@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F5F1E8;
+  --foreground: #2A2A2A;
+
+  --color-brand-green: #1F6F4A;
+  --color-brand-green-dark: #155436;
+  --color-brand-green-light: #2E8B5F;
+  --color-cream-bg: #F5F1E8;
+  --color-cream-dark: #ECE6D4;
+  --color-terracotta-c: #C97A5A;
+  --color-terracotta-light: #E29A7C;
+  --color-gold-c: #D4A437;
+  --color-gold-light: #E5BC5C;
+  --color-sky-c: #5DADE2;
+  --color-stone-c: #6B6B6B;
+  --color-stone-light: #9A9A9A;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand: var(--color-brand-green);
+  --color-brand-dark: var(--color-brand-green-dark);
+  --color-brand-light: var(--color-brand-green-light);
+  --color-cream: var(--color-cream-bg);
+  --color-cream-deep: var(--color-cream-dark);
+  --color-terracotta: var(--color-terracotta-c);
+  --color-terracotta-soft: var(--color-terracotta-light);
+  --color-gold: var(--color-gold-c);
+  --color-gold-soft: var(--color-gold-light);
+  --color-sky: var(--color-sky-c);
+  --color-stone: var(--color-stone-c);
+  --color-stone-soft: var(--color-stone-light);
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-poppins), system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-cream-dark); }
+::-webkit-scrollbar-thumb { background: var(--color-brand-green); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-brand-green-dark); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-fade-up { animation: fadeUp 0.7s ease-out both; }
+.animate-fade-in { animation: fadeIn 0.8s ease-out both; }
+.animate-marquee { animation: marquee 40s linear infinite; }
+
+.bg-dots {
+  background-image: radial-gradient(rgba(31,111,74,0.12) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
