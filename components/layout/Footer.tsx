@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { collegeInfo, departments } from "@/lib/data";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -34,9 +35,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <div className="flex items-center gap-3 mb-4">
-            <div className="h-12 w-12 rounded-full bg-cream grid place-items-center text-brand font-display font-extrabold">
-              NT
-            </div>
+            <Image src={'/Logo/NorthHorr.png'} width={100} height={100} alt="NorthHorr" />
             <div>
               <div className="font-display text-cream font-bold">{collegeInfo.shortName}</div>
               <div className="text-xs text-gold">{collegeInfo.tagline}</div>

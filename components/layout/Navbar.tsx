@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -26,11 +27,10 @@ export function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-brand/95 backdrop-blur shadow-lg"
-          : "bg-brand"
-      }`}
+      className={`sticky top-0 z-50 transition-all duration-300 ${scrolled
+        ? "bg-brand/95 backdrop-blur shadow-lg"
+        : "bg-brand"
+        }`}
     >
       {/* Top utility strip */}
       <div className="hidden md:block bg-brand-dark text-cream/80 text-xs">
@@ -54,9 +54,10 @@ export function Navbar() {
 
       <nav className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="h-12 w-12 rounded-full bg-cream grid place-items-center text-brand font-display font-extrabold text-lg shadow-md group-hover:scale-105 transition">
+          <Image src={'/Logo/NorthHorr.png'} width={100} height={100} alt="NorthHorr" />
+          {/* <div className="h-12 w-12 rounded-full bg-cream grid place-items-center text-brand font-display font-extrabold text-lg shadow-md group-hover:scale-105 transition">
             NT
-          </div>
+          </div> */}
           <div className="text-cream leading-tight">
             <div className="font-display font-bold tracking-tight text-base sm:text-lg">
               North Horr TVC
@@ -114,9 +115,8 @@ export function Navbar() {
 
       {/* Mobile menu */}
       <div
-        className={`lg:hidden overflow-hidden bg-brand-dark transition-[max-height] duration-300 ${
-          open ? "max-h-[600px]" : "max-h-0"
-        }`}
+        className={`lg:hidden overflow-hidden bg-brand-dark transition-[max-height] duration-300 ${open ? "max-h-[600px]" : "max-h-0"
+          }`}
       >
         <ul className="px-6 py-4 flex flex-col gap-1">
           {navLinks.map((l) => (
