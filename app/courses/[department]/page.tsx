@@ -72,7 +72,7 @@ export default async function DepartmentPage(
               href="/contact"
               className="hidden sm:inline-block px-5 py-2.5 rounded-full bg-brand text-cream font-medium hover:bg-brand-dark transition"
             >
-              Apply Now
+              Now
             </Link>
           </div>
 

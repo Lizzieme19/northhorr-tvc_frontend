@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useAuth, portalRoute } from "@/lib/auth";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -45,9 +46,7 @@ export function Navbar() {
               +254 700 000 000
             </a>
             <span>|</span>
-            <Link href="/login" className="hover:text-gold transition">
-              Student Portal
-            </Link>
+            <PortalLinkButton />
           </div>
         </div>
       </div>
@@ -83,7 +82,7 @@ export function Navbar() {
 
         <div className="hidden lg:flex items-center gap-3">
           <Link
-            href="/courses"
+            href="/application"
             className="px-5 py-2.5 rounded-full bg-gold text-brand-dark font-semibold text-sm hover:bg-gold-soft transition shadow"
           >
             Apply Now
@@ -132,7 +131,7 @@ export function Navbar() {
           ))}
           <li className="mt-2">
             <Link
-              href="/courses"
+              href="/application"
               onClick={() => setOpen(false)}
               className="block text-center px-5 py-2.5 rounded-full bg-gold text-brand-dark font-semibold"
             >
@@ -142,5 +141,26 @@ export function Navbar() {
         </ul>
       </div>
     </header>
+  );
+}
+
+function PortalLinkButton() {
+  const { isAuthenticated, user } = useAuth();
+  
+  if (isAuthenticated && user) {
+    return (
+      <Link
+        href={portalRoute(user.role)}
+        className="hover:text-gold transition"
+      >
+        Student Portal
+      </Link>
+    );
+  }
+
+  return (
+    <Link href="/login" className="hover:text-gold transition">
+      Student Portal
+    </Link>
   );
 }

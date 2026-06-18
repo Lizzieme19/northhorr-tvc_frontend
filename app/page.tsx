@@ -387,7 +387,7 @@ export default function Home() {
           </p>
           <div className="mt-9 flex flex-wrap gap-4 justify-center">
             <Link
-              href="/courses"
+              href="/application"
               className="px-7 py-3.5 rounded-full bg-gold text-brand-dark font-semibold hover:bg-gold-soft transition shadow-lg"
             >
               Apply Now →
