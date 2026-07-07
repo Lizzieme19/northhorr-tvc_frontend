@@ -172,14 +172,28 @@ export default function ApplicationForm() {
                 <Field name="father_phone" label="Phone Number" required value={formData.father_phone} onChange={handleChange} />
                 <Field name="father_id" label="National ID/ Passport No" required value={formData.father_id} onChange={handleChange} />
                 <Field name="father_occupation" label="Occupation" required value={formData.father_occupation} onChange={handleChange} />
-                <Field name="father_date_of_birth" label="Date of Birth" required value={formData.father_date_of_birth} onChange={handleChange} />
-                <Field name="father_alive" label="Is Father Alive?" required value={formData.father_alive} onChange={handleChange} />
+                <Field name="father_date_of_birth" label="Date of Birth" type="date" required value={formData.father_date_of_birth} onChange={handleChange} />
+                <div>
+              <label className="block text-sm font-semibold text-brand-dark mb-1.5">Is Father Alive? <span className="text-terracotta">*</span></label>
+              <select name="father_alive" required value={formData.father_alive} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                <option value="">Select...</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
                 <Field name="mother_names" label="Full Name of Mother" required value={formData.mother_names} onChange={handleChange} />
                 <Field name="mother_phone" label="Phone Number" required value={formData.mother_phone} onChange={handleChange} />
                 <Field name="mother_id" label="National ID/ Passport No" required value={formData.mother_id} onChange={handleChange} />
                 <Field name="mother_occupation" label="Occupation" required value={formData.mother_occupation} onChange={handleChange} />
-                <Field name="mother_date_of_birth" label="Date of Birth" required value={formData.mother_date_of_birth} onChange={handleChange} />
-                <Field name="mother_alive" label="Is Mother Alive?" required value={formData.mother_alive} onChange={handleChange} />
+                <Field name="mother_date_of_birth" label="Date of Birth" type="date" required value={formData.mother_date_of_birth} onChange={handleChange} />
+                <div>
+              <label className="block text-sm font-semibold text-brand-dark mb-1.5">Is Mother Alive? <span className="text-terracotta">*</span></label>
+              <select name="mother_alive" required value={formData.mother_alive} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                <option value="">Select...</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
                 <Field name="siblings_no" label="Number of Siblings" required value={formData.siblings_no} onChange={handleChange} />
               </div>
             </div>
@@ -189,7 +203,7 @@ export default function ApplicationForm() {
                 <Field name="emergency_name_1" label="Name" required value={formData.emergency_name_1} onChange={handleChange} />
                 <Field name="relationship_1" label="Relationship" required value={formData.relationship_1} onChange={handleChange} />
                 <Field name="emergency_phone_1" label="Phone Number" required value={formData.emergency_phone_1} onChange={handleChange} />
-                <Field name="emergency_address" label="Address" required value={formData.emergency_address_1} onChange={handleChange} />
+                <Field name="emergency_address_1" label="Address" required value={formData.emergency_address_1} onChange={handleChange} />
                 <Field name="emergency_name_2" label="Name" required value={formData.emergency_name_2} onChange={handleChange} />
                 <Field name="emergency_phone_2" label="Phone Number" required value={formData.emergency_phone_2} onChange={handleChange} />
                 <Field name="relationship_2" label="Relationship" required value={formData.relationship_2} onChange={handleChange} />

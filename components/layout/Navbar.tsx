@@ -58,7 +58,7 @@ export function Navbar() {
           </div>
           <div className="text-cream leading-tight">
             <div className="font-display font-bold tracking-tight text-base sm:text-lg">
-              North Horr TVC
+              North Horr Technical and Vocational College
             </div>
             <div className="text-[10px] sm:text-xs uppercase tracking-widest text-gold/90">
               Igniting a brighter future

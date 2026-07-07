@@ -59,6 +59,29 @@ export default async function DepartmentPage(
 
       <section className="py-16">
         <div className="mx-auto max-w-7xl px-6">
+          <div className="grid lg:grid-cols-3 gap-8 mb-12">
+            <div className="lg:col-span-2">
+              <p className="text-stone leading-relaxed">{dep.overview}</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow p-6">
+              <Image
+                src={dep.hod.image}
+                alt={dep.hod.name}
+                width={200}
+                height={200}
+                className="rounded-2xl"
+              />
+              <div className="mt-4">
+                <h3 className="font-display text-xl font-bold text-brand-dark">
+                  {dep.hod.name}
+                </h3>
+                <p className="text-sm text-brand-dark">
+                  {dep.hod.title}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-end justify-between gap-4 mb-8">
             <div>
               <span className="text-terracotta text-sm font-semibold uppercase tracking-widest">
@@ -72,7 +95,7 @@ export default async function DepartmentPage(
               href="/contact"
               className="hidden sm:inline-block px-5 py-2.5 rounded-full bg-brand text-cream font-medium hover:bg-brand-dark transition"
             >
-              Now
+              Apply Now
             </Link>
           </div>
 
@@ -108,6 +131,60 @@ export default async function DepartmentPage(
                   </span>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16">
+        <div className="mx-auto max-w-7xl px-6">
+        <h2 className="font-display text-3xl">
+          Career Opportunities
+        </h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
+          {dep.careers.map(career=>(
+            <div
+            key={career}
+            className="border rounded-xl p-5 bg-white">  
+              💼 {career}
+            </div>
+          ))}
+        </div>
+        </div>
+      </section>
+
+      <section className="py-16">
+        <div className="mx-auto max-w-7xl px-6">
+          <h2 className="font-display text-3xl text-brand-dark">
+            Why Choose {dep.name}?
+          </h2>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+            {dep.highlights.map(item=>(
+              <div
+              key={item}
+              className="bg-white rounded-xl p-6 shadow-sm border border-stone/10"
+              >
+                ✅ {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16">
+        <div className="mx-auto max-w-7xl px-6">
+          <h2 className="font-display text-3xl text-brand-dark">
+            Department Gallery
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
+            {dep.gallery.map(img=>(
+              <img
+              key={img}
+              src={img}
+              alt={dep.name}
+              className="w-full h-auto rounded-xl shadow-sm"
+              />
             ))}
           </div>
         </div>

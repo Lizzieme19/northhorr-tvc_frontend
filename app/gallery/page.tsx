@@ -9,7 +9,7 @@ export default function GalleryPage() {
     <>
       <PageHero
         eyebrow="Gallery"
-        title="Life and learning at NTVC."
+        title="Life and learning at North Horr TVC."
         description="A glimpse into our campus, workshops, events and student life."
         image="https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&w=2000&q=80"
       />

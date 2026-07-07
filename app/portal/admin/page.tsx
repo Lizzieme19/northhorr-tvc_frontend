@@ -92,7 +92,7 @@ export default function AdminDashboard() {
       <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          <span className="font-display font-semibold hidden sm:block">NTVC Admin Portal</span>
+          <span className="font-display font-semibold hidden sm:block">North Horr TVC Admin Portal</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
