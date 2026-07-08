@@ -12,7 +12,7 @@ export function Footer() {
               Ready to start your journey?
             </h3>
             <p className="text-cream/80 mt-1">
-              Join hundreds of students transforming their lives at NTVC.
+              Join hundreds of students transforming their lives at North Horr TVC.
             </p>
           </div>
           <div className="flex gap-3">
@@ -72,7 +72,7 @@ export function Footer() {
           <h4 className="text-cream font-display font-semibold mb-4">Quick Links</h4>
           <ul className="space-y-2 text-sm">
             {[
-              { href: "/about", label: "About NTVC" },
+              { href: "/about", label: "About North Horr TVC" },
               { href: "/courses", label: "Courses" },
               { href: "/news", label: "News & Events" },
               { href: "/gallery", label: "Gallery" },

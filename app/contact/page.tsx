@@ -47,7 +47,7 @@ export default function ContactPage() {
           <div className="space-y-6">
             <div className="rounded-3xl overflow-hidden border border-stone/15 shadow-lg aspect-[4/3] bg-cream-deep">
               <iframe
-                title="NTVC location"
+                title="North Horr TVC location"
                 src="https://www.openstreetmap.org/export/embed.html?bbox=37.0%2C3.2%2C37.4%2C3.4&layer=mapnik&marker=3.32%2C37.10"
                 className="w-full h-full border-0"
                 loading="lazy"

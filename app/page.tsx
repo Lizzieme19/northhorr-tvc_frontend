@@ -10,7 +10,7 @@ export default function Home() {
         <div className="absolute inset-0 -z-10">
           <Image
             src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=2000&q=80"
-            alt="NTVC campus"
+            alt="North Horr TVC campus"
             fill
             priority
             className="object-cover"
@@ -94,13 +94,13 @@ export default function Home() {
             <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-xl">
               <Image
                 src="https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80"
-                alt="NTVC campus building"
+                alt="North HorrTVC campus building"
                 fill
                 className="object-cover"
               />
             </div>
             <div className="absolute -bottom-8 -right-4 sm:-right-8 bg-brand text-cream rounded-2xl p-6 shadow-2xl max-w-xs">
-              <div className="font-display text-3xl font-bold text-gold">15+</div>
+              <div className="font-display text-3xl font-bold text-gold">5+</div>
               <div className="text-sm text-cream/80">
                 Years training Northern Kenya's skilled workforce
               </div>
@@ -112,7 +112,7 @@ export default function Home() {
 
           <div>
             <span className="text-terracotta font-semibold text-sm uppercase tracking-widest">
-              Welcome to NTVC
+              Welcome to North Horr TVC
             </span>
             <h2 className="mt-3 font-display text-3xl sm:text-4xl text-brand-dark">
               A premier TVET institution in Northern Kenya.
@@ -223,7 +223,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center max-w-2xl mx-auto">
             <span className="text-terracotta font-semibold text-sm uppercase tracking-widest">
-              Why NTVC
+              Why North Horr TVC
             </span>
             <h2 className="mt-3 font-display text-3xl sm:text-4xl text-brand-dark">
               Built for the workplace of tomorrow.
@@ -379,7 +379,7 @@ export default function Home() {
         </div>
         <div className="mx-auto max-w-4xl px-6 py-24 text-center text-cream">
           <h2 className="font-display text-3xl sm:text-5xl">
-            Your future starts at <span className="text-gold">NTVC</span>.
+            Your future starts at <span className="text-gold">North Horr TVC</span>.
           </h2>
           <p className="mt-5 text-cream/85 text-lg">
             Apply for the September intake today and join a community of
@@ -387,7 +387,7 @@ export default function Home() {
           </p>
           <div className="mt-9 flex flex-wrap gap-4 justify-center">
             <Link
-              href="/courses"
+              href="/application"
               className="px-7 py-3.5 rounded-full bg-gold text-brand-dark font-semibold hover:bg-gold-soft transition shadow-lg"
             >
               Apply Now →

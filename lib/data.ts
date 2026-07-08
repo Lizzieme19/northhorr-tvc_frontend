@@ -1,4 +1,4 @@
-// Static placeholder data for the NTVC public website.
+// Static placeholder data for the North Horr TVC public website.
 // Backend will eventually replace these structures via API.
 
 export type Course = {
@@ -14,7 +14,18 @@ export type Department = {
   icon: string; // emoji placeholder
   image: string;
   courses: Course[];
+  hod: {
+    name: string;
+    title: string;
+    image: string;
+  };
+  overview: string;
+  highlights: string[];
+  careers: string[];
+  gallery: string[];
+
 };
+
 
 export const departments: Department[] = [
   {
@@ -26,6 +37,38 @@ export const departments: Department[] = [
     icon: "🌾",
     image:
       "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+
+    overview: "The Department of Agriculture at North Horr Technical and Vocational College offers comprehensive training in sustainable farming, livestock production, dairy management, and aquaculture. Our programs are designed to equip students with practical skills and knowledge to meet the growing demands of Kenya's agricultural sector.",
+    hod: {
+      name: "Dr. John Mwangi",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Hands-on training in sustainable farming practices",
+      "Practical skills in livestock production and management",
+      "Dairy farm management and dairy plant technology",
+      "Aquaculture and fish farming techniques",
+      "Agricultural extension and community development",
+      "Modern equipment and facilities for practical learning"
+    ],
+    careers: [
+      "Agricultural Officer",
+      "Dairy Farm Manager",
+      "Livestock Production Manager",
+      "Aquaculture Specialist",
+      "Agricultural Extension Officer",
+      "Farm Manager",
+      "Agricultural Consultant",
+      "Dairy Plant Operator",
+      "Aquaculture Technician",
+      "Agricultural Research Assistant"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Sustainable Agriculture", levels: "Level 3, 4, 5, 6" },
       { name: "Agricultural Extension", levels: "Level 5 & 6" },
@@ -51,6 +94,29 @@ export const departments: Department[] = [
     icon: "🔧",
     image:
       "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Mechanical Engineering at North Horr Technical and Vocational College offers comprehensive training in motor vehicle, motorcycle, and panel beating trades. Our programs are designed to equip students with practical skills and knowledge to meet the growing demands of Kenya's automotive sector.",
+    hod: {
+      name: "Mr. James Mwangi",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Hands-on training in motor vehicle maintenance and repair",
+      "Practical skills in motorcycle mechanics",
+      "Panel beating and body repair techniques",
+      "Modern equipment and facilities for practical learning"
+    ],
+    careers: [
+      "Automotive Technician",
+      "Motorcycle Mechanic",
+      "Panel Beater",
+      "Vehicle Maintenance Supervisor"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Automotive Technician", levels: "Level 5, 6" },
       { name: "Motor Cycle Mechanics", levels: "Level 3, 4" },
@@ -68,6 +134,29 @@ export const departments: Department[] = [
     icon: "🧪",
     image:
       "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Applied Sciences at North Horr Technical and Vocational College offers comprehensive training in food technology, baking, meat processing, and laboratory sciences. Our programs are designed to equip students with practical skills and knowledge to meet the demands of the food, health, and research industries.",
+    hod: {
+      name: "Dr. Sarah Kimani",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Hands-on training in food technology and baking",
+      "Practical skills in meat processing",
+      "Laboratory science and analysis techniques",
+      "Modern equipment and facilities for practical learning"
+    ],
+    careers: [
+      "Food Technologist",
+      "Baker/Baking Technologist",
+      "Meat Processing Technician",
+      "Laboratory Technician"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Baking", levels: "Level 3, 4" },
       { name: "Baking Technology", levels: "Level 5, 6" },
@@ -85,6 +174,31 @@ export const departments: Department[] = [
     icon: "🏗️",
     image:
       "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Building & Civil Engineering at North Horr Technical and Vocational College offers comprehensive training in construction trades and building technology. Our programs prepare students for careers in construction, masonry, carpentry, plumbing, and interior design.",
+    hod: {
+      name: "Mr. John Mwangi",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Hands-on training in modern construction techniques",
+      "State-of-the-art workshops and laboratories",
+      "Industry partnerships with leading construction companies",
+      "Career opportunities in construction, masonry, and interior design"
+    ],
+    careers: [
+      "Construction Technician",
+      "Carpenter/Joiner",
+      "Plumber",
+      "Mason",
+      "Interior Designer",
+      "Building Inspector"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Building Technology", levels: "Level 5 & 6" },
       { name: "Carpentry and Joinery", levels: "Level 3, 4, 5" },
@@ -106,6 +220,35 @@ export const departments: Department[] = [
     icon: "🤝",
     image:
       "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Social Sciences at North Horr Technical and Vocational College offers training in community health, social work, and caregiving. Our programs prepare students for careers in healthcare, social services, and community development.",
+    hod: {
+      name: "Ms. Jane Wanjiku",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Training in community health and social work",
+      "Hands-on experience in healthcare settings",
+      "Career opportunities in healthcare, social services, and community development",
+      "Partnerships with healthcare facilities and NGOs"
+    ],
+    careers: [
+      "Community Health Worker",
+      "Social Worker",
+      "Caregiver",
+      "Child Protection Officer",
+      "Community Health Officer",
+      "Health Systems Support Worker",
+      "Health Systems Support Manager",
+      "Healthcare Support Worker",
+      "Home Based Care Worker",
+      "Social Work Practitioner"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Caregiving", levels: "Level 4" },
       { name: "Child Protection", levels: "Level 5F, 6F" },
@@ -127,6 +270,32 @@ export const departments: Department[] = [
     icon: "💼",
     image:
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Business at North Horr Technical and Vocational College offers training in human resources, procurement, project management, and storekeeping. Our programs prepare students for careers in business administration, operations management, and supply chain management.",
+    hod: {
+      name: "Mr. John Mwangi",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Training in human resources, procurement, project management, and storekeeping",
+      "Hands-on experience in business operations",
+      "Career opportunities in business administration, operations management, and supply chain management",
+      "Partnerships with businesses and organizations"
+    ],
+    careers: [
+      "Business Administrator",
+      "Operations Manager",
+      "Supply Chain Manager",
+      "Project Coordinator",
+      "Storekeeper",
+      "Procurement Officer",
+      "Human Resources Manager"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Human Resource", levels: "Level 5, 6" },
       { name: "Storekeeping", levels: "Level 4" },
@@ -143,6 +312,30 @@ export const departments: Department[] = [
     icon: "✂️",
     image:
       "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Cosmetology & Fashion at North Horr Technical and Vocational College offers training in cosmetology, fashion design, and leather technology. Our programs prepare students for careers in beauty, fashion, and leather goods production.",
+    hod: {
+      name: "Ms. Jane Wanjiku",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Training in cosmetology, fashion design, and leather technology",
+      "Hands-on experience in beauty, fashion, and leather goods production",
+      "Career opportunities in beauty, fashion, and leather goods production",
+      "Partnerships with beauty and fashion industries"
+    ],
+    careers: [
+      "Cosmetologist",
+      "Fashion Designer",
+      "Leather Goods Producer",
+      "Leather Processor",
+      "Leather Technology Specialist"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Cosmetology", levels: "Level 3, 4, 5, 6" },
       { name: "Fashion Design", levels: "Level 3, 4, 5, 6" },
@@ -160,6 +353,32 @@ export const departments: Department[] = [
     icon: "⚡",
     image:
       "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Electrical & Electronics Engineering at North Horr Technical and Vocational College offers training in electrical engineering, electrical installation, solar PV system installation, refrigeration and air conditioning, electronics engineering, electronics technology, and electrotechnical engineering. Our programs prepare students for careers in electrical and electronics engineering.",
+    hod: {
+      name: "Mr. Peter Njoroge",
+      title: "Head of Department",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+    },
+    highlights: [
+      "Training in electrical engineering, electrical installation, solar PV system installation, refrigeration and air conditioning, electronics engineering, electronics technology, and electrotechnical engineering",
+      "Hands-on experience in electrical and electronics engineering",
+      "Career opportunities in electrical and electronics engineering",
+      "Partnerships with electrical and electronics industries"
+    ],
+    careers: [
+      "Electrical Engineer",
+      "Electrical Installation Technician",
+      "Solar PV System Installer",
+      "Refrigeration and Air Conditioning Technician",
+      "Electronics Engineer",
+      "Electronics Technician",
+      "Electrotechnical Engineer"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Electrical Engineering", levels: "Level 5, 6" },
       { name: "Electrical Installation", levels: "Level 3, 4" },
@@ -179,6 +398,28 @@ export const departments: Department[] = [
     icon: "💻",
     image:
       "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
+    overview: "The Department of Computing & Informatics at North Horr Technical and Vocational College offers training in computer operations, ICT operator, and ICT technician. Our programs prepare students for careers in computing and informatics.",
+    hod: {
+      name: "Mr. James Mwangi",
+      title: "Head of Department",
+      image: "/images/departments/ICT/ICT.jpg"
+    },
+    highlights: [
+      "Training in computer operations, ICT operator, and ICT technician",
+      "Hands-on experience in computing and informatics",
+      "Career opportunities in computing and informatics",
+      "Partnerships with computing and informatics industries"
+    ],
+    careers: [
+      "Computer Operator",
+      "ICT Operator",
+      "ICT Technician"
+    ],
+    gallery: [
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
+    ],
     courses: [
       { name: "Computer Operations", levels: "Level 3" },
       { name: "ICT Operator", levels: "Level 4" },
@@ -211,7 +452,7 @@ export const newsItems: NewsItem[] = [
     id: "2",
     title: "Annual Skills Showcase & Career Fair",
     excerpt:
-      "NTVC hosts industry partners for a two-day skills exhibition featuring student innovations, live trade demos and on-the-spot job interviews.",
+      "North Horr TVC hosts industry partners for a two-day skills exhibition featuring student innovations, live trade demos and on-the-spot job interviews.",
     date: "Sep 24, 2025",
     category: "Event",
     image:
@@ -229,7 +470,7 @@ export const newsItems: NewsItem[] = [
   },
   {
     id: "4",
-    title: "NTVC Students Win Regional Innovation Award",
+    title: "North Horr TVC Students Win Regional Innovation Award",
     excerpt:
       "A team from the Computing & Informatics department took home top honours at the Northern Kenya TVET Innovation Challenge.",
     date: "Jul 14, 2025",
@@ -253,7 +494,7 @@ export const testimonials: Testimonial[] = [
     course: "Fashion Design, Level 6",
     year: "Class of 2024",
     quote:
-      "NTVC didn't just teach me a trade — it gave me the confidence to start my own tailoring business. Today I employ four people from my village.",
+      "North Horr TVC didn't just teach me a trade — it gave me the confidence to start my own tailoring business. Today I employ four people from my village.",
     avatar:
       "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=400&q=80",
   },
@@ -271,7 +512,7 @@ export const testimonials: Testimonial[] = [
     course: "Community Health, Level 6",
     year: "Class of 2024",
     quote:
-      "I came to NTVC with a dream of serving my community. Today I work as a community health officer and I owe it all to the staff who believed in me.",
+      "I came to North Horr TVC with a dream of serving my community. Today I work as a community health officer and I owe it all to the staff who believed in me.",
     avatar:
       "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
   },
@@ -307,12 +548,12 @@ export type Resource = {
 };
 
 export const resources: Resource[] = [
-  { title: "NTVC Prospectus 2025/2026", description: "Complete college prospectus including programs, fees, and admission procedures.", type: "PDF", size: "4.2 MB", category: "Prospectus" },
+  { title: "North Horr TVC Prospectus 2025/2026", description: "Complete college prospectus including programs, fees, and admission procedures.", type: "PDF", size: "4.2 MB", category: "Prospectus" },
   { title: "Application Form (Septemper Intake)", description: "Official application form for the September intake — all departments.", type: "PDF", size: "320 KB", category: "Forms" },
   { title: "HELB Loan Application Guide", description: "Step-by-step guide on applying for HELB funding as a TVET student.", type: "PDF", size: "1.1 MB", category: "Forms" },
   { title: "Term 1 Master Timetable", description: "Class timetable for all Level 3–6 programs, Term 1.", type: "PDF", size: "780 KB", category: "Timetables" },
   { title: "Examination Schedule", description: "End-of-term examination schedule for all departments.", type: "PDF", size: "510 KB", category: "Timetables" },
-  { title: "Student Handbook & Code of Conduct", description: "Rules, regulations and student rights at NTVC.", type: "PDF", size: "2.3 MB", category: "Policies" },
+  { title: "Student Handbook & Code of Conduct", description: "Rules, regulations and student rights at North Horr TVC.", type: "PDF", size: "2.3 MB", category: "Policies" },
   { title: "Fee Structure 2025/2026", description: "Detailed fee breakdown by program and level.", type: "PDF", size: "240 KB", category: "Prospectus" },
   { title: "Hostel Application Form", description: "Form for on-campus accommodation requests.", type: "DOCX", size: "65 KB", category: "Forms" },
 ];
@@ -326,7 +567,7 @@ export const stats = [
 
 export const collegeInfo = {
   name: "North Horr Technical and Vocational College",
-  shortName: "NTVC",
+  shortName: "North Horr TVC",
   tagline: "Igniting a brighter future",
   motto: "Skill. Innovation. Service.",
   location: "North Horr Sub-County, Marsabit, Kenya",
@@ -342,3 +583,34 @@ export const collegeInfo = {
     linkedin: "https://linkedin.com/school/ntvc",
   },
 };
+
+export type StaffMember = {
+  name: string;
+  title: string;
+  department: string;
+  image: string;
+  phone?: string;
+  email?: string;
+  description: string;
+  quote?: string;
+};
+
+export const staffMembers: StaffMember[] = [
+  {
+    name: "Mr. Masinde J. Kephas",
+    title: "Dean of Students",
+    department: "Office of the Dean of Students",
+    image: "/images/staff/dean.jpg",
+    description: "Welcome to the Office of the Dean of Students at North Horr Technical and Vocational College. Our office is committed to promoting the welfare, discipline, and holistic development of all trainees. We provide guidance and support to students throughout their training, coordinate student leadership and co-curricular activities, and serve as a link between trainees and the college administration. We strive to create a safe, inclusive, and conducive learning environment that fosters academic excellence, personal growth, and responsible citizenship. The Dean of Students' Office remains dedicated to ensuring that every trainee has the support and opportunities needed to succeed both within and beyond the college.",
+  },
+  {
+    name: "Sabdio D. Wario",
+    title: "Registrar",
+    department: "Office of the Registrar",
+    image: "/images/staff/registrar.jpg",
+    phone: "0798776299",
+    email: "wsabdio@gmail.com",
+    description: "The Registrar is a key member of the management team at North Horr Technical and Vocational College (TVC), responsible for overseeing academic and student administration services. The office coordinates student admissions, registration, examinations, records management, certification, graduation processes, and scholarship administration, ensuring efficiency, accuracy, and adherence to institutional policies. Working closely with students, staff, regulatory agencies, and other stakeholders, the Registrar ensures compliance with the requirements of the Ministry of Education, the Technical and Vocational Education and Training Authority (TVETA), and other relevant bodies. The office is committed to maintaining high standards of academic integrity, transparency, and quality service delivery.",
+    quote: "At North Horr TVC, we are committed to providing quality education, efficient academic services, and a supportive learning environment that empowers every student to achieve their full potential.",
+  },
+];

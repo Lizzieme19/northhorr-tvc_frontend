@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
-import { stats } from "@/lib/data";
+import { StaffCard } from "@/components/ui/StaffCard";
+import { stats, staffMembers } from "@/lib/data";
 
 export const metadata: Metadata = { title: "About Us" };
 
@@ -10,9 +11,9 @@ export default function AboutPage() {
   return (
     <>
       <PageHero
-        eyebrow="About NTVC"
+        eyebrow="About North Horr TVC"
         title="Northern Kenya's home for skill, innovation and service."
-        description="Established to bridge the skills gap in Marsabit County, NTVC has grown into a leading TVET institution serving learners from across Kenya."
+        description="Established to bridge the skills gap in Marsabit County, North Horr TVC has grown into a leading TVET institution serving learners from across Kenya."
         image="https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=2000&q=80"
       />
 
@@ -103,16 +104,27 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <section className="py-20 bg-cream-deep">
+        <div className="mx-auto max-w-7xl px-6">
+          <h2 className="font-display text-3xl text-brand-dark text-center mb-12">
+            Meet Our Leadership
+          </h2>
+          {staffMembers.map((staff, index) => (
+            <StaffCard key={staff.name} staff={staff} variant="full" />
+          ))}
+        </div>
+      </section>
+
       <section className="py-20 bg-brand text-cream">
         <div className="mx-auto max-w-4xl px-6 text-center">
           <h2 className="font-display text-3xl sm:text-4xl">A word from the Principal</h2>
           <p className="mt-6 text-cream/85 text-lg italic leading-relaxed">
-            &ldquo;At NTVC we believe every learner has within them a spark of
+            &ldquo;At North Horr TVC we believe every learner has within them a spark of
             greatness. Our role is simply to ignite it — through quality
             instruction, modern facilities and a community that cares. Welcome
             home.&rdquo;
           </p>
-          <div className="mt-6 font-display text-gold">— The Principal, NTVC</div>
+          <div className="mt-6 font-display text-gold">— The Principal, North HorrTVC</div>
         </div>
       </section>
 

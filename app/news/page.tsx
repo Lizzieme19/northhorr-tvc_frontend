@@ -12,7 +12,7 @@ export default function NewsPage() {
     <>
       <PageHero
         eyebrow="News & Events"
-        title="What's happening at NTVC."
+        title="What's happening at North Horr TVC."
         description="Stay up to date with college announcements, achievements and upcoming events."
         image="https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=2000&q=80"
       />
