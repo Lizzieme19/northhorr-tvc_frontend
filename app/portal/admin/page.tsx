@@ -899,8 +899,8 @@ function CoursesTab() {
                         <button onClick={() => {
                           setCourseForm({ id: c.id, name: c.name, levels: c.levels, shortcode: c.shortcode, department_id: c.department_id });
                           setIsCourseModalOpen(true);
-                        }} className="text-brand hover:underline font-medium text-xs font-semibold">Edit</button>
-                        <button onClick={() => handleCourseDelete(c.id)} className="text-red-600 hover:underline font-medium text-xs font-semibold">Delete</button>
+                        }} className="text-brand hover:underline text-xs font-semibold">Edit</button>
+                        <button onClick={() => handleCourseDelete(c.id)} className="text-red-600 hover:underline text-xs font-semibold">Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -961,8 +961,8 @@ function CoursesTab() {
                         <button onClick={() => {
                           setDeptForm({ id: d.id, name: d.name, tagline: d.tagline || '', description: d.description || '', icon: d.icon || '🏢', image_url: d.image_url || '' });
                           setIsDeptModalOpen(true);
-                        }} className="text-brand hover:underline font-medium text-xs font-semibold">Edit</button>
-                        <button onClick={() => handleDeptDelete(d.id)} className="text-red-600 hover:underline font-medium text-xs font-semibold">Delete</button>
+                        }} className="text-brand hover:underline text-xs font-semibold">Edit</button>
+                        <button onClick={() => handleDeptDelete(d.id)} className="text-red-600 hover:underline text-xs font-semibold">Delete</button>
                       </td>
                     </tr>
                   ))}
