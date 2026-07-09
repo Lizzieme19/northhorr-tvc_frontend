@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { departments, newsItems, stats, testimonials } from "@/lib/data";
+import { Carousel } from "@/components/ui/Carousel";
+import { campusGallery } from "@/lib/data";
 
 export default function Home() {
   return (
@@ -91,12 +93,13 @@ export default function Home() {
       <section className="py-20 lg:py-28">
         <div className="mx-auto max-w-7xl px-6 grid lg:grid-cols-2 gap-14 items-center">
           <div className="relative">
-            <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-xl">
-              <Image
-                src="https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80"
-                alt="North HorrTVC campus building"
-                fill
-                className="object-cover"
+            <div className="relative">
+              <Carousel 
+                items={campusGallery} 
+                autoPlay
+                showDots
+                showArrows
+                alt="North Horr TVC campus" 
               />
             </div>
             <div className="absolute -bottom-8 -right-4 sm:-right-8 bg-brand text-cream rounded-2xl p-6 shadow-2xl max-w-xs">

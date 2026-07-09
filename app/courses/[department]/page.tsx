@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { departments } from "@/lib/data";
+import { Carousel } from "@/components/ui/Carousel";
 
 export function generateStaticParams() {
   return departments.map((d) => ({ department: d.slug }));
@@ -63,7 +64,7 @@ export default async function DepartmentPage(
             <div className="lg:col-span-2">
               <p className="text-stone leading-relaxed">{dep.overview}</p>
             </div>
-            <div className="bg-white rounded-2xl shadow p-6">
+            <div className="bg-white rounded-1xl shadow p-6">
               <Image
                 src={dep.hod.image}
                 alt={dep.hod.name}
@@ -172,21 +173,27 @@ export default async function DepartmentPage(
         </div>
       </section>
 
-      <section className="py-16">
+      <section className="py-20 bg-cream-deep">
         <div className="mx-auto max-w-7xl px-6">
-          <h2 className="font-display text-3xl text-brand-dark">
-            Department Gallery
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
-            {dep.gallery.map(img=>(
-              <img
-              key={img}
-              src={img}
-              alt={dep.name}
-              className="w-full h-auto rounded-xl shadow-sm"
-              />
-            ))}
+
+          <div className="mb-10">
+            <span className="text-terracotta uppercase tracking-widest text-sm">
+              Department Gallery
+            </span>
+
+            <h2 className="mt-2 font-display text-4xl text-brand-dark"> 
+              Life in {dep.name}
+            </h2>
+
+            <p className="mt-4 max-w-2xl text-stone"> 
+              See what it&apos;s like to study with us
+            </p>
           </div>
+          
+            <Carousel
+             items={dep.gallery.map(img => ({ image: img, alt: dep.name }))} 
+             alt={dep.name} />
+          
         </div>
       </section>
 
