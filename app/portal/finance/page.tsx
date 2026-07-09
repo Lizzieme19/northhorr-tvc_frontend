@@ -3,11 +3,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
+import { financeApi } from '@/lib/services';
+import ChangePassword from '@/components/ChangePassword';
 
 export default function FinanceDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<any>(null);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -20,22 +23,23 @@ export default function FinanceDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    api.get('/finance/summary').then(r => setSummary(r.data)).catch(() => {});
+    financeApi.getReports().then(r => setSummary(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
     const params: any = { page, limit: 15 };
     if (search) params.search = search;
     if (feeCleared !== '') params.fee_cleared = feeCleared;
-    api.get('/finance/students', { params })
-      .then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); })
-      .catch(() => {});
+    financeApi.getFeeRecords().then(r => {
+      setStudents(r.data.students);
+      setTotal(r.data.pagination.total);
+    }).catch(() => {});
   }, [page, search, feeCleared]);
 
   const markPaid = async (studentId: string, feeType: string) => {
     setProcessing(`${studentId}-${feeType}`);
     try {
-      await api.patch(`/finance/students/${studentId}/fees`, { fee_type: feeType });
+      await financeApi.createFeeRecord(studentId, { fee_type: feeType, amount: feeType === 'ADMISSION' ? 1500 : 500 });
       // Update local state
       setStudents(prev => prev.map(s => {
         if (s.id !== studentId) return s;
@@ -45,7 +49,7 @@ export default function FinanceDashboard() {
         return { ...s };
       }));
       // Update summary briefly
-      api.get('/finance/summary').then(r => setSummary(r.data));
+      financeApi.getReports().then(r => setSummary(r.data));
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to update fee');
     } finally { setProcessing(null); }
@@ -63,11 +67,20 @@ export default function FinanceDashboard() {
         <div className="flex items-center gap-4">
           <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
           <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">FINANCE</span>
+          <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
           <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {showPasswordChange && (
+          <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
+            <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>
+            <ChangePassword />
+            <button onClick={() => setShowPasswordChange(false)} className="mt-4 text-sm text-stone hover:text-brand transition">Cancel</button>
+          </div>
+        )}
+
         <h1 className="font-display text-2xl text-brand-dark mb-6">Fee Overview</h1>
         
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">

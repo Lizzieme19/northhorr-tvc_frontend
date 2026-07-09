@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { departmentsApi } from '@/lib/services';
 import api from '@/lib/api';
 
 const Field = ({ label, name, type = 'text', required = false, value, onChange, ...props }: any) => (
@@ -23,8 +24,8 @@ export default function ApplicationForm() {
     surname: '', other_names: '', gender: '', date_of_birth: '', nationality: 'Kenyan', religion: '',
     id_number: '', birth_cert_no: '', email: '', phone: '', address: '',
     previous_school: '', kcpe_index: '', kcpe_marks: '', kcse_index: '', kcse_grade: '',
-    father_names: '', father_phone: '', father_id: '', father_occupation: '', father_date_of_birth: '', father_alive: '',
-    mother_names: '', mother_phone: '', mother_id: '', mother_occupation: '', mother_date_of_birth: '', mother_alive: '',
+    father_present: true, father_name: '', father_phone: '', father_email: '', father_occupation: '',
+    mother_present: true, mother_name: '', mother_phone: '', mother_email: '', mother_occupation: '',
     siblings_no: '',
     emergency_name_1: '', emergency_phone_1: '', relationship_1: '', emergency_address_1: '',
     emergency_name_2: '', emergency_phone_2: '', relationship_2: '', emergency_address_2: '',
@@ -36,7 +37,7 @@ export default function ApplicationForm() {
   });
 
   useEffect(() => {
-    api.get('/departments').then(r => setDepartments(r.data)).catch(() => {});
+    departmentsApi.getAll().then(r => setDepartments(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -56,7 +57,28 @@ export default function ApplicationForm() {
     e.preventDefault();
     setSubmitting(true);
     const data = new FormData();
-    Object.entries(formData).forEach(([k, v]) => data.append(k, v as string));
+    
+    // Map frontend parent fields to backend schema
+    const backendData = {
+      ...formData,
+      // Map father details
+      father_present: formData.father_present,
+      father_name: formData.father_present ? formData.father_name : null,
+      father_phone: formData.father_present ? formData.father_phone : null,
+      father_email: formData.father_present ? formData.father_email : null,
+      father_occupation: formData.father_present ? formData.father_occupation : null,
+      // Map mother details
+      mother_present: formData.mother_present,
+      mother_name: formData.mother_present ? formData.mother_name : null,
+      mother_phone: formData.mother_present ? formData.mother_phone : null,
+      mother_email: formData.mother_present ? formData.mother_email : null,
+      mother_occupation: formData.mother_present ? formData.mother_occupation : null,
+      // Map emergency details - use first emergency contact
+      emergency_person: formData.emergency_name_1,
+      emergency_phone: formData.emergency_phone_1,
+    };
+    
+    Object.entries(backendData).forEach(([k, v]) => data.append(k, v as string));
     Object.entries(files).forEach(([k, v]: any) => { if (v) data.append(k, v); });
 
     try {
@@ -87,7 +109,7 @@ export default function ApplicationForm() {
     <div>
       {/* Stepper Header */}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-        {[1, 2, 3, 4, 5].map(i => (
+        {[1, 2, 3, 4].map(i => (
           <div key={i} className={`flex-1 h-2 rounded-full min-w-[40px] transition-colors ${step >= i ? 'bg-brand' : 'bg-stone/20'}`} />
         ))}
       </div>
@@ -95,11 +117,10 @@ export default function ApplicationForm() {
         {step === 1 && 'Step 1: Course Selection'}
         {step === 2 && 'Step 2: Personal Details'}
         {step === 3 && 'Step 3: Academic Background'}
-        {step === 4 && 'Step 4: Parent & Medical'}
-        {step === 5 && 'Step 5: Document Uploads'}
+        {step === 4 && 'Step 4: Parent & Emergency Details'}
       </h2>
 
-      <form onSubmit={step === 5 ? handleSubmit : nextStep} className="space-y-8 animate-fade-in">
+      <form onSubmit={step === 4 ? handleSubmit : nextStep} className="space-y-8 animate-fade-in">
         
         {step === 1 && (
           <div className="grid sm:grid-cols-2 gap-5">
@@ -166,39 +187,47 @@ export default function ApplicationForm() {
         {step === 4 && (
           <div className="space-y-8">
             <div>
-              <h3 className="text-lg font-display text-brand-dark mb-4">Parent/Guardian Details</h3>
-              <div className="grid sm:grid-cols-2 gap-5">
-                <Field name="father_names" label="Full Name of Father" required value={formData.father_names} onChange={handleChange} />
-                <Field name="father_phone" label="Phone Number" required value={formData.father_phone} onChange={handleChange} />
-                <Field name="father_id" label="National ID/ Passport No" required value={formData.father_id} onChange={handleChange} />
-                <Field name="father_occupation" label="Occupation" required value={formData.father_occupation} onChange={handleChange} />
-                <Field name="father_date_of_birth" label="Date of Birth" type="date" required value={formData.father_date_of_birth} onChange={handleChange} />
-                <div>
-              <label className="block text-sm font-semibold text-brand-dark mb-1.5">Is Father Alive? <span className="text-terracotta">*</span></label>
-              <select name="father_alive" required value={formData.father_alive} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                <option value="">Select...</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-                <Field name="mother_names" label="Full Name of Mother" required value={formData.mother_names} onChange={handleChange} />
-                <Field name="mother_phone" label="Phone Number" required value={formData.mother_phone} onChange={handleChange} />
-                <Field name="mother_id" label="National ID/ Passport No" required value={formData.mother_id} onChange={handleChange} />
-                <Field name="mother_occupation" label="Occupation" required value={formData.mother_occupation} onChange={handleChange} />
-                <Field name="mother_date_of_birth" label="Date of Birth" type="date" required value={formData.mother_date_of_birth} onChange={handleChange} />
-                <div>
-              <label className="block text-sm font-semibold text-brand-dark mb-1.5">Is Mother Alive? <span className="text-terracotta">*</span></label>
-              <select name="mother_alive" required value={formData.mother_alive} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                <option value="">Select...</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-                <Field name="siblings_no" label="Number of Siblings" required value={formData.siblings_no} onChange={handleChange} />
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="text-lg font-display text-brand-dark">Father Information</h3>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-stone">Present?</label>
+                  <button type="button" onClick={() => setFormData({ ...formData, father_present: !formData.father_present })}
+                    className={`w-12 h-6 rounded-full transition ${formData.father_present ? 'bg-brand' : 'bg-stone/30'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full transition ${formData.father_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
               </div>
+              {formData.father_present && (
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <Field name="father_name" label="Father's Name" required value={formData.father_name} onChange={handleChange} />
+                  <Field name="father_phone" label="Father's Phone" required value={formData.father_phone} onChange={handleChange} />
+                  <Field name="father_email" label="Father's Email" type="email" value={formData.father_email} onChange={handleChange} />
+                  <Field name="father_occupation" label="Father's Occupation" value={formData.father_occupation} onChange={handleChange} />
+                </div>
+              )}
             </div>
             <div>
-              <h3 className="text-lg font-display text-brand-dark mb-4">Emergency Details (Give names and adresses of two persons who can be contacted in case of an emergency)</h3>
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="text-lg font-display text-brand-dark">Mother Information</h3>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-stone">Present?</label>
+                  <button type="button" onClick={() => setFormData({ ...formData, mother_present: !formData.mother_present })}
+                    className={`w-12 h-6 rounded-full transition ${formData.mother_present ? 'bg-brand' : 'bg-stone/30'}`}>
+                    <div className={`w-5 h-5 bg-white rounded-full transition ${formData.mother_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              </div>
+              {formData.mother_present && (
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <Field name="mother_name" label="Mother's Name" required value={formData.mother_name} onChange={handleChange} />
+                  <Field name="mother_phone" label="Mother's Phone" required value={formData.mother_phone} onChange={handleChange} />
+                  <Field name="mother_email" label="Mother's Email" type="email" value={formData.mother_email} onChange={handleChange} />
+                  <Field name="mother_occupation" label="Mother's Occupation" value={formData.mother_occupation} onChange={handleChange} />
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="text-lg font-display text-brand-dark mb-4">Emergency Details (Give names and addresses of two persons who can be contacted in case of an emergency)</h3>
               <div className="grid sm:grid-cols-2 gap-5">
                 <Field name="emergency_name_1" label="Name" required value={formData.emergency_name_1} onChange={handleChange} />
                 <Field name="relationship_1" label="Relationship" required value={formData.relationship_1} onChange={handleChange} />
@@ -214,28 +243,15 @@ export default function ApplicationForm() {
           </div>
         )}
 
-        {step === 5 && (
-          <div className="space-y-4">
-            <p className="text-sm text-stone mb-4">Please upload clear scanned copies of the following documents (PDF, JPG, PNG). Max 5MB per file.</p>
-            <div className="grid sm:grid-cols-2 gap-5">
-              <Field name="doc_kcpe" label="KCPE Result Slip/Certificate" type="file" onChange={handleFileChange} />
-              <Field name="doc_kcse" label="KCSE Result Slip/Certificate" type="file" onChange={handleFileChange} />
-              <Field name="doc_birth_cert" label="Birth Certificate" type="file" onChange={handleFileChange} />
-              <Field name="doc_id_copy" label="Copy of National ID" type="file" onChange={handleFileChange} />
-              <Field name="doc_medical" label="Medical Examination Certificate" type="file" onChange={handleFileChange} />
-            </div>
-          </div>
-        )}
-
         <div className="pt-6 flex items-center justify-between border-t border-stone/10">
           {step > 1 ? (
             <button type="button" onClick={prevStep} className="px-6 py-3 rounded-full text-brand font-semibold hover:bg-brand/10 transition">
               ← Back
             </button>
           ) : <div />}
-          
+
           <button type="submit" disabled={submitting} className="px-8 py-3 rounded-full bg-brand text-cream font-semibold hover:bg-brand-dark transition shadow-lg disabled:opacity-50">
-            {step === 5 ? (submitting ? 'Submitting...' : 'Submit Application ✅') : 'Next Step →'}
+            {step === 4 ? (submitting ? 'Submitting...' : 'Submit Application ✅') : 'Next Step →'}
           </button>
         </div>
       </form>
