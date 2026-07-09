@@ -1,6 +1,25 @@
 // Static placeholder data for the North Horr TVC public website.
 // Backend will eventually replace these structures via API.
 
+export const campusGallery = [
+  {
+    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+    alt: "Campus View",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+    alt: "Library",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+    alt: "Workshop",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+    alt: "Campus View",
+  },
+]
+
 export type Course = {
   name: string;
   levels: string;
