@@ -61,7 +61,7 @@ export default function ChangePassword() {
       
       <div>
         <label className="block text-sm font-semibold text-brand-dark mb-1.5">
-          What is the Current Password
+          Current Password
         </label>
         <input
           type="password"
