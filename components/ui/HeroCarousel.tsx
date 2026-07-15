@@ -79,24 +79,24 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
 
                 {/** Overlay */}
                 <div className="absolute inset-0 bg-black/50"/>
-                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"/>
+                <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent"/>
                 
                 {/** Content */}
-                <div className="relative z-20 mx-auto flex h-full max-w-7xl items-center px-6">
+                <div className="relative z-20 mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6">
 
                   <div className="max-w-2xl text-white">
-                    <span className="text-4xl font-bold mb-4">Welcome to Northhorr TVC</span>
-                    <h1 className="mt-6 font-display text-5xl font-bold leading-tight lg:text-7xl">
+                    <span className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">Welcome to Northhorr TVC</span>
+                    <h1 className="mt-4 sm:mt-6 font-display text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold leading-tight">
                       {slide.title}
                     </h1>
 
-                    <p className="mt-6 text-lg text-white/90">
+                    <p className="mt-4 sm:mt-6 text-sm sm:text-base md:text-lg text-white/90">
                       {slide.description}
                     </p>
 
                     <Link 
                       href={slide.buttonLink} 
-                      className="mt-6 inline-flex rounded-full bg-gold text-black px-8 py-4 font-semibold transition hover:bg-gold-soft">
+                      className="mt-4 sm:mt-6 inline-flex rounded-full bg-gold text-black px-6 sm:px-8 py-3 sm:py-4 font-semibold transition hover:bg-gold-soft text-sm sm:text-base">
                         {slide.buttonText}
                     </Link>
 
@@ -109,22 +109,35 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
           </div>
         </div>
 
-        {/** Left */}
-
+        {/** Left - Hidden on mobile */}
         <button 
           onClick={scrollPrev}
-          className="absolute left-8 top-1/2 -translate-y-1/2 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-xl transition hover:bg-white"
+          className="hidden sm:flex absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-30 h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/90 shadow-xl transition hover:bg-white"
         >
-          <ChevronLeft className="h-6 w-6" />
+          <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
         </button>
 
-        {/** Right */}
+        {/** Right - Hidden on mobile */}
         <button 
           onClick={scrollNext}
-          className="absolute right-8 top-1/2 -translate-y-1/2 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-xl transition hover:bg-white"
+          className="hidden sm:flex absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-30 h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-white/90 shadow-xl transition hover:bg-white"
         >
-          <ChevronRight className="h-6 w-6" />
+          <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
         </button>
+
+        {/** Carousel Indicators - Visible on mobile */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+          {scrollSnaps.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => scrollTo(index)}
+              className={`h-2 w-2 rounded-full transition-all ${
+                selectedIndex === index ? 'bg-gold w-6' : 'bg-white/50 hover:bg-white/80'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
     </section>
   )
     
