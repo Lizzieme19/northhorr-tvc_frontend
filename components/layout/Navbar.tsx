@@ -26,6 +26,17 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (open) setOpen(false);
+    };
+    if (open) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [open]);
+
   return (
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${scrolled
@@ -51,15 +62,20 @@ export function Navbar() {
         </div>
       </div>
 
-      <nav className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <Image src={'/Logo/NorthHorr.png'} width={100} height={100} alt="NorthHorr" />
-          {/* <div className="h-12 w-12 rounded-full bg-cream grid place-items-center text-brand font-display font-extrabold text-lg shadow-md group-hover:scale-105 transition">
-            NT
-          </div> */}
-          <div className="text-cream leading-tight">
-            <div className="font-display font-bold tracking-tight text-base sm:text-lg">
-              North Horr Technical and Vocational College
+      <nav className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+          <div className="relative h-10 sm:h-12 w-10 sm:w-12 shrink-0">
+            <Image 
+              src={'/Logo/NorthHorr.png'} 
+              width={48} 
+              height={48} 
+              alt="NorthHorr"
+              className="object-contain"
+            />
+          </div>
+          <div className="text-cream leading-tight hidden sm:block">
+            <div className="font-display font-bold tracking-tight text-sm sm:text-base lg:text-lg">
+              North Horr TVC
             </div>
             <div className="text-[10px] sm:text-xs uppercase tracking-widest text-gold/90">
               Igniting a brighter future
@@ -93,7 +109,8 @@ export function Navbar() {
         <button
           onClick={() => setOpen((s) => !s)}
           aria-label="Toggle menu"
-          className="lg:hidden text-cream p-2 rounded hover:bg-brand-dark transition"
+          aria-expanded={open}
+          className="lg:hidden text-cream p-2 rounded-lg hover:bg-brand-dark/50 transition active:scale-95"
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
             {open ? (
@@ -114,44 +131,79 @@ export function Navbar() {
 
       {/* Mobile menu */}
       <div
-        className={`lg:hidden overflow-hidden bg-brand-dark transition-[max-height] duration-300 ${open ? "max-h-[600px]" : "max-h-0"
+        className={`lg:hidden overflow-hidden bg-brand-dark transition-all duration-300 ease-in-out ${open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
           }`}
       >
-        <ul className="px-6 py-4 flex flex-col gap-1">
+        <div className="px-4 sm:px-6 py-4 flex flex-col gap-1">
+          {/* Mobile contact info */}
+          <div className="mb-4 pb-4 border-b border-brand/30">
+            <div className="text-xs text-cream/70 mb-2">Contact Us</div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2 text-cream/90">
+                <span>📍</span>
+                <span>North Horr, Marsabit County</span>
+              </div>
+              <div className="flex items-center gap-2 text-cream/90">
+                <span>📧</span>
+                <a href="mailto:northhorrtvc@gmail.com" className="hover:text-gold transition">
+                  northhorrtvc@gmail.com
+                </a>
+              </div>
+              <div className="flex items-center gap-2 text-cream/90">
+                <span>📞</span>
+                <a href="tel:+254717977218" className="hover:text-gold transition">
+                  +254 717 977 218
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          {/* Navigation links */}
           {navLinks.map((l) => (
-            <li key={l.href}>
-              <Link
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="block px-3 py-2.5 rounded-md text-cream/90 hover:bg-brand hover:text-gold transition"
-              >
-                {l.label}
-              </Link>
-            </li>
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setOpen(false)}
+              className="block px-4 py-3 rounded-lg text-cream/90 hover:bg-brand hover:text-gold transition text-base font-medium"
+            >
+              {l.label}
+            </Link>
           ))}
-          <li className="mt-2">
+          
+          {/* Portal link */}
+          <div className="mt-2 pt-4 border-t border-brand/30">
+            <PortalLinkButton mobile={true} onClose={() => setOpen(false)} />
+          </div>
+          
+          {/* Apply button */}
+          <div className="mt-4">
             <Link
               href="/application"
               onClick={() => setOpen(false)}
-              className="block text-center px-5 py-2.5 rounded-full bg-gold text-brand-dark font-semibold"
+              className="block w-full text-center px-5 py-3.5 rounded-full bg-gold text-brand-dark font-semibold text-base hover:bg-gold-soft transition shadow-lg"
             >
               Apply Now
             </Link>
-          </li>
-        </ul>
+          </div>
+        </div>
       </div>
     </header>
   );
 }
 
-function PortalLinkButton() {
+function PortalLinkButton({ mobile = false, onClose }: { mobile?: boolean; onClose?: () => void } = {}) {
   const { isAuthenticated, user } = useAuth();
   
+  const handleClick = () => {
+    if (onClose) onClose();
+  };
+
   if (isAuthenticated && user) {
     return (
       <Link
         href={portalRoute(user.role)}
-        className="hover:text-gold transition"
+        onClick={handleClick}
+        className={`hover:text-gold transition ${mobile ? 'block px-4 py-3 rounded-lg text-cream/90 hover:bg-brand text-base font-medium' : ''}`}
       >
         Student Portal
       </Link>
@@ -159,7 +211,11 @@ function PortalLinkButton() {
   }
 
   return (
-    <Link href="/login" className="hover:text-gold transition">
+    <Link 
+      href="/login" 
+      onClick={handleClick}
+      className={`hover:text-gold transition ${mobile ? 'block px-4 py-3 rounded-lg text-cream/90 hover:bg-brand text-base font-medium' : ''}`}
+    >
       Student Portal
     </Link>
   );

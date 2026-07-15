@@ -2,43 +2,43 @@
 // Backend will eventually replace these structures via API.
 export const heroSlides = [
   {
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=2000&q=80",
     title: "Igniting a Brighter Future Through Skill",
     description: "North Horr Technical and Vocational College offers accredited TVET programmes that empower learners with practical skills for employment and entrepreneurship.",
     buttonText: "Explore Courses",
     buttonLink: "/courses",
   },
   {
-    image: "/images/hero/workshop.jpg",
+    image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=2000&q=80",
     title: "Hands-on Practical Learning",
     description: "Modern workshops and experienced instructors prepare students for real-world careers.",
     buttonText: "Our Departments",
-    buttonLink: "/departments",
+    buttonLink: "/courses",
   },
   {
-    image: "/images/hero/graduation.jpg",
+    image: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=2000&q=80",
     title: "Empowering Northern Kenya",
     description: "Producing competent graduates equipped to transform communities through technical excellence.",
     buttonText: "Apply Today",
-    buttonLink: "/contact",
+    buttonLink: "/application",
   }
 ]
 export const campusGallery = [
   {
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
-    alt: "Campus View",
+    image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80",
+    alt: "Campus Gate",
   },
   {
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80",
     alt: "Library",
   },
   {
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80",
     alt: "Workshop",
   },
   {
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
-    alt: "Campus View",
+    image: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1200&q=80",
+    alt: "Graduation",
   },
 ]
 
