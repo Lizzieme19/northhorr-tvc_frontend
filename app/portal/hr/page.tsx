@@ -23,7 +23,7 @@ export default function HRDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    staffApi.getAll().then(r => setStaff(r.data || [])).catch(() => {});
+    staffApi.getAll().then(r => setStaff(r.data?.staff || r.data || [])).catch(() => {});
     designationsApi.getAll().then(r => setDesignations(r.data || [])).catch(() => {});
     leavesApi.getAll().then(r => setLeaves(r.data || [])).catch(() => {});
   }, []);
@@ -44,7 +44,7 @@ export default function HRDashboard() {
     if (!confirm('Are you sure you want to delete this item?')) return;
     try {
       await api.delete(id);
-      if (tab === 'staff') staffApi.getAll().then(r => setStaff(r.data || []));
+      if (tab === 'staff') staffApi.getAll().then(r => setStaff(r.data?.staff || r.data || []));
       if (tab === 'designations') designationsApi.getAll().then(r => setDesignations(r.data || []));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to delete');
