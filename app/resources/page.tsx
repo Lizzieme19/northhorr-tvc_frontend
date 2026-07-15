@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
-import { resources } from "@/lib/data";
+import { resourcesApi } from "@/lib/services";
 
 export const metadata: Metadata = { title: "Downloadable Resources" };
 
@@ -10,9 +10,24 @@ const typeColors: Record<string, string> = {
   PDF: "bg-terracotta/15 text-terracotta",
   DOCX: "bg-sky/15 text-sky",
   ZIP: "bg-gold/15 text-brand-dark",
+  FILE: "bg-stone/15 text-stone",
 };
 
-export default function ResourcesPage() {
+async function getResources() {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/resources`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) return [];
+    return await response.json();
+  } catch {
+    return [];
+  }
+}
+
+export default async function ResourcesPage() {
+  const resources = await getResources();
+
   return (
     <>
       <PageHero
@@ -25,7 +40,7 @@ export default function ResourcesPage() {
       <section className="py-16">
         <div className="mx-auto max-w-6xl px-6 space-y-14">
           {categories.map((cat) => {
-            const items = resources.filter((r) => r.category === cat);
+            const items = resources.filter((r: any) => r.category === cat);
             if (items.length === 0) return null;
             return (
               <div key={cat}>
@@ -35,15 +50,15 @@ export default function ResourcesPage() {
                   <span className="text-stone text-sm">({items.length})</span>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {items.map((r) => (
+                  {items.map((r: any) => (
                     <div
-                      key={r.title}
+                      key={r.id}
                       className="group flex items-center gap-4 p-5 bg-white rounded-2xl border border-stone/15 hover:border-brand hover:shadow-md transition"
                     >
                       <div
-                        className={`h-14 w-14 rounded-xl grid place-items-center font-display font-bold text-sm ${typeColors[r.type]}`}
+                        className={`h-14 w-14 rounded-xl grid place-items-center font-display font-bold text-sm ${typeColors[r.file_type] || typeColors.FILE}`}
                       >
-                        {r.type}
+                        {r.file_type}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-display font-semibold text-brand-dark truncate">
@@ -52,14 +67,17 @@ export default function ResourcesPage() {
                         <p className="text-sm text-stone line-clamp-1">
                           {r.description}
                         </p>
-                        <div className="mt-1 text-xs text-stone-soft">{r.size}</div>
+                        <div className="mt-1 text-xs text-stone-soft">{r.file_size}</div>
                       </div>
-                      <button
+                      <a
+                        href={r.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="shrink-0 px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition"
                         title="Download"
                       >
                         ↓ Download
-                      </button>
+                      </a>
                     </div>
                   ))}
                 </div>

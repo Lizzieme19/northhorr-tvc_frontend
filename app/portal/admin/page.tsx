@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { studentsApi, applicationsApi, departmentsApi, coursesApi } from '@/lib/services';
+import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -35,6 +35,10 @@ export default function AdminDashboard() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [studentCredentials, setStudentCredentials] = useState<any>(null);
+  const [resources, setResources] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [resourceFile, setResourceFile] = useState<File | null>(null);
+  const [resourceForm, setResourceForm] = useState({ title: '', description: '', category: 'Prospectus' });
 
   // Auth guard
   useEffect(() => {
@@ -44,6 +48,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     studentsApi.getStats().then(r => setStats(r.data)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (tab === 'resources') {
+      resourcesApi.getAll().then(r => setResources(r.data || [])).catch(() => setResources([]));
+    }
+  }, [tab]);
 
   useEffect(() => {
     const params: any = { page, limit: 15 };
@@ -91,6 +101,46 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleResourceUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resourceFile || !resourceForm.title || !resourceForm.category) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', resourceFile);
+      formData.append('title', resourceForm.title);
+      formData.append('description', resourceForm.description);
+      formData.append('category', resourceForm.category);
+      
+      await api.post('/resources', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      alert('Resource uploaded successfully!');
+      setResourceFile(null);
+      setResourceForm({ title: '', description: '', category: 'Prospectus' });
+      resourcesApi.getAll().then(r => setResources(r.data || []));
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to upload resource');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleResourceDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this resource?')) return;
+    try {
+      await resourcesApi.delete(id);
+      setResources(prev => prev.filter(r => r.id !== id));
+      alert('Resource deleted successfully');
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to delete resource');
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
@@ -117,6 +167,7 @@ export default function AdminDashboard() {
           { key: 'students', label: '🎓 Students' },
           { key: 'courses', label: '📚 Dept & Courses' },
           { key: 'staff', label: '👥 Staff & Import' },
+          { key: 'resources', label: '📁 Resources' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
@@ -278,6 +329,101 @@ export default function AdminDashboard() {
                   <div className="text-green-700">Imported: {importResult.imported} | Errors: {importResult.errors}</div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── RESOURCES ── */}
+        {tab === 'resources' && (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Upload Resource */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Upload Resource</h2>
+              <form onSubmit={handleResourceUpload} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={resourceForm.title}
+                    onChange={e => setResourceForm({...resourceForm, title: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Category *</label>
+                  <select
+                    required
+                    value={resourceForm.category}
+                    onChange={e => setResourceForm({...resourceForm, category: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  >
+                    <option value="Prospectus">Prospectus</option>
+                    <option value="Forms">Forms</option>
+                    <option value="Timetables">Timetables</option>
+                    <option value="Policies">Policies</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
+                  <textarea
+                    value={resourceForm.description}
+                    onChange={e => setResourceForm({...resourceForm, description: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">File *</label>
+                  <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
+                    <input type="file" className="hidden" onChange={e => setResourceFile(e.target.files?.[0] || null)} />
+                    <div className="text-3xl mb-2">📁</div>
+                    <div className="text-sm font-medium text-brand-dark">{resourceFile ? resourceFile.name : 'Click to upload file'}</div>
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={!resourceFile || uploading}
+                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                >
+                  {uploading ? 'Uploading…' : 'Upload Resource'}
+                </button>
+              </form>
+            </div>
+
+            {/* Resources List */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Uploaded Resources</h2>
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {resources.length === 0 ? (
+                  <p className="text-stone text-center py-8">No resources uploaded yet</p>
+                ) : (
+                  resources.map(r => (
+                    <div key={r.id} className="flex items-center justify-between p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-brand-dark truncate">{r.title}</div>
+                        <div className="text-sm text-stone">{r.category} • {r.file_type} • {r.file_size}</div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <a
+                          href={r.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition"
+                        >
+                          View
+                        </a>
+                        <button
+                          onClick={() => handleResourceDelete(r.id)}
+                          className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}

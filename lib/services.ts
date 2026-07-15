@@ -156,3 +156,11 @@ export const budgetsApi = {
   create: (data: any) => api.post('/budgets', data),
   update: (id: string, data: any) => api.put(`/budgets/${id}`, data),
 };
+
+// Resources
+export const resourcesApi = {
+  getAll: (params?: any) => api.get('/resources', { params }),
+  getById: (id: string) => api.get(`/resources/${id}`),
+  create: (data: any) => api.post('/resources', data),
+  delete: (id: string) => api.delete(`/resources/${id}`),
+};
