@@ -9,7 +9,7 @@ export default function ContactPage() {
   const contactCards = [
     { icon: "📍", title: "Visit", lines: [collegeInfo.location, collegeInfo.poBox] },
     { icon: "📞", title: "Call", lines: [collegeInfo.phone, "Mon–Fri, 8am–5pm"] },
-    { icon: "✉️", title: "Email", lines: [collegeInfo.email, collegeInfo.admissionsEmail] },
+    { icon: "✉️", title: "Email", lines: [collegeInfo.email]},
   ];
 
   return (

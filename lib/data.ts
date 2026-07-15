@@ -654,6 +654,7 @@ export const collegeInfo = {
   phone: "0714634023",
   email: "northhorrtvc@gmail.com",
 
+
   /* admissionsEmail: "admissions@ntvc.ac.ke", */
   socials: {
     facebook: "https://facebook.com/ntvckenya",
