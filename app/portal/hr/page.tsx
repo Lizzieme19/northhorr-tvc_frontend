@@ -174,7 +174,7 @@ export default function HRDashboard() {
                   <div key={d.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-brand-dark">{d.title}</div>
-                      <div className="text-sm text-stone">Grade: {d.grade} • Salary Range: KES {d.min_salary} - {d.max_salary}</div>
+                      <div className="text-sm text-stone">Grade: {d.grade_level} • Salary Range: KES {d.salary_min} - {d.salary_max}</div>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => handleEdit(d)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
@@ -288,16 +288,16 @@ export default function HRDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Grade</label>
-                    <input name="grade" value={formData.grade || ''} onChange={(e) => setFormData({...formData, grade: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <input name="grade_level" value={formData.grade_level || ''} onChange={(e) => setFormData({...formData, grade_level: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Min Salary</label>
-                      <input name="min_salary" type="number" value={formData.min_salary || ''} onChange={(e) => setFormData({...formData, min_salary: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                      <input name="salary_min" type="number" value={formData.salary_min || ''} onChange={(e) => setFormData({...formData, salary_min: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Max Salary</label>
-                      <input name="max_salary" type="number" value={formData.max_salary || ''} onChange={(e) => setFormData({...formData, max_salary: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                      <input name="salary_max" type="number" value={formData.salary_max || ''} onChange={(e) => setFormData({...formData, salary_max: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                     </div>
                   </div>
                   <div>
