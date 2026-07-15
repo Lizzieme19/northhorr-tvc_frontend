@@ -251,6 +251,21 @@ export default function HRDashboard() {
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
                     <input name="phone" value={formData.phone || ''} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                   </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Gender *</label>
+                      <select name="gender" required value={formData.gender || ''} onChange={(e) => setFormData({...formData, gender: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                        <option value="">Select...</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Date of Birth *</label>
+                      <input name="date_of_birth" type="date" required value={formData.date_of_birth || ''} onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Designation ID</label>
                     <input name="designation_id" value={formData.designation_id || ''} onChange={(e) => setFormData({...formData, designation_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
@@ -270,8 +285,8 @@ export default function HRDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Employment Date</label>
-                      <input name="employment_date" type="date" value={formData.employment_date || ''} onChange={(e) => setFormData({...formData, employment_date: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Employment Date *</label>
+                      <input name="date_hired" type="date" required value={formData.date_hired || ''} onChange={(e) => setFormData({...formData, date_hired: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                     </div>
                   </div>
                   <div>
