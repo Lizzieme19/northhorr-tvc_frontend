@@ -25,7 +25,7 @@ export default function HRDashboard() {
   useEffect(() => {
     staffApi.getAll().then(r => setStaff(Array.isArray(r.data) ? r.data : (r.data?.staff || []))).catch(() => setStaff([]));
     designationsApi.getAll().then(r => setDesignations(Array.isArray(r.data) ? r.data : [])).catch(() => setDesignations([]));
-    leavesApi.getAll().then(r => setLeaves(Array.isArray(r.data) ? r.data : [])).catch(() => setLeaves([]));
+    leavesApi.getAll().then(r => setLeaves(r.data?.leaves || [])).catch(() => setLeaves([]));
   }, []);
 
   const handleCreate = () => {
