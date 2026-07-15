@@ -23,7 +23,7 @@ export default function StaffDashboard() {
   useEffect(() => {
     if (user?.role === 'STAFF') {
       api.get('/staff/me').then(r => setProfile(r.data)).catch(() => {});
-      leavesApi.getAll().then(r => setLeaves(r.data)).catch(() => {});
+      leavesApi.getAll().then(r => setLeaves(r.data || [])).catch(() => setLeaves([]));
     }
   }, [user]);
 
@@ -34,7 +34,7 @@ export default function StaffDashboard() {
       await leavesApi.create(leaveForm);
       setShowLeaveForm(false);
       setLeaveForm({ type: '', start_date: '', end_date: '', reason: '' });
-      leavesApi.getAll().then(r => setLeaves(r.data));
+      leavesApi.getAll().then(r => setLeaves(r.data || []));
       alert('Leave request submitted successfully');
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to submit leave request');

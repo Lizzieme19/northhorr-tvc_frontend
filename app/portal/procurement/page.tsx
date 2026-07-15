@@ -26,12 +26,12 @@ export default function ProcurementDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    suppliersApi.getAll().then(r => setSuppliers(r.data || [])).catch(() => {});
-    requisitionsApi.getAll().then(r => setRequisitions(r.data || [])).catch(() => {});
-    rfqsApi.getAll().then(r => setRfqs(r.data || [])).catch(() => {});
-    lposApi.getAll().then(r => setLpos(r.data || [])).catch(() => {});
-    grnsApi.getAll().then(r => setGrns(r.data || [])).catch(() => {});
-    inventoryApi.getAll().then(r => setInventory(r.data || [])).catch(() => {});
+    suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || [])).catch(() => setSuppliers([]));
+    requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || [])).catch(() => setRequisitions([]));
+    rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || [])).catch(() => setRfqs([]));
+    lposApi.getAll().then(r => setLpos(r.data?.lpos || [])).catch(() => setLpos([]));
+    grnsApi.getAll().then(r => setGrns(r.data?.grns || [])).catch(() => setGrns([]));
+    inventoryApi.getAll().then(r => setInventory(r.data?.items || [])).catch(() => setInventory([]));
   }, []);
 
   const handleCreate = () => {
