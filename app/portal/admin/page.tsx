@@ -714,6 +714,10 @@ function CreateStaffForm() {
           <option value="ADMIN">Admin</option>
           <option value="DEPT_HEAD">Department Head</option>
           <option value="FINANCE">Finance</option>
+          <option value="HR">HR</option>
+          <option value="PROCUREMENT">Procurement</option>
+          <option value="STAFF">Staff</option>
+          <option value="STUDENT">Student</option>
         </select>
       </div>
       {form.role === 'DEPT_HEAD' && (
