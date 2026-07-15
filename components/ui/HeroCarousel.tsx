@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import Link from "next/link";
@@ -35,6 +35,31 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
   const scrollPrev = useCallback(()=> emblaApi?.scrollPrev(), [emblaApi]);
 
   const scrollNext = useCallback(()=> emblaApi?.scrollNext(), [emblaApi]);
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+
+  const onInit = useCallback((emblaApi: any) => {
+    setScrollSnaps(emblaApi.scrollSnapList());
+  }, []);
+
+  const onSelect = useCallback((emblaApi: any) => {
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, []);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    onInit(emblaApi);
+    onSelect(emblaApi);
+
+    emblaApi.on("reInit", onInit);
+    emblaApi.on("select", onSelect);
+  }, [emblaApi, onInit, onSelect]);
+
+  const scrollTo = useCallback((index: number) => {
+    if (emblaApi) emblaApi.scrollTo(index);
+  }, [emblaApi]);
 
   return (
     <section className="relative h-[85vh] overflow-hidden">
@@ -71,7 +96,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
 
                     <Link 
                       href={slide.buttonLink} 
-                      className="mt-6 inline-flex rounded-full bg-gold text-black px-0 py-4 font-semibold transition hover:bg-gold-sort">
+                      className="mt-6 inline-flex rounded-full bg-gold text-black px-8 py-4 font-semibold transition hover:bg-gold-soft">
                         {slide.buttonText}
                     </Link>
 
@@ -88,7 +113,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
 
         <button 
           onClick={scrollPrev}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex h-14vw-14 items-center justify-center rounded-full bg-white/90 shadow-xl transition hover:bg-white"
+          className="absolute left-8 top-1/2 -translate-y-1/2 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-xl transition hover:bg-white"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
