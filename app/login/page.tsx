@@ -124,12 +124,6 @@ export default function LoginPage() {
               Forgot password? Contact administration
             </a>
           </div>
-
-          <div className="mt-6 p-4 rounded-xl bg-cream-deep border border-stone/15 text-xs text-stone space-y-1">
-            <p className="font-semibold text-brand-dark">Demo credentials:</p>
-            <p>🔑 Admin: <code>admin@ntvc.ac.ke</code> / <code>Admin@NTVC2026</code></p>
-            <p>💰 Finance: <code>finance@ntvc.ac.ke</code> / <code>Finance@NTVC2026</code></p>
-          </div>
         </div>
 
         <p className="text-center text-cream/70 text-xs mt-6">
