@@ -33,10 +33,10 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="min-h-[100vh] grid place-items-center px-6 py-16 relative overflow-hidden">
+    <section className="min-h-screen grid place-items-center px-6 py-16 relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-dark via-brand to-brand-dark/80" />
+        <div className="absolute inset-0 bg-linear-to-br from-brand-dark via-brand to-brand-dark/80" />
         <div className="absolute inset-0 bg-dots opacity-20" />
       </div>
 
