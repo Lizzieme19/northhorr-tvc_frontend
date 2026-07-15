@@ -650,7 +650,7 @@ export const collegeInfo = {
   tagline: "Igniting a brighter future",
   motto: "Skill. Innovation. Service.",
   location: "North Horr Sub-County, Marsabit, Kenya",
-  poBox: "P.O. Box 12, North Horr",
+  poBox: "P.O. Box 200-60500, Marsabit",
   phone: "0714634023",
   email: "northhorrtvc@gmail.com",
 
