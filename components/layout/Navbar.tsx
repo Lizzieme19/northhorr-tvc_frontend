@@ -38,12 +38,12 @@ export function Navbar() {
         <div className="mx-auto max-w-7xl px-6 py-1.5 flex justify-between">
           <span>📍 North Horr, Marsabit County, Kenya</span>
           <div className="flex gap-4">
-            <a href="mailto:info@ntvc.ac.ke" className="hover:text-gold transition">
-              info@ntvc.ac.ke
+            <a href="mailto:northhorrtvc@gmail.com" className="hover:text-gold transition">
+              northhorrtvc@gmail.com
             </a>
             <span>|</span>
-            <a href="tel:+254700000000" className="hover:text-gold transition">
-              +254 700 000 000
+            <a href="tel:+254717977218" className="hover:text-gold transition">
+              +254 717 977 218
             </a>
             <span>|</span>
             <PortalLinkButton />

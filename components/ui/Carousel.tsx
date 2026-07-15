@@ -31,8 +31,9 @@ export function Carousel({
     {
       loop: true,
       align: "start"
+
     },
-    autoPlay ? [Autoplay({ delay: 4000, stopOnInteraction: false })] : []
+    autoPlay ? [Autoplay({ delay: 9000, stopOnInteraction: false })] : []
   );
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -46,16 +47,7 @@ export function Carousel({
     setSelectedIndex(emblaApi.selectedScrollSnap());
   }, []);
 
-  useEffect(() => {
-    if (!emblaApi) return;
-
-    onInit(emblaApi);
-    onSelect(emblaApi);
-
-    emblaApi.on("reInit", onInit);
-    emblaApi.on("select", onSelect);
-  }, [emblaApi, onInit, onSelect]);
-
+  
   const scrollTo = useCallback((index: number) => {
     if (emblaApi) emblaApi.scrollTo(index);
   }, [emblaApi]);
@@ -79,7 +71,7 @@ export function Carousel({
               overflow-hidden
               shadow-xl
               transition-all 
-              duration-500
+              duration-400
               group-hover:shadow-2xl
               group-hover:scale-105
               "

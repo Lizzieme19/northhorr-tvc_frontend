@@ -3,103 +3,30 @@ import Link from "next/link";
 import { departments, newsItems, stats, testimonials } from "@/lib/data";
 import { Carousel } from "@/components/ui/Carousel";
 import { campusGallery } from "@/lib/data";
+import { heroSlides } from "@/lib/data";
+import { HeroCarousel } from "@/components/ui/HeroCarousel";
+
 
 export default function Home() {
   return (
     <>
       {/* HERO */}
-      <section className="relative isolate overflow-hidden">
-        <div className="absolute inset-0 -z-10">
-          <Image
-            src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=2000&q=80"
-            alt="North Horr TVC campus"
-            fill
-            priority
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-dark/95 via-brand/85 to-brand-dark/70" />
-          <div className="absolute inset-0 bg-dots opacity-30" />
-        </div>
+      <section className="relative h-[85vh]">
+        <HeroCarousel slides={heroSlides} />
+        </section>
 
-        <div className="mx-auto max-w-7xl px-6 py-24 lg:py-32 grid lg:grid-cols-2 gap-12 items-center">
-          <div className="text-cream animate-fade-up">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/20 text-gold border border-gold/40 text-xs font-semibold tracking-wider uppercase">
-              <span className="h-1.5 w-1.5 rounded-full bg-gold animate-pulse" />
-              September 2025 Intake Open
-            </span>
-            <h1 className="mt-6 font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05]">
-              Igniting a <span className="text-gold">brighter</span>{" "}
-              future through skill.
-            </h1>
-            <p className="mt-6 text-base sm:text-lg text-cream/85 max-w-xl leading-relaxed">
-              North Horr Technical and Vocational College offers accredited
-              Level 3–6 TVET programs across nine departments — from
-              agriculture and engineering to ICT and fashion.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                href="/courses"
-                className="px-7 py-3.5 rounded-full bg-gold text-brand-dark font-semibold hover:bg-gold-soft transition shadow-lg shadow-gold/20"
-              >
-                Explore Courses →
-              </Link>
-              <Link
-                href="/about"
-                className="px-7 py-3.5 rounded-full border-2 border-cream/30 text-cream hover:border-gold hover:text-gold transition backdrop-blur-sm"
-              >
-                About the College
-              </Link>
-            </div>
-            <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-6">
-              {stats.map((s) => (
-                <div key={s.label}>
-                  <div className="text-3xl font-display font-bold text-gold">
-                    {s.value}
-                  </div>
-                  <div className="text-xs uppercase tracking-wider text-cream/70 mt-1">
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="hidden lg:block relative animate-fade-in">
-            <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-8 border-cream/10 rotate-2">
-              <Image
-                src="https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=1000&q=80"
-                alt="Student in workshop"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div className="absolute -bottom-6 -left-6 w-44 aspect-square rounded-2xl overflow-hidden shadow-xl border-4 border-cream/20 -rotate-6">
-              <Image
-                src="https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?auto=format&fit=crop&w=600&q=80"
-                alt="Carpentry trainee"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div className="absolute -top-4 -right-4 px-5 py-3 bg-cream rounded-2xl shadow-xl rotate-3">
-              <div className="text-xs text-stone uppercase tracking-wider">Accredited by</div>
-              <div className="font-display font-bold text-brand">TVETA & KNQA</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* WELCOME / ABOUT */}
       <section className="py-20 lg:py-28">
         <div className="mx-auto max-w-7xl px-6 grid lg:grid-cols-2 gap-14 items-center">
           <div className="relative">
             <div className="relative">
-              <Carousel 
-                items={campusGallery} 
-                autoPlay
-                showDots
-                showArrows
-                alt="North Horr TVC campus" 
+              <Image
+                src="/images/campus.jpg"
+                alt="Campus"
+                width={800}
+                height={600}
+                className="w-full h-auto rounded-2xl"
               />
             </div>
             <div className="absolute -bottom-8 -right-4 sm:-right-8 bg-brand text-cream rounded-2xl p-6 shadow-2xl max-w-xs">

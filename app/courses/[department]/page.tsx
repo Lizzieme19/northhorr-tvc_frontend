@@ -137,63 +137,82 @@ export default async function DepartmentPage(
         </div>
       </section>
 
-      <section className="py-16">
+      <section className="py-20 bg-cream-deep">
         <div className="mx-auto max-w-7xl px-6">
-        <h2 className="font-display text-3xl">
-          Career Opportunities
-        </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
-          {dep.careers.map(career=>(
-            <div
-            key={career}
-            className="border rounded-xl p-5 bg-white">  
-              💼 {career}
-            </div>
-          ))}
-        </div>
-        </div>
-      </section>
-
-      <section className="py-16">
-        <div className="mx-auto max-w-7xl px-6">
-          <h2 className="font-display text-3xl text-brand-dark">
-            Why Choose {dep.name}?
-          </h2>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-            {dep.highlights.map(item=>(
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-terracotta text-sm font-semibold uppercase tracking-widest">
+              Career Paths
+            </span>
+            <h2 className="mt-3 font-display text-3xl text-brand-dark">
+              Where our graduates work
+            </h2>
+            <p className="mt-4 text-stone">
+              Our programs prepare you for diverse opportunities across multiple industries
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {dep.careers.map((career, index) => (
               <div
-              key={item}
-              className="bg-white rounded-xl p-6 shadow-sm border border-stone/10"
+                key={career}
+                className="group p-6 bg-white rounded-2xl border border-stone/15 hover:border-brand/50 hover:shadow-lg transition flex items-start gap-4"
               >
-                ✅ {item}
+                <div className="h-12 w-12 rounded-xl bg-brand/10 group-hover:bg-brand/20 flex items-center justify-center text-2xl flex-shrink-0 transition">
+                  💼
+                </div>
+                <div>
+                  <h3 className="font-semibold text-brand-dark">{career}</h3>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20 bg-cream-deep">
+      <section className="py-20">
         <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <span className="text-terracotta text-sm font-semibold uppercase tracking-widest">
+              Department Advantages
+            </span>
+            <h2 className="mt-3 font-display text-3xl text-brand-dark">
+              Why Choose {dep.name}?
+            </h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {dep.highlights.map((item, index) => (
+              <div
+                key={item}
+                className="group p-6 bg-white rounded-2xl border border-stone/15 hover:border-gold hover:shadow-lg transition"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-full bg-gold/20 flex items-center justify-center text-brand-dark font-semibold flex-shrink-0">
+                    ✓
+                  </div>
+                  <p className="text-stone leading-relaxed">{item}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="mb-10">
             <span className="text-terracotta uppercase tracking-widest text-sm">
               Department Gallery
             </span>
-
             <h2 className="mt-2 font-display text-4xl text-brand-dark"> 
               Life in {dep.name}
             </h2>
-
             <p className="mt-4 max-w-2xl text-stone"> 
               See what it&apos;s like to study with us
             </p>
           </div>
           
-            <Carousel
-             items={dep.gallery.map(img => ({ image: img, alt: dep.name }))} 
-             alt={dep.name} />
-          
+          <Carousel
+           items={dep.gallery.map(img => ({ image: img, alt: dep.name }))} 
+           alt={dep.name} />
         </div>
       </section>
 
