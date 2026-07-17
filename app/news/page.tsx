@@ -120,7 +120,7 @@ export default function NewsPage() {
                 </h2>
                 <p className="mt-4 text-stone leading-relaxed">{featured.excerpt}</p>
                 <Link
-                  href="#"
+                  href={`/news/${featured.id}`}
                   className="inline-flex mt-6 px-6 py-3 rounded-full bg-brand text-cream font-semibold hover:bg-brand-dark transition"
                 >
                   Read full story
@@ -152,7 +152,7 @@ export default function NewsPage() {
                     {n.title}
                   </h3>
                   <p className="mt-2 text-sm text-stone line-clamp-3">{n.excerpt}</p>
-                  <Link href="#" className="inline-block mt-4 text-terracotta font-semibold text-sm">
+                  <Link href={`/news/${n.id}`} className="inline-block mt-4 text-terracotta font-semibold text-sm">
                     Read more →
                   </Link>
                 </div>
