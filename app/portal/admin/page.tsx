@@ -1144,6 +1144,10 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
     id_copy_back: null as File | null,
     parent_id_copy_front: null as File | null,
     parent_id_copy_back: null as File | null,
+    medical_report: null as File | null,
+    kcse_certificate: null as File | null,
+    birth_certificate: null as File | null,
+    other_documents: null as File | null,
   });
 
   useEffect(() => {
@@ -1186,9 +1190,15 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
       if (docFiles.id_copy_back) formData.append('id_copy_back', docFiles.id_copy_back);
       if (docFiles.parent_id_copy_front) formData.append('parent_id_copy_front', docFiles.parent_id_copy_front);
       if (docFiles.parent_id_copy_back) formData.append('parent_id_copy_back', docFiles.parent_id_copy_back);
+      if (docFiles.medical_report) formData.append('medical_report', docFiles.medical_report);
+      if (docFiles.kcse_certificate) formData.append('kcse_certificate', docFiles.kcse_certificate);
+      if (docFiles.birth_certificate) formData.append('birth_certificate', docFiles.birth_certificate);
+      if (docFiles.other_documents) formData.append('other_documents', docFiles.other_documents);
       
       if (formData.has('id_copy_front') || formData.has('id_copy_back') || 
-          formData.has('parent_id_copy_front') || formData.has('parent_id_copy_back')) {
+          formData.has('parent_id_copy_front') || formData.has('parent_id_copy_back') ||
+          formData.has('medical_report') || formData.has('kcse_certificate') ||
+          formData.has('birth_certificate') || formData.has('other_documents')) {
         setUploadingDocs(true);
         await api.post(`/students/${selectedStudent.id}/documents`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
@@ -1198,7 +1208,16 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
       const updated = await studentsApi.getAll({ page, limit: 15, search });
       setStudents(updated.data.students);
       setSelectedStudent(null);
-      setDocFiles({ id_copy_front: null, id_copy_back: null, parent_id_copy_front: null, parent_id_copy_back: null });
+      setDocFiles({ 
+        id_copy_front: null, 
+        id_copy_back: null, 
+        parent_id_copy_front: null, 
+        parent_id_copy_back: null,
+        medical_report: null,
+        kcse_certificate: null,
+        birth_certificate: null,
+        other_documents: null
+      });
       alert('Student profile updated successfully');
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to update student profile');
@@ -1413,6 +1432,26 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Back)</label>
                       <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, parent_id_copy_back: e.target.files?.[0] || null})}
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-brand-dark mb-1">Medical Report</label>
+                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, medical_report: e.target.files?.[0] || null})}
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-brand-dark mb-1">KCSE Certificate</label>
+                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, kcse_certificate: e.target.files?.[0] || null})}
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-brand-dark mb-1">Birth Certificate</label>
+                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, birth_certificate: e.target.files?.[0] || null})}
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-brand-dark mb-1">Other Documents</label>
+                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, other_documents: e.target.files?.[0] || null})}
                         className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                     </div>
                   </div>
