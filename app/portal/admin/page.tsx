@@ -727,6 +727,13 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [updating, setUpdating] = useState(false);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [docFiles, setDocFiles] = useState({
+    id_copy_front: null as File | null,
+    id_copy_back: null as File | null,
+    parent_id_copy_front: null as File | null,
+    parent_id_copy_back: null as File | null,
+  });
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -757,17 +764,36 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
 
   const handleUpdateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUpdating(true);
+    setUploadingDocs(true);
     try {
+      // First update the student profile data
       await studentsApi.update(selectedStudent.id, editForm);
+      
+      // Then upload documents if any files are selected
+      const formData = new FormData();
+      if (docFiles.id_copy_front) formData.append('id_copy_front', docFiles.id_copy_front);
+      if (docFiles.id_copy_back) formData.append('id_copy_back', docFiles.id_copy_back);
+      if (docFiles.parent_id_copy_front) formData.append('parent_id_copy_front', docFiles.parent_id_copy_front);
+      if (docFiles.parent_id_copy_back) formData.append('parent_id_copy_back', docFiles.parent_id_copy_back);
+      
+      if (formData.has('id_copy_front') || formData.has('id_copy_back') || 
+          formData.has('parent_id_copy_front') || formData.has('parent_id_copy_back')) {
+        setUploadingDocs(true);
+        await api.post(`/students/${selectedStudent.id}/documents`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+      
       const updated = await studentsApi.getAll({ page, limit: 15, search });
       setStudents(updated.data.students);
       setSelectedStudent(null);
+      setDocFiles({ id_copy_front: null, id_copy_back: null, parent_id_copy_front: null, parent_id_copy_back: null });
       alert('Student profile updated successfully');
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to update student profile');
     } finally {
       setUpdating(false);
+      setUploadingDocs(false);
     }
   };
 
@@ -960,22 +986,22 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Front)</label>
-                      <input type="file" accept="image/*" 
+                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, id_copy_front: e.target.files?.[0] || null})}
                         className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Back)</label>
-                      <input type="file" accept="image/*"
+                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, id_copy_back: e.target.files?.[0] || null})}
                         className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Front)</label>
-                      <input type="file" accept="image/*"
+                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, parent_id_copy_front: e.target.files?.[0] || null})}
                         className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Back)</label>
-                      <input type="file" accept="image/*"
+                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, parent_id_copy_back: e.target.files?.[0] || null})}
                         className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                     </div>
                   </div>
@@ -984,7 +1010,7 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
             </form>
 
             <div className="flex gap-3 pt-4 border-t border-stone/10">
-              <button type="submit" disabled={updating} onClick={handleUpdateStudent}
+              <button type="submit" disabled={uploadingDocs} onClick={handleUpdateStudent}
                 className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
                 {updating ? 'Saving...' : 'Save Changes'}
               </button>
