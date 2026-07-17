@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi } from '@/lib/services';
+import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources' | 'news'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -39,6 +39,10 @@ export default function AdminDashboard() {
   const [uploading, setUploading] = useState(false);
   const [resourceFile, setResourceFile] = useState<File | null>(null);
   const [resourceForm, setResourceForm] = useState({ title: '', description: '', category: 'Prospectus' });
+  const [news, setNews] = useState<any[]>([]);
+  const [newsForm, setNewsForm] = useState({ title: '', excerpt: '', content: '', category: 'News', is_featured: false, is_published: false });
+  const [newsImage, setNewsImage] = useState<File | null>(null);
+  const [uploadingNews, setUploadingNews] = useState(false);
 
   // Auth guard
   useEffect(() => {
@@ -52,6 +56,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (tab === 'resources') {
       resourcesApi.getAll().then(r => setResources(r.data || [])).catch(() => setResources([]));
+    }
+    if (tab === 'news') {
+      newsApi.getAll().then(r => setNews(r.data.news || [])).catch(() => setNews([]));
     }
   }, [tab]);
 
@@ -141,6 +148,49 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleNewsUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsForm.title || !newsForm.excerpt || !newsForm.category) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    setUploadingNews(true);
+    try {
+      const formData = new FormData();
+      formData.append('title', newsForm.title);
+      formData.append('excerpt', newsForm.excerpt);
+      formData.append('content', newsForm.content);
+      formData.append('category', newsForm.category);
+      formData.append('is_featured', newsForm.is_featured.toString());
+      formData.append('is_published', newsForm.is_published.toString());
+      if (newsImage) {
+        formData.append('image', newsImage);
+      }
+      
+      await newsApi.create(formData);
+      
+      alert('News created successfully!');
+      setNewsForm({ title: '', excerpt: '', content: '', category: 'News', is_featured: false, is_published: false });
+      setNewsImage(null);
+      newsApi.getAll().then(r => setNews(r.data.news || []));
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to create news');
+    } finally {
+      setUploadingNews(false);
+    }
+  };
+
+  const handleNewsDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this news item?')) return;
+    try {
+      await newsApi.delete(id);
+      setNews(prev => prev.filter(n => n.id !== id));
+      alert('News deleted successfully');
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to delete news');
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
@@ -168,6 +218,7 @@ export default function AdminDashboard() {
           { key: 'courses', label: '📚 Dept & Courses' },
           { key: 'staff', label: '👥 Staff & Import' },
           { key: 'resources', label: '📁 Resources' },
+          { key: 'news', label: '📰 News' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
@@ -415,6 +466,132 @@ export default function AdminDashboard() {
                         </a>
                         <button
                           onClick={() => handleResourceDelete(r.id)}
+                          className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── NEWS ── */}
+        {tab === 'news' && (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Create News */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Create News</h2>
+              <form onSubmit={handleNewsUpload} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newsForm.title}
+                    onChange={e => setNewsForm({...newsForm, title: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Excerpt *</label>
+                  <textarea
+                    required
+                    value={newsForm.excerpt}
+                    onChange={e => setNewsForm({...newsForm, excerpt: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Content</label>
+                  <textarea
+                    value={newsForm.content}
+                    onChange={e => setNewsForm({...newsForm, content: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Category *</label>
+                  <select
+                    required
+                    value={newsForm.category}
+                    onChange={e => setNewsForm({...newsForm, category: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  >
+                    <option value="News">News</option>
+                    <option value="Event">Event</option>
+                    <option value="Announcement">Announcement</option>
+                  </select>
+                </div>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newsForm.is_featured}
+                      onChange={e => setNewsForm({...newsForm, is_featured: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-sm text-brand-dark">Featured</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newsForm.is_published}
+                      onChange={e => setNewsForm({...newsForm, is_published: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-sm text-brand-dark">Published</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Image</label>
+                  <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
+                    <input type="file" accept="image/*" className="hidden" onChange={e => setNewsImage(e.target.files?.[0] || null)} />
+                    <div className="text-3xl mb-2">🖼️</div>
+                    <div className="text-sm font-medium text-brand-dark">{newsImage ? newsImage.name : 'Click to upload image'}</div>
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={uploadingNews}
+                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                >
+                  {uploadingNews ? 'Creating…' : 'Create News'}
+                </button>
+              </form>
+            </div>
+
+            {/* News List */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">News Items</h2>
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {news.length === 0 ? (
+                  <p className="text-stone text-center py-8">No news items yet</p>
+                ) : (
+                  news.map(n => (
+                    <div key={n.id} className="flex items-center justify-between p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-brand-dark truncate">{n.title}</div>
+                        <div className="text-sm text-stone">{n.category} • {n.is_published ? 'Published' : 'Draft'} {n.is_featured && '• Featured'}</div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        {n.image_url && (
+                          <a
+                            href={n.image_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition"
+                          >
+                            View Image
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleNewsDelete(n.id)}
                           className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
                         >
                           Delete
