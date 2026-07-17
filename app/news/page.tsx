@@ -2,12 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
 import { newsApi } from "@/lib/services";
 import { useEffect, useState } from "react";
-
-export const metadata: Metadata = { title: "News & Events" };
 
 interface NewsItem {
   id: string;
