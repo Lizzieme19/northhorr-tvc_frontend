@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi } from '@/lib/services';
+import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources' | 'news' | 'fee-types'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -47,6 +47,10 @@ export default function AdminDashboard() {
   const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
   const [editingFeeType, setEditingFeeType] = useState<any>(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
+  const [terms, setTerms] = useState<any[]>([]);
+  const [termForm, setTermForm] = useState({ name: '', start_date: '', end_date: '', academic_year: '', is_active: true });
+  const [editingTerm, setEditingTerm] = useState<any>(null);
+  const [savingTerm, setSavingTerm] = useState(false);
 
   // Auth guard
   useEffect(() => {
@@ -66,6 +70,9 @@ export default function AdminDashboard() {
     }
     if (tab === 'fee-types') {
       feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
+    }
+    if (tab === 'terms') {
+      termsApi.getAll().then(r => setTerms(r.data.terms || [])).catch(() => setTerms([]));
     }
   }, [tab]);
 
@@ -251,6 +258,55 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleTermSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingTerm(true);
+    try {
+      const data = {
+        ...termForm,
+        start_date: new Date(termForm.start_date).toISOString(),
+        end_date: new Date(termForm.end_date).toISOString(),
+      };
+      if (editingTerm) {
+        await termsApi.update(editingTerm.id, data);
+        setTerms(prev => prev.map(t => t.id === editingTerm.id ? { ...t, ...data } : t));
+        alert('Term updated successfully');
+      } else {
+        const response = await termsApi.create(data);
+        setTerms(prev => [...prev, response.data.term]);
+        alert('Term created successfully');
+      }
+      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', is_active: true });
+      setEditingTerm(null);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to save term');
+    } finally {
+      setSavingTerm(false);
+    }
+  };
+
+  const handleTermEdit = (t: any) => {
+    setEditingTerm(t);
+    setTermForm({
+      name: t.name,
+      start_date: t.start_date.split('T')[0],
+      end_date: t.end_date.split('T')[0],
+      academic_year: t.academic_year,
+      is_active: t.is_active,
+    });
+  };
+
+  const handleTermDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this term?')) return;
+    try {
+      await termsApi.delete(id);
+      setTerms(prev => prev.filter(t => t.id !== id));
+      alert('Term deleted successfully');
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to delete term');
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
@@ -280,6 +336,7 @@ export default function AdminDashboard() {
           { key: 'resources', label: '📁 Resources' },
           { key: 'news', label: '📰 News' },
           { key: 'fee-types', label: '💰 Fee Types' },
+          { key: 'terms', label: '📅 Terms' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
@@ -698,6 +755,128 @@ export default function AdminDashboard() {
                         </button>
                         <button
                           onClick={() => handleFeeTypeDelete(ft.id)}
+                          className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TERMS ── */}
+        {tab === 'terms' && (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Create/Edit Term */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">{editingTerm ? 'Edit Term' : 'Create Term'}</h2>
+              <form onSubmit={handleTermSave} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Term Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={termForm.name}
+                    onChange={e => setTermForm({...termForm, name: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="e.g. Term 1 2024"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Academic Year *</label>
+                  <input
+                    type="text"
+                    required
+                    value={termForm.academic_year}
+                    onChange={e => setTermForm({...termForm, academic_year: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="e.g. 2024/2025"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Start Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={termForm.start_date}
+                      onChange={e => setTermForm({...termForm, start_date: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">End Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={termForm.end_date}
+                      onChange={e => setTermForm({...termForm, end_date: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={termForm.is_active}
+                      onChange={e => setTermForm({...termForm, is_active: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-sm text-brand-dark">Active Term</span>
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={savingTerm}
+                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                >
+                  {savingTerm ? 'Saving…' : (editingTerm ? 'Update Term' : 'Create Term')}
+                </button>
+                {editingTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingTerm(null);
+                      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', is_active: true });
+                    }}
+                    className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </form>
+            </div>
+
+            {/* Terms List */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Academic Terms ({terms.length})</h2>
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {terms.length === 0 ? (
+                  <p className="text-stone text-center py-8">No terms configured yet</p>
+                ) : (
+                  terms.map(t => (
+                    <div key={t.id} className={`flex items-center justify-between p-4 rounded-xl border ${t.is_active ? 'bg-cream-deep/50 border-stone/10' : 'bg-stone/50 border-stone/20 opacity-60'}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-brand-dark truncate">{t.name}</div>
+                        <div className="text-sm text-stone">{t.academic_year} • {new Date(t.start_date).toLocaleDateString()} - {new Date(t.end_date).toLocaleDateString()}</div>
+                        <div className="text-xs text-stone mt-1">
+                          {t._count?.students || 0} students • {t._count?.student_balances || 0} balances
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => handleTermEdit(t)}
+                          className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleTermDelete(t.id)}
                           className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
                         >
                           Delete

@@ -182,3 +182,14 @@ export const feeTypesApi = {
   update: (id: string, data: any) => api.patch(`/fee-types/${id}`, data),
   delete: (id: string) => api.delete(`/fee-types/${id}`),
 };
+
+// Terms
+export const termsApi = {
+  getAll: (params?: any) => api.get('/terms', { params }),
+  getById: (id: string) => api.get(`/terms/${id}`),
+  create: (data: any) => api.post('/terms', data),
+  update: (id: string, data: any) => api.patch(`/terms/${id}`, data),
+  delete: (id: string) => api.delete(`/terms/${id}`),
+  enrollStudent: (termId: string, studentId: string) => api.post(`/terms/${termId}/enroll/${studentId}`),
+  unenrollStudent: (termId: string, studentId: string) => api.delete(`/terms/${termId}/enroll/${studentId}`),
+};
