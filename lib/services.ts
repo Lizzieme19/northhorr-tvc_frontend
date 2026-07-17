@@ -164,3 +164,12 @@ export const resourcesApi = {
   create: (data: any) => api.post('/resources', data),
   delete: (id: string) => api.delete(`/resources/${id}`),
 };
+
+// News
+export const newsApi = {
+  getAll: (params?: any) => api.get('/news', { params }),
+  getById: (id: string) => api.get(`/news/${id}`),
+  create: (data: FormData) => api.post('/news', data),
+  update: (id: string, data: FormData) => api.put(`/news/${id}`, data),
+  delete: (id: string) => api.delete(`/news/${id}`),
+};
