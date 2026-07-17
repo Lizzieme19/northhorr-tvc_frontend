@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi } from '@/lib/services';
+import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources' | 'news'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources' | 'news' | 'fee-types'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -43,6 +43,10 @@ export default function AdminDashboard() {
   const [newsForm, setNewsForm] = useState({ title: '', excerpt: '', content: '', category: 'News', is_featured: false, is_published: false });
   const [newsImage, setNewsImage] = useState<File | null>(null);
   const [uploadingNews, setUploadingNews] = useState(false);
+  const [feeTypes, setFeeTypes] = useState<any[]>([]);
+  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+  const [editingFeeType, setEditingFeeType] = useState<any>(null);
+  const [savingFeeType, setSavingFeeType] = useState(false);
 
   // Auth guard
   useEffect(() => {
@@ -59,6 +63,9 @@ export default function AdminDashboard() {
     }
     if (tab === 'news') {
       newsApi.getAll().then(r => setNews(r.data.news || [])).catch(() => setNews([]));
+    }
+    if (tab === 'fee-types') {
+      feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
     }
   }, [tab]);
 
@@ -191,6 +198,59 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleFeeTypeSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingFeeType(true);
+    try {
+      const data = {
+        ...feeTypeForm,
+        amount: parseFloat(feeTypeForm.amount) || 0,
+        course_id: feeTypeForm.course_id || null,
+      };
+      if (editingFeeType) {
+        await feeTypesApi.update(editingFeeType.id, data);
+        setFeeTypes(prev => prev.map(ft => ft.id === editingFeeType.id ? { ...ft, ...data } : ft));
+        alert('Fee type updated successfully');
+      } else {
+        const response = await feeTypesApi.create(data);
+        setFeeTypes(prev => [...prev, response.data.fee_type]);
+        alert('Fee type created successfully');
+      }
+      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+      setEditingFeeType(null);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to save fee type');
+    } finally {
+      setSavingFeeType(false);
+    }
+  };
+
+  const handleFeeTypeEdit = (ft: any) => {
+    setEditingFeeType(ft);
+    setFeeTypeForm({
+      name: ft.name,
+      code: ft.code,
+      description: ft.description || '',
+      amount: ft.amount.toString(),
+      is_required: ft.is_required,
+      applies_to: ft.applies_to,
+      course_id: ft.course_id || '',
+      level: ft.level || '',
+      term_based: ft.term_based,
+    });
+  };
+
+  const handleFeeTypeDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this fee type?')) return;
+    try {
+      await feeTypesApi.delete(id);
+      setFeeTypes(prev => prev.filter(ft => ft.id !== id));
+      alert('Fee type deleted successfully');
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to delete fee type');
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
@@ -219,6 +279,7 @@ export default function AdminDashboard() {
           { key: 'staff', label: '👥 Staff & Import' },
           { key: 'resources', label: '📁 Resources' },
           { key: 'news', label: '📰 News' },
+          { key: 'fee-types', label: '💰 Fee Types' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
@@ -466,6 +527,177 @@ export default function AdminDashboard() {
                         </a>
                         <button
                           onClick={() => handleResourceDelete(r.id)}
+                          className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FEE TYPES ── */}
+        {tab === 'fee-types' && (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Create/Edit Fee Type */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">{editingFeeType ? 'Edit Fee Type' : 'Create Fee Type'}</h2>
+              <form onSubmit={handleFeeTypeSave} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={feeTypeForm.name}
+                    onChange={e => setFeeTypeForm({...feeTypeForm, name: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="e.g. Tuition Fee"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={feeTypeForm.code}
+                    onChange={e => setFeeTypeForm({...feeTypeForm, code: e.target.value.toUpperCase()})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm font-mono"
+                    placeholder="e.g. TUITION"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
+                  <textarea
+                    value={feeTypeForm.description}
+                    onChange={e => setFeeTypeForm({...feeTypeForm, description: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    rows={2}
+                    placeholder="Optional description..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Amount *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={feeTypeForm.amount}
+                    onChange={e => setFeeTypeForm({...feeTypeForm, amount: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="e.g. 15000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Applies To *</label>
+                  <select
+                    required
+                    value={feeTypeForm.applies_to}
+                    onChange={e => setFeeTypeForm({...feeTypeForm, applies_to: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  >
+                    <option value="ALL">All Students</option>
+                    <option value="SPECIFIC_COURSE">Specific Course</option>
+                    <option value="SPECIFIC_LEVEL">Specific Level</option>
+                  </select>
+                </div>
+                {feeTypeForm.applies_to === 'SPECIFIC_COURSE' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Course</label>
+                    <select
+                      value={feeTypeForm.course_id}
+                      onChange={e => setFeeTypeForm({...feeTypeForm, course_id: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    >
+                      <option value="">Select course...</option>
+                      {/* Will populate with courses */}
+                    </select>
+                  </div>
+                )}
+                {feeTypeForm.applies_to === 'SPECIFIC_LEVEL' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Level</label>
+                    <select
+                      value={feeTypeForm.level}
+                      onChange={e => setFeeTypeForm({...feeTypeForm, level: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    >
+                      <option value="">Select level...</option>
+                      <option value="Certificate">Certificate</option>
+                      <option value="Diploma">Diploma</option>
+                      <option value="Artisan">Artisan</option>
+                    </select>
+                  </div>
+                )}
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={feeTypeForm.is_required}
+                      onChange={e => setFeeTypeForm({...feeTypeForm, is_required: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-sm text-brand-dark">Required</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={feeTypeForm.term_based}
+                      onChange={e => setFeeTypeForm({...feeTypeForm, term_based: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-sm text-brand-dark">Term-based</span>
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={savingFeeType}
+                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                >
+                  {savingFeeType ? 'Saving…' : (editingFeeType ? 'Update Fee Type' : 'Create Fee Type')}
+                </button>
+                {editingFeeType && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingFeeType(null);
+                      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+                    }}
+                    className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </form>
+            </div>
+
+            {/* Fee Types List */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Fee Types ({feeTypes.length})</h2>
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {feeTypes.length === 0 ? (
+                  <p className="text-stone text-center py-8">No fee types configured yet</p>
+                ) : (
+                  feeTypes.map(ft => (
+                    <div key={ft.id} className={`flex items-center justify-between p-4 rounded-xl border ${ft.is_active ? 'bg-cream-deep/50 border-stone/10' : 'bg-stone/50 border-stone/20 opacity-60'}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-brand-dark truncate">{ft.name}</div>
+                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} {ft.term_based && '• Term-based'}</div>
+                        <div className="text-xs text-stone mt-1">{ft.is_required ? 'Required' : 'Optional'} • {ft.is_active ? 'Active' : 'Disabled'}</div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => handleFeeTypeEdit(ft)}
+                          className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleFeeTypeDelete(ft.id)}
                           className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
                         >
                           Delete

@@ -173,3 +173,12 @@ export const newsApi = {
   update: (id: string, data: FormData) => api.put(`/news/${id}`, data),
   delete: (id: string) => api.delete(`/news/${id}`),
 };
+
+// Fee Types
+export const feeTypesApi = {
+  getAll: (params?: any) => api.get('/fee-types', { params }),
+  getById: (id: string) => api.get(`/fee-types/${id}`),
+  create: (data: any) => api.post('/fee-types', data),
+  update: (id: string, data: any) => api.patch(`/fee-types/${id}`, data),
+  delete: (id: string) => api.delete(`/fee-types/${id}`),
+};
