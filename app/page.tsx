@@ -1,13 +1,95 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { departments, newsItems, stats, testimonials } from "@/lib/data";
+import { departments, stats, testimonials } from "@/lib/data";
 import { Carousel } from "@/components/ui/Carousel";
 import { campusGallery } from "@/lib/data";
 import { heroSlides } from "@/lib/data";
 import { HeroCarousel } from "@/components/ui/HeroCarousel";
+import { newsApi } from "@/lib/services";
+import { useEffect, useState } from "react";
 
+interface NewsItem {
+  id: string;
+  title: string;
+  excerpt: string;
+  content?: string;
+  category: string;
+  image_url?: string;
+  is_featured: boolean;
+  is_published: boolean;
+  published_at?: string;
+  created_at: string;
+}
 
 export default function Home() {
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const response = await newsApi.getAll({ published: 'true', limit: 4 });
+        setNewsItems(response.data.news || []);
+      } catch (err) {
+        console.error('Failed to fetch news:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const fallbackNews = [
+    {
+      id: '1',
+      title: 'September Intake Now Open',
+      excerpt: 'Apply for our September 2026 intake across all departments. Limited slots available.',
+      category: 'Announcement',
+      date: 'September 2026',
+      image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: '2',
+      title: 'New Agricultural Equipment',
+      excerpt: 'State-of-the-art farming machinery arrives to enhance practical training.',
+      category: 'News',
+      date: 'July 2026',
+      image: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: '3',
+      title: 'Industry Partnership Launch',
+      excerpt: 'Collaboration with leading Kenyan employers for student attachments.',
+      category: 'Event',
+      date: 'June 2026',
+      image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: '4',
+      title: 'Graduation Ceremony 2026',
+      excerpt: 'Celebrating our newest graduates across all TVET levels.',
+      category: 'Event',
+      date: 'May 2026',
+      image: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80'
+    }
+  ];
+
+  const displayNews = loading || newsItems.length === 0 ? fallbackNews : newsItems.map(n => ({
+    id: n.id,
+    title: n.title,
+    excerpt: n.excerpt,
+    category: n.category,
+    date: formatDate(n.created_at),
+    image: n.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80'
+  }));
   return (
     <>
       {/* HERO */}
@@ -205,8 +287,8 @@ export default function Home() {
             <article className="lg:row-span-2 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition group">
               <div className="relative aspect-16/10 overflow-hidden">
                 <Image
-                  src={newsItems[0].image}
-                  alt={newsItems[0].title}
+                  src={displayNews[0].image}
+                  alt={displayNews[0].title}
                   fill
                   className="object-cover group-hover:scale-105 transition duration-700"
                 />
@@ -214,21 +296,21 @@ export default function Home() {
               <div className="p-5 sm:p-7">
                 <div className="flex items-center gap-2 sm:gap-3 text-xs">
                   <span className="px-2 sm:px-3 py-1 rounded-full bg-gold/20 text-brand-dark font-semibold">
-                    {newsItems[0].category}
+                    {displayNews[0].category}
                   </span>
-                  <span className="text-stone">{newsItems[0].date}</span>
+                  <span className="text-stone">{displayNews[0].date}</span>
                 </div>
                 <h3 className="mt-3 sm:mt-4 font-display text-xl sm:text-2xl text-brand-dark group-hover:text-brand transition">
-                  {newsItems[0].title}
+                  {displayNews[0].title}
                 </h3>
-                <p className="mt-2 sm:mt-3 text-stone leading-relaxed text-sm sm:text-base">{newsItems[0].excerpt}</p>
+                <p className="mt-2 sm:mt-3 text-stone leading-relaxed text-sm sm:text-base">{displayNews[0].excerpt}</p>
                 <Link href="/news" className="inline-flex mt-4 sm:mt-5 text-terracotta font-semibold text-sm sm:text-base">
                   Read more →
                 </Link>
               </div>
             </article>
 
-            {newsItems.slice(1, 4).map((n) => (
+            {displayNews.slice(1, 4).map((n) => (
               <article key={n.id} className="bg-white rounded-2xl overflow-hidden flex shadow-sm hover:shadow-xl transition group">
                 <div className="relative w-28 sm:w-32 md:w-40 shrink-0">
                   <Image src={n.image} alt={n.title} fill className="object-cover" />
