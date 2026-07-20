@@ -19,6 +19,8 @@ export default function FinanceDashboard() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [selectedStudentBalance, setSelectedStudentBalance] = useState<any>(null);
+  const [editingStudentFees, setEditingStudentFees] = useState<any>(null);
+  const [studentFeeForm, setStudentFeeForm] = useState({ full_year_paid: false, fee_adjustment: '' });
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'FINANCE')) router.replace('/login');
@@ -62,6 +64,33 @@ export default function FinanceDashboard() {
       setSelectedStudentBalance(r.data);
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to fetch balance');
+    }
+  };
+
+  const editStudentFees = (student: any) => {
+    setEditingStudentFees(student);
+    setStudentFeeForm({
+      full_year_paid: student.full_year_paid || false,
+      fee_adjustment: student.fee_adjustment?.toString() || '',
+    });
+  };
+
+  const saveStudentFees = async () => {
+    try {
+      await api.patch(`/finance/students/${editingStudentFees.id}/fees`, {
+        full_year_paid: studentFeeForm.full_year_paid,
+        fee_adjustment: parseFloat(studentFeeForm.fee_adjustment) || 0,
+      });
+      alert('Student fee settings updated');
+      setEditingStudentFees(null);
+      // Refresh student list
+      const params: any = { page, limit: 15 };
+      if (search) params.search = search;
+      if (feeCleared !== '') params.fee_cleared = feeCleared;
+      const r = await financeApi.getFeeRecords(params);
+      setStudents(r.data.students);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to update student fees');
     }
   };
 
@@ -138,11 +167,12 @@ export default function FinanceDashboard() {
                   <th className="px-4 py-3 text-left">KUCCPS</th>
                   <th className="px-4 py-3 text-left">Tuition</th>
                   <th className="px-4 py-3 text-left">Balance</th>
+                  <th className="px-4 py-3 text-left">Actions</th>
                   <th className="px-4 py-3 text-left">Print ID</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone/10">
-                {students.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-stone">No records found</td></tr>}
+                {students.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-stone">No records found</td></tr>}
                 {students.map(s => (
                   <tr key={s.id} className="hover:bg-cream-deep/50 transition">
                     <td className="px-4 py-3 font-mono text-xs text-brand">{s.admission_no}</td>
@@ -198,6 +228,9 @@ export default function FinanceDashboard() {
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => viewStudentBalance(s.id)} className="text-xs text-brand hover:underline">View Balance</button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => editStudentFees(s)} className="text-xs text-brand hover:underline">Edit Fees</button>
                     </td>
                     <td className="px-4 py-3">
                       <button disabled={!s.student_id_fee_paid} onClick={() => alert('Student ID printing queue triggered.')}
@@ -259,7 +292,10 @@ export default function FinanceDashboard() {
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {selectedStudentBalance.fee_records.map((record: any) => (
                         <div key={record.id} className="text-xs bg-stone/5 p-2 rounded">
-                          <div className="font-medium">{record.feeType?.name || record.fee_type}</div>
+                          <div className="flex justify-between items-center">
+                            <div className="font-medium">{record.feeType?.name || record.fee_type}</div>
+                            <div className="text-stone font-mono text-[10px]">{record.reference_code || ''}</div>
+                          </div>
                           <div className="text-stone">KES {record.amount} • {new Date(record.paid_at).toLocaleDateString()}</div>
                         </div>
                       ))}
@@ -270,6 +306,58 @@ export default function FinanceDashboard() {
               <button onClick={() => setSelectedStudentBalance(null)} className="mt-6 w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">
                 Close
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Student Fees Modal */}
+        {editingStudentFees && (
+          <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+            <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+              <h2 className="font-display text-xl text-brand-dark mb-4">Edit Student Fee Settings</h2>
+              <div className="space-y-4 text-sm">
+                <div className="border-b border-stone/10 pb-2">
+                  <span className="text-stone">Admission No:</span>
+                  <span className="font-medium text-brand-dark ml-2">{editingStudentFees.admission_no}</span>
+                </div>
+                <div className="border-b border-stone/10 pb-2">
+                  <span className="text-stone">Student:</span>
+                  <span className="font-medium text-brand-dark ml-2">{editingStudentFees.application.surname} {editingStudentFees.application.other_names}</span>
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={studentFeeForm.full_year_paid}
+                      onChange={e => setStudentFeeForm({...studentFeeForm, full_year_paid: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-brand-dark">Full Year Paid</span>
+                  </label>
+                  <p className="text-xs text-stone mt-1">Mark if student has paid for the full academic year</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Fee Adjustment (KES)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={studentFeeForm.fee_adjustment}
+                    onChange={e => setStudentFeeForm({...studentFeeForm, fee_adjustment: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="e.g. 5000"
+                  />
+                  <p className="text-xs text-stone mt-1">Discount or waiver amount to apply</p>
+                </div>
+              </div>
+              <div className="mt-6 flex gap-3">
+                <button onClick={saveStudentFees} className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">
+                  Save Changes
+                </button>
+                <button onClick={() => setEditingStudentFees(null)} className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}

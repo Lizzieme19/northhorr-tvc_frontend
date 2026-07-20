@@ -3,16 +3,48 @@
 import { useState } from "react";
 
 export default function ContactForm() {
-  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus("sending");
-    // Frontend-only placeholder — replace with API call later.
-    await new Promise((r) => setTimeout(r, 900));
-    setStatus("sent");
-    (e.currentTarget as HTMLFormElement).reset();
-    setTimeout(() => setStatus("idle"), 4000);
+    setErrorMessage("");
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      phone: formData.get("phone"),
+      subject: formData.get("subject"),
+      message: formData.get("message"),
+    };
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.northhorrtvc.ac.ke'}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setStatus("sent");
+        (e.currentTarget as HTMLFormElement).reset();
+        setTimeout(() => setStatus("idle"), 4000);
+      } else {
+        setStatus("error");
+        setErrorMessage(result.message || "Failed to send message. Please try again.");
+        setTimeout(() => setStatus("idle"), 4000);
+      }
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage("Network error. Please check your connection and try again.");
+      setTimeout(() => setStatus("idle"), 4000);
+    }
   };
 
   return (
@@ -51,6 +83,11 @@ export default function ContactForm() {
       {status === "sent" && (
         <p className="text-sm text-brand">
           Thank you — we&apos;ll get back to you within 1 business day.
+        </p>
+      )}
+      {status === "error" && (
+        <p className="text-sm text-terracotta">
+          {errorMessage}
         </p>
       )}
     </form>
