@@ -142,10 +142,10 @@ export default function ApplicationForm() {
               <label className="block text-sm font-semibold text-brand-dark mb-1.5">Level Applied <span className="text-terracotta">*</span></label>
               <select name="level_applied" required value={formData.level_applied} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
                 <option value="">Select Level...</option>
-                <option value="Level 3">Level 3 (Artisan)</option>
-                <option value="Level 4">Level 4 (Craft Certificate)</option>
-                <option value="Level 5">Level 5 (Diploma)</option>
-                <option value="Level 6">Level 6 (Advanced Diploma)</option>
+                <option value="Level 3">Level 3 (Short Course)</option>
+                <option value="Level 4">Level 4 (Artisan)</option>
+                <option value="Level 5">Level 5 (Certififcate)</option>
+                <option value="Level 6">Level 6 (Diploma)</option>
               </select>
             </div>
           </div>
