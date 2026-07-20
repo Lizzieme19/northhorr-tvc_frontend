@@ -44,11 +44,11 @@ export default function AdminDashboard() {
   const [newsImage, setNewsImage] = useState<File | null>(null);
   const [uploadingNews, setUploadingNews] = useState(false);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
-  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
   const [editingFeeType, setEditingFeeType] = useState<any>(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
-  const [termForm, setTermForm] = useState({ name: '', start_date: '', end_date: '', academic_year: '', is_active: true });
+  const [termForm, setTermForm] = useState({ name: '', start_date: '', end_date: '', academic_year: '', term_cost: '', is_active: true });
   const [editingTerm, setEditingTerm] = useState<any>(null);
   const [savingTerm, setSavingTerm] = useState(false);
 
@@ -223,7 +223,7 @@ export default function AdminDashboard() {
         setFeeTypes(prev => [...prev, response.data.fee_type]);
         alert('Fee type created successfully');
       }
-      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
       setEditingFeeType(null);
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to save fee type');
@@ -240,6 +240,7 @@ export default function AdminDashboard() {
       description: ft.description || '',
       amount: ft.amount.toString(),
       is_required: ft.is_required,
+      is_disabled: ft.is_disabled || false,
       applies_to: ft.applies_to,
       course_id: ft.course_id || '',
       level: ft.level || '',
@@ -266,6 +267,7 @@ export default function AdminDashboard() {
         ...termForm,
         start_date: new Date(termForm.start_date).toISOString(),
         end_date: new Date(termForm.end_date).toISOString(),
+        term_cost: parseFloat(termForm.term_cost) || 0,
       };
       if (editingTerm) {
         await termsApi.update(editingTerm.id, data);
@@ -276,7 +278,7 @@ export default function AdminDashboard() {
         setTerms(prev => [...prev, response.data.term]);
         alert('Term created successfully');
       }
-      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', is_active: true });
+      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', term_cost: '', is_active: true });
       setEditingTerm(null);
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to save term');
@@ -292,6 +294,7 @@ export default function AdminDashboard() {
       start_date: t.start_date.split('T')[0],
       end_date: t.end_date.split('T')[0],
       academic_year: t.academic_year,
+      term_cost: t.term_cost?.toString() || '',
       is_active: t.is_active,
     });
   };
@@ -709,6 +712,15 @@ export default function AdminDashboard() {
                     />
                     <span className="text-sm text-brand-dark">Term-based</span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={feeTypeForm.is_disabled}
+                      onChange={e => setFeeTypeForm({...feeTypeForm, is_disabled: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-sm text-brand-dark">Disabled</span>
+                  </label>
                 </div>
                 <button
                   type="submit"
@@ -722,7 +734,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => {
                       setEditingFeeType(null);
-                      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+                      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
                     }}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
                   >
@@ -797,6 +809,18 @@ export default function AdminDashboard() {
                     placeholder="e.g. 2024/2025"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Term Cost</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={termForm.term_cost}
+                    onChange={e => setTermForm({...termForm, term_cost: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="e.g. 45000"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Start Date *</label>
@@ -842,7 +866,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => {
                       setEditingTerm(null);
-                      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', is_active: true });
+                      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', term_cost: '', is_active: true });
                     }}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
                   >
