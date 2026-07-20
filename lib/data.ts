@@ -2,42 +2,56 @@
 // Backend will eventually replace these structures via API.
 export const heroSlides = [
   {
-    image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=2000&q=80",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.45.50.jpeg",
     title: "Igniting a Brighter Future Through Skill",
     description: "North Horr Technical and Vocational College offers accredited TVET programmes that empower learners with practical skills for employment and entrepreneurship.",
     buttonText: "Explore Courses",
     buttonLink: "/courses",
   },
   {
-    image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=2000&q=80",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.46.02.jpeg",
     title: "Hands-on Practical Learning",
     description: "Modern workshops and experienced instructors prepare students for real-world careers.",
     buttonText: "Our Departments",
     buttonLink: "/courses",
   },
   {
-    image: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=2000&q=80",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.45.54.jpeg",
     title: "Empowering Northern Kenya",
     description: "Producing competent graduates equipped to transform communities through technical excellence.",
     buttonText: "Apply Today",
+    buttonLink: "/application",
+  },
+  {
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.45.57.jpeg",
+    title: "Industry-Ready Graduates",
+    description: "Our curriculum is designed in partnership with leading employers to ensure you graduate with skills that are in high demand.",
+    buttonText: "View Courses",
+    buttonLink: "/courses",
+  },
+  {
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.46.06.jpeg",
+    title: "Join Our Growing Community",
+    description: "Become part of a vibrant learning community where innovation meets tradition and dreams become reality.",
+    buttonText: "Start Application",
     buttonLink: "/application",
   }
 ]
 export const campusGallery = [
   {
-    image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.43.49.jpeg",
     alt: "Campus Gate",
   },
   {
-    image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.43.54.jpeg",
     alt: "Library",
   },
   {
-    image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.43.57.jpeg",
     alt: "Workshop",
   },
   {
-    image: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1200&q=80",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.44.04.jpeg",
     alt: "Graduation",
   },
 ]

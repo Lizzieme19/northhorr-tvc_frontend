@@ -78,8 +78,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
                 />
 
                 {/** Overlay */}
-                <div className="absolute inset-0 bg-black/50"/>
-                <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent"/>
+                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"/>
                 
                 {/** Content */}
                 <div className="relative z-20 mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6">
