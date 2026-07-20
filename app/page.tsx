@@ -104,7 +104,7 @@ export default function Home() {
           <div className="relative order-2 lg:order-1">
             <div className="relative">
               <Image
-                src="https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80"
+                src="https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.44.04.jpeg"
                 alt="North Horr TVC Campus Gate"
                 width={800}
                 height={600}
