@@ -62,7 +62,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
   }, [emblaApi]);
 
   return (
-    <section className="relative h-[85vh] overflow-hidden">
+    <section className="relative h-[50vh] overflow-hidden">
 
         {/*Slides */}
         <div className="overflow-hidden h-full" ref={emblaRef}>
@@ -85,8 +85,8 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
                 <div className="relative z-20 mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6">
 
                   <div className="max-w-2xl text-white">
-                    <span className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">Welcome to Northhorr TVC</span>
-                    <h1 className="mt-4 sm:mt-6 font-display text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold leading-tight">
+                    <span className="text-lg sm:text-xl md:text-2xl font-semibold mb-4 text-gold">North Horr Technical and Vocational College</span>
+                    <h1 className="mt-4 sm:mt-6 font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
                       {slide.title}
                     </h1>
 

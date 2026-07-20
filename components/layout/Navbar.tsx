@@ -64,11 +64,11 @@ export function Navbar() {
 
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
-          <div className="relative h-10 sm:h-12 w-10 sm:w-12 shrink-0">
+          <div className="relative h-14 sm:h-16 md:h-18 lg:h-20 w-14 sm:w-16 md:w-18 lg:w-20 shrink-0">
             <Image 
               src={'/Logo/NorthHorr.png'} 
-              width={48} 
-              height={48} 
+              width={80} 
+              height={80} 
               alt="NorthHorr"
               className="object-contain"
             />

@@ -93,7 +93,7 @@ export default function Home() {
   return (
     <>
       {/* HERO */}
-      <section className="relative h-[85vh]">
+      <section className="relative h-[50vh]">
         <HeroCarousel slides={heroSlides} />
         </section>
 
