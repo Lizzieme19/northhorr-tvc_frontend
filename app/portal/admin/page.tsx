@@ -26,14 +26,11 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'staff' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [intake, setIntake] = useState('SEPTEMBER');
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
   const [studentCredentials, setStudentCredentials] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -100,17 +97,6 @@ export default function AdminDashboard() {
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Error updating status');
     } finally { setApproving(null); }
-  };
-
-  const handleKuccpsImport = async () => {
-    if (!csvFile) return;
-    setImporting(true);
-    try {
-      const r = await applicationsApi.importKuccps(csvFile);
-      setImportResult(r.data);
-    } catch (e: any) {
-      alert(e?.response?.data?.error || 'Import failed');
-    } finally { setImporting(false); }
   };
 
   const generateLetter = async (studentId: string) => {
@@ -377,7 +363,7 @@ export default function AdminDashboard() {
             </div>
             <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
               <h2 className="font-display text-lg text-brand-dark mb-4">Quick Actions</h2>
-              <div className="grid sm:grid-cols-4 gap-4">
+              <div className="grid sm:grid-cols-3 gap-4">
                 <button onClick={() => setTab('applications')} className="p-4 rounded-xl border-2 border-dashed border-brand/30 hover:border-brand hover:bg-brand/5 transition text-left">
                   <div className="text-2xl mb-2">📋</div>
                   <div className="font-semibold text-brand-dark">Review Applications</div>
@@ -387,11 +373,6 @@ export default function AdminDashboard() {
                   <div className="text-2xl mb-2">👥</div>
                   <div className="font-semibold text-brand-dark">Manage Users</div>
                   <div className="text-xs text-stone mt-1">View all system users</div>
-                </button>
-                <button onClick={() => setTab('staff')} className="p-4 rounded-xl border-2 border-dashed border-gold/30 hover:border-gold hover:bg-gold/5 transition text-left">
-                  <div className="text-2xl mb-2">📥</div>
-                  <div className="font-semibold text-brand-dark">Import KUCCPS</div>
-                  <div className="text-xs text-stone mt-1">Upload CSV file</div>
                 </button>
                 <button onClick={() => setTab('students')} className="p-4 rounded-xl border-2 border-dashed border-terracotta/30 hover:border-terracotta hover:bg-terracotta/5 transition text-left">
                   <div className="text-2xl mb-2">🎓</div>
@@ -481,37 +462,6 @@ export default function AdminDashboard() {
 
         {/* ── COURSES & DEPTS ── */}
         {tab === 'courses' && <CoursesTab />}
-
-        {/* ── STAFF & KUCCPS ── */}
-        {tab === 'staff' && (
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Create Staff */}
-            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-              <h2 className="font-display text-lg text-brand-dark mb-5">Create Staff Account</h2>
-              <CreateStaffForm />
-            </div>
-            {/* KUCCPS Import */}
-            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-              <h2 className="font-display text-lg text-brand-dark mb-2">KUCCPS CSV Import</h2>
-              <p className="text-sm text-stone mb-4">Upload a CSV with columns: surname, other_names, gender, dob, email, phone, kcse_index, kcse_grade</p>
-              <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
-                <input type="file" accept=".csv" className="hidden" onChange={e => setCsvFile(e.target.files?.[0] || null)} />
-                <div className="text-3xl mb-2">📄</div>
-                <div className="text-sm font-medium text-brand-dark">{csvFile ? csvFile.name : 'Click to upload CSV'}</div>
-              </label>
-              <button onClick={handleKuccpsImport} disabled={!csvFile || importing}
-                className="mt-4 w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
-                {importing ? 'Importing…' : 'Import KUCCPS Students'}
-              </button>
-              {importResult && (
-                <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200 text-sm">
-                  <div className="font-semibold text-green-800">Import complete!</div>
-                  <div className="text-green-700">Imported: {importResult.imported} | Errors: {importResult.errors}</div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* ── RESOURCES ── */}
         {tab === 'resources' && (
@@ -1182,12 +1132,29 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
     birth_certificate: null as File | null,
     other_documents: null as File | null,
   });
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
       .then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); })
       .catch(() => {});
   }, [page, search]);
+
+  const handleKuccpsImport = async () => {
+    if (!csvFile) return;
+    setImporting(true);
+    try {
+      const r = await applicationsApi.importKuccps(csvFile);
+      setImportResult(r.data);
+      const updated = await studentsApi.getAll({ page, limit: 15, search });
+      setStudents(updated.data.students);
+      setTotal(updated.data.pagination.total);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Import failed');
+    } finally { setImporting(false); }
+  };
 
   const handleEditStudent = (student: any) => {
     setSelectedStudent(student);
@@ -1280,10 +1247,34 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-display text-2xl text-brand-dark">Students ({total})</h1>
-        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Search admission no, name…"
-          className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
+        <div className="flex gap-3">
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search admission no, name…"
+            className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
+        </div>
       </div>
+
+      {/* KUCCPS Import */}
+      <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm mb-6">
+        <h2 className="font-display text-lg text-brand-dark mb-2">KUCCPS CSV Import</h2>
+        <p className="text-sm text-stone mb-4">Upload a CSV with columns: surname, other_names, gender, dob, email, phone, kcse_index, kcse_grade</p>
+        <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
+          <input type="file" accept=".csv" className="hidden" onChange={e => setCsvFile(e.target.files?.[0] || null)} />
+          <div className="text-3xl mb-2">📄</div>
+          <div className="text-sm font-medium text-brand-dark">{csvFile ? csvFile.name : 'Click to upload CSV'}</div>
+        </label>
+        <button onClick={handleKuccpsImport} disabled={!csvFile || importing}
+          className="mt-4 w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
+          {importing ? 'Importing…' : 'Import KUCCPS Students'}
+        </button>
+        {importResult && (
+          <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200 text-sm">
+            <div className="font-semibold text-green-800">Import complete!</div>
+            <div className="text-green-700">Imported: {importResult.imported} | Errors: {importResult.errors}</div>
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1643,6 +1634,15 @@ function UsersTab() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [staffForm, setStaffForm] = useState({ email: '', password: '', role: 'DEPT_HEAD', department_id: '' });
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [savingStaff, setSavingStaff] = useState(false);
+  const [staffMsg, setStaffMsg] = useState('');
+
+  useEffect(() => {
+    departmentsApi.getAll().then(r => setDepartments(r.data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const params: any = { page, limit: 20 };
@@ -1666,6 +1666,25 @@ function UsersTab() {
     }
   };
 
+  const handleCreateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingStaff(true);
+    setStaffMsg('');
+    try {
+      await api.post('/auth/create-staff', staffForm);
+      setStaffMsg('✅ Staff account created successfully!');
+      setStaffForm({ email: '', password: '', role: 'DEPT_HEAD', department_id: '' });
+      setShowCreateForm(false);
+      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search } });
+      setUsers(updated.data.users);
+      setTotal(updated.data.pagination.total);
+    } catch (err: any) {
+      setStaffMsg(err?.response?.data?.error || 'Failed to create staff account');
+    } finally {
+      setSavingStaff(false);
+    }
+  };
+
   const roleColors: Record<string, string> = {
     ADMIN: 'bg-purple-100 text-purple-800',
     DEPT_HEAD: 'bg-blue-100 text-blue-800',
@@ -1681,6 +1700,9 @@ function UsersTab() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-display text-2xl text-brand-dark">Users ({total})</h1>
         <div className="flex gap-3">
+          <button onClick={() => setShowCreateForm(!showCreateForm)} className="px-4 py-2 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">
+            {showCreateForm ? 'Cancel' : '+ Create Staff'}
+          </button>
           <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand">
             <option value="">All Roles</option>
@@ -1697,6 +1719,59 @@ function UsersTab() {
             className="px-3 py-2 rounded-xl border border_stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
         </div>
       </div>
+
+      {/* Create Staff Form */}
+      {showCreateForm && (
+        <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm mb-6">
+          <h2 className="font-display text-lg text-brand-dark mb-5">Create Staff Account</h2>
+          <form onSubmit={handleCreateStaff} className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email *</label>
+                <input type="email" required value={staffForm.email} onChange={e => setStaffForm({...staffForm, email: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Password *</label>
+                <input type="password" required value={staffForm.password} onChange={e => setStaffForm({...staffForm, password: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Role *</label>
+                <select required value={staffForm.role} onChange={e => setStaffForm({...staffForm, role: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                  <option value="ADMIN">Admin</option>
+                  <option value="DEPT_HEAD">Dept Head</option>
+                  <option value="FINANCE">Finance</option>
+                  <option value="STAFF">Staff</option>
+                  <option value="PROCUREMENT">Procurement</option>
+                  <option value="HR">HR</option>
+                </select>
+              </div>
+              {staffForm.role === 'DEPT_HEAD' && (
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department</label>
+                  <select value={staffForm.department_id} onChange={e => setStaffForm({...staffForm, department_id: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                    <option value="">Select Department</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+            {staffMsg && (
+              <div className={`p-3 rounded-xl text-sm ${staffMsg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                {staffMsg}
+              </div>
+            )}
+            <button type="submit" disabled={savingStaff}
+              className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
+              {savingStaff ? 'Creating…' : 'Create Staff Account'}
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -1750,67 +1825,6 @@ function UsersTab() {
         </div>
       </div>
     </div>
-  );
-}
-
-function CreateStaffForm() {
-  const [form, setForm] = useState({ email: '', password: '', role: 'DEPT_HEAD', department_id: '' });
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-
-  useEffect(() => { departmentsApi.getAll().then(r => setDepartments(r.data)).catch(() => {}); }, []);
-
-  const handleSubmit = async (e: any) => {
-    e.preventDefault(); setSaving(true); setMsg('');
-    try {
-      await api.post('/auth/create-staff', form);
-      setMsg('✅ Staff account created successfully!');
-      setForm({ email: '', password: '', role: 'DEPT_HEAD', department_id: '' });
-    } catch (e: any) { setMsg('❌ ' + (e?.response?.data?.error || 'Error')); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {msg && <div className={`p-3 rounded-xl text-sm ${msg.startsWith('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>{msg}</div>}
-      <div>
-        <label className="block text-sm font-medium text-brand-dark mb-1">Email</label>
-        <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-          className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" placeholder="staff@ntvc.ac.ke" />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-brand-dark mb-1">Temporary Password</label>
-        <input type="text" required value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-          className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" placeholder="Temp@1234" />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-brand-dark mb-1">Role</label>
-        <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-          className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
-          <option value="ADMIN">Admin</option>
-          <option value="DEPT_HEAD">Department Head</option>
-          <option value="FINANCE">Finance</option>
-          <option value="HR">HR</option>
-          <option value="PROCUREMENT">Procurement</option>
-          <option value="STAFF">Staff</option>
-          <option value="STUDENT">Student</option>
-        </select>
-      </div>
-      {form.role === 'DEPT_HEAD' && (
-        <div>
-          <label className="block text-sm font-medium text-brand-dark mb-1">Department</label>
-          <select value={form.department_id} onChange={e => setForm(f => ({ ...f, department_id: e.target.value }))}
-            className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
-            <option value="">Select department…</option>
-            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </div>
-      )}
-      <button type="submit" disabled={saving} className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
-        {saving ? 'Creating…' : 'Create Account'}
-      </button>
-    </form>
   );
 }
 
