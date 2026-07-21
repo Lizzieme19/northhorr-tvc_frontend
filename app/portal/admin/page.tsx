@@ -544,7 +544,7 @@ export default function AdminDashboard() {
         )}
 
         {/* ── STUDENTS ── */}
-        {tab === 'students' && <StudentsTab generateLetter={generateLetter} />}
+        {tab === 'students' && <StudentsTab generateLetter={generateLetter} feeTypes={feeTypes} />}
 
         {/* ── USERS ── */}
         {tab === 'users' && <UsersTab />}
@@ -1359,7 +1359,7 @@ export default function AdminDashboard() {
   );
 }
 
-function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void }) {
+function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string) => void; feeTypes: any[] }) {
   const [students, setStudents] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -1386,6 +1386,7 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
   const [feeSummary, setFeeSummary] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [showProgressionModal, setShowProgressionModal] = useState(false);
   const [progressionForm, setProgressionForm] = useState({ toLevel: '', termId: '', notes: '', forcePromote: false });
