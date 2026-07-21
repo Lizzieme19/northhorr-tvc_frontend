@@ -40,6 +40,7 @@ export default function AdminDashboard() {
     doc_medical: null as File | null,
   });
   const [uploadingAppDocs, setUploadingAppDocs] = useState(false);
+  const [editableAppData, setEditableAppData] = useState<any>(null);
   const [resources, setResources] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [resourceFile, setResourceFile] = useState<File | null>(null);
@@ -90,6 +91,33 @@ export default function AdminDashboard() {
       setAppTotal(r.data.pagination.total);
     }).catch(() => {});
   }, [page, statusFilter, search, tab]);
+
+  useEffect(() => {
+    if (selectedApp) {
+      setEditableAppData({
+        surname: selectedApp.surname || '',
+        other_names: selectedApp.other_names || '',
+        email: selectedApp.email || '',
+        phone: selectedApp.phone || '',
+        address: selectedApp.address || '',
+        kcpe_index: selectedApp.kcpe_index || '',
+        kcpe_marks: selectedApp.kcpe_marks || '',
+        kcse_index: selectedApp.kcse_index || '',
+        kcse_grade: selectedApp.kcse_grade || '',
+        previous_school: selectedApp.previous_school || '',
+        parent_names: selectedApp.parent_names || '',
+        parent_relationship: selectedApp.parent_relationship || '',
+        parent_phone: selectedApp.parent_phone || '',
+        parent_email: selectedApp.parent_email || '',
+        emergency_person: selectedApp.emergency_person || '',
+        emergency_phone: selectedApp.emergency_phone || '',
+        medical_conditions: selectedApp.medical_conditions || '',
+        disability: selectedApp.disability || '',
+      });
+    } else {
+      setEditableAppData(null);
+    }
+  }, [selectedApp]);
 
   const handleStatus = async (id: string, status: string) => {
     setApproving(id);
@@ -201,19 +229,26 @@ export default function AdminDashboard() {
 
   const handleAppDocUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedApp) return;
+    if (!selectedApp || !editableAppData) return;
     setUploadingAppDocs(true);
     try {
       const formData = new FormData();
+      
+      // Add document files
       Object.entries(appDocFiles).forEach(([key, file]) => {
         if (file) formData.append(key, file);
+      });
+      
+      // Add editable form data
+      Object.entries(editableAppData).forEach(([key, value]) => {
+        if (value) formData.append(key, value.toString());
       });
       
       await api.patch(`/applications/${selectedApp.id}/documents`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      alert('Documents uploaded successfully!');
+      alert('Application updated successfully!');
       setAppDocFiles({
         doc_kcpe: null,
         doc_kcse: null,
@@ -226,7 +261,7 @@ export default function AdminDashboard() {
       setApplications(updated.data.applications);
       setSelectedApp(updated.data.applications.find((a: Application) => a.id === selectedApp.id) || null);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to upload documents');
+      alert(e?.response?.data?.error || 'Failed to update application');
     } finally {
       setUploadingAppDocs(false);
     }
@@ -1100,21 +1135,138 @@ export default function AdminDashboard() {
                 <div className="text-stone">Type:</div><div className="font-medium text-brand-dark">{selectedApp.type}</div>
                 <div className="text-stone">Gender:</div><div className="font-medium text-brand-dark">{selectedApp.gender || '—'}</div>
                 <div className="text-stone">DOB:</div><div className="font-medium text-brand-dark">{selectedApp.date_of_birth ? new Date(selectedApp.date_of_birth).toLocaleDateString() : '—'}</div>
-                <div className="text-stone">Email:</div><div className="font-medium text-brand-dark">{selectedApp.email || '—'}</div>
-                <div className="text-stone">Phone:</div><div className="font-medium text-brand-dark">{selectedApp.phone || '—'}</div>
-                <div className="text-stone">Address:</div><div className="font-medium text-brand-dark">{selectedApp.address || '—'}</div>
                 
-                <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Academic Info</div>
-                <div className="text-stone">Previous School:</div><div className="font-medium text-brand-dark">{selectedApp.previous_school || '—'}</div>
-                <div className="text-stone">KCPE Index / Marks:</div><div className="font-medium text-brand-dark">{selectedApp.kcpe_index || '—'} / {selectedApp.kcpe_marks || '—'}</div>
-                <div className="text-stone">KCSE Index / Grade:</div><div className="font-medium text-brand-dark">{selectedApp.kcse_index || '—'} / {selectedApp.kcse_grade || '—'}</div>
+                <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Personal Information (Editable)</div>
+                <div className="text-stone">Surname:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.surname || ''}
+                  onChange={e => setEditableAppData({...editableAppData, surname: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Other Names:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.other_names || ''}
+                  onChange={e => setEditableAppData({...editableAppData, other_names: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Email:</div>
+                <input
+                  type="email"
+                  value={editableAppData?.email || ''}
+                  onChange={e => setEditableAppData({...editableAppData, email: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Phone:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.phone || ''}
+                  onChange={e => setEditableAppData({...editableAppData, phone: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Address:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.address || ''}
+                  onChange={e => setEditableAppData({...editableAppData, address: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
                 
-                <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Parent & Emergency Info</div>
-                <div className="text-stone">Parent Name:</div><div className="font-medium text-brand-dark">{selectedApp.parent_names || '—'} ({selectedApp.parent_relationship || '—'})</div>
-                <div className="text-stone">Parent Phone:</div><div className="font-medium text-brand-dark">{selectedApp.parent_phone || '—'}</div>
-                <div className="text-stone">Emergency Contact:</div><div className="font-medium text-brand-dark">{selectedApp.emergency_person || '—'}</div>
-                <div className="text-stone">Emergency Phone:</div><div className="font-medium text-brand-dark">{selectedApp.emergency_phone || '—'}</div>
-                <div className="text-stone">Medical/Disability:</div><div className="font-medium text-brand-dark">{selectedApp.medical_conditions || selectedApp.disability || 'None'}</div>
+                <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Academic Info (Editable)</div>
+                <div className="text-stone">Previous School:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.previous_school || ''}
+                  onChange={e => setEditableAppData({...editableAppData, previous_school: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">KCPE Index:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.kcpe_index || ''}
+                  onChange={e => setEditableAppData({...editableAppData, kcpe_index: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">KCPE Marks:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.kcpe_marks || ''}
+                  onChange={e => setEditableAppData({...editableAppData, kcpe_marks: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">KCSE Index:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.kcse_index || ''}
+                  onChange={e => setEditableAppData({...editableAppData, kcse_index: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">KCSE Grade:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.kcse_grade || ''}
+                  onChange={e => setEditableAppData({...editableAppData, kcse_grade: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                
+                <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Parent & Emergency Info (Editable)</div>
+                <div className="text-stone">Parent Name:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.parent_names || ''}
+                  onChange={e => setEditableAppData({...editableAppData, parent_names: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Parent Relationship:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.parent_relationship || ''}
+                  onChange={e => setEditableAppData({...editableAppData, parent_relationship: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Parent Phone:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.parent_phone || ''}
+                  onChange={e => setEditableAppData({...editableAppData, parent_phone: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Parent Email:</div>
+                <input
+                  type="email"
+                  value={editableAppData?.parent_email || ''}
+                  onChange={e => setEditableAppData({...editableAppData, parent_email: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Emergency Contact:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.emergency_person || ''}
+                  onChange={e => setEditableAppData({...editableAppData, emergency_person: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Emergency Phone:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.emergency_phone || ''}
+                  onChange={e => setEditableAppData({...editableAppData, emergency_phone: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Medical Conditions:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.medical_conditions || ''}
+                  onChange={e => setEditableAppData({...editableAppData, medical_conditions: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
+                <div className="text-stone">Disability:</div>
+                <input
+                  type="text"
+                  value={editableAppData?.disability || ''}
+                  onChange={e => setEditableAppData({...editableAppData, disability: e.target.value})}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
                 
                 <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Uploaded Documents</div>
                 <div className="col-span-2 flex flex-wrap gap-2">
@@ -1155,9 +1307,9 @@ export default function AdminDashboard() {
                       {appDocFiles.doc_medical && <span className="text-xs text-green-600">✓</span>}
                     </label>
                   </div>
-                  <button onClick={handleAppDocUpload} disabled={uploadingAppDocs || Object.values(appDocFiles).every(f => !f)}
+                  <button onClick={handleAppDocUpload} disabled={uploadingAppDocs}
                     className="w-full py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50">
-                    {uploadingAppDocs ? 'Uploading…' : 'Upload Documents'}
+                    {uploadingAppDocs ? 'Saving…' : 'Save Changes & Upload Documents'}
                   </button>
                 </div>
               </div>
