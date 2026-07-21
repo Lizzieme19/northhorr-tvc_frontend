@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'staff' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'staff' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -377,11 +377,16 @@ export default function AdminDashboard() {
             </div>
             <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
               <h2 className="font-display text-lg text-brand-dark mb-4">Quick Actions</h2>
-              <div className="grid sm:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-4 gap-4">
                 <button onClick={() => setTab('applications')} className="p-4 rounded-xl border-2 border-dashed border-brand/30 hover:border-brand hover:bg-brand/5 transition text-left">
                   <div className="text-2xl mb-2">📋</div>
                   <div className="font-semibold text-brand-dark">Review Applications</div>
                   <div className="text-xs text-stone mt-1">{stats?.pendingApps || 0} pending</div>
+                </button>
+                <button onClick={() => setTab('users')} className="p-4 rounded-xl border-2 border-dashed border-purple/30 hover:border-purple hover:bg-purple/5 transition text-left">
+                  <div className="text-2xl mb-2">👥</div>
+                  <div className="font-semibold text-brand-dark">Manage Users</div>
+                  <div className="text-xs text-stone mt-1">View all system users</div>
                 </button>
                 <button onClick={() => setTab('staff')} className="p-4 rounded-xl border-2 border-dashed border-gold/30 hover:border-gold hover:bg-gold/5 transition text-left">
                   <div className="text-2xl mb-2">📥</div>
@@ -470,6 +475,9 @@ export default function AdminDashboard() {
 
         {/* ── STUDENTS ── */}
         {tab === 'students' && <StudentsTab generateLetter={generateLetter} />}
+
+        {/* ── USERS ── */}
+        {tab === 'users' && <UsersTab />}
 
         {/* ── COURSES & DEPTS ── */}
         {tab === 'courses' && <CoursesTab />}
@@ -1512,6 +1520,61 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
               {/* Document Uploads */}
               <div>
                 <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Document Uploads</h3>
+                
+                {/* Existing Documents */}
+                <div className="mb-4 p-4 bg-cream-deep/30 rounded-xl">
+                  <h4 className="text-sm font-semibold text-brand-dark mb-3">Uploaded Documents</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    {selectedStudent.id_copy_front_url && (
+                      <a href={selectedStudent.id_copy_front_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Student ID (Front)
+                      </a>
+                    )}
+                    {selectedStudent.id_copy_back_url && (
+                      <a href={selectedStudent.id_copy_back_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Student ID (Back)
+                      </a>
+                    )}
+                    {selectedStudent.parent_id_copy_front_url && (
+                      <a href={selectedStudent.parent_id_copy_front_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Parent ID (Front)
+                      </a>
+                    )}
+                    {selectedStudent.parent_id_copy_back_url && (
+                      <a href={selectedStudent.parent_id_copy_back_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Parent ID (Back)
+                      </a>
+                    )}
+                    {selectedStudent.medical_report_url && (
+                      <a href={selectedStudent.medical_report_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Medical Report
+                      </a>
+                    )}
+                    {selectedStudent.kcse_certificate_url && (
+                      <a href={selectedStudent.kcse_certificate_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 KCSE Certificate
+                      </a>
+                    )}
+                    {selectedStudent.birth_certificate_url && (
+                      <a href={selectedStudent.birth_certificate_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Birth Certificate
+                      </a>
+                    )}
+                    {selectedStudent.other_documents_url && (
+                      <a href={selectedStudent.other_documents_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Other Documents
+                      </a>
+                    )}
+                    {!selectedStudent.id_copy_front_url && !selectedStudent.id_copy_back_url && 
+                     !selectedStudent.parent_id_copy_front_url && !selectedStudent.parent_id_copy_back_url &&
+                     !selectedStudent.medical_report_url && !selectedStudent.kcse_certificate_url &&
+                     !selectedStudent.birth_certificate_url && !selectedStudent.other_documents_url && (
+                      <p className="text-stone col-span-2">No documents uploaded yet</p>
+                    )}
+                  </div>
+                </div>
+
+                <h4 className="text-sm font-semibold text-brand-dark mb-3">Upload New Documents</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Front)</label>
@@ -1555,20 +1618,137 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
                     </div>
                   </div>
               </div>
-            </form>
 
-            <div className="flex gap-3 pt-4 border-t border-stone/10">
-              <button type="submit" disabled={updating || uploadingDocs}
-                className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
-                {updating || uploadingDocs ? 'Saving...' : 'Save Changes'}
-              </button>
-              <button type="button" onClick={() => setSelectedStudent(null)} className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
-                Cancel
-              </button>
-            </div>
+              <div className="flex gap-3 pt-4 border-t border-stone/10">
+                <button type="submit" disabled={updating || uploadingDocs}
+                  className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
+                  {updating || uploadingDocs ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button type="button" onClick={() => setSelectedStudent(null)} className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function UsersTab() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params: any = { page, limit: 20 };
+    if (roleFilter) params.role = roleFilter;
+    if (search) params.search = search;
+    api.get('/auth/users', { params }).then(r => {
+      setUsers(r.data.users);
+      setTotal(r.data.pagination.total);
+    }).catch(() => {});
+  }, [page, roleFilter, search]);
+
+  const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
+    setUpdating(userId);
+    try {
+      await api.patch(`/auth/users/${userId}`, { is_active: !currentStatus });
+      setUsers(users.map(u => u.id === userId ? { ...u, is_active: !currentStatus } : u));
+    } catch (err) {
+      alert('Failed to update user status');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const roleColors: Record<string, string> = {
+    ADMIN: 'bg-purple-100 text-purple-800',
+    DEPT_HEAD: 'bg-blue-100 text-blue-800',
+    FINANCE: 'bg-green-100 text-green-800',
+    STAFF: 'bg-gray-100 text-gray-800',
+    PROCUREMENT: 'bg-orange-100 text-orange-800',
+    HR: 'bg-pink-100 text-pink-800',
+    STUDENT: 'bg-brand/10 text-brand',
+  };
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="font-display text-2xl text-brand-dark">Users ({total})</h1>
+        <div className="flex gap-3">
+          <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand">
+            <option value="">All Roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="DEPT_HEAD">Dept Head</option>
+            <option value="FINANCE">Finance</option>
+            <option value="STAFF">Staff</option>
+            <option value="PROCUREMENT">Procurement</option>
+            <option value="HR">HR</option>
+            <option value="STUDENT">Student</option>
+          </select>
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search email…"
+            className="px-3 py-2 rounded-xl border border_stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3 text-left">Email</th>
+                <th className="px-4 py-3 text-left">Role</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Student Info</th>
+                <th className="px-4 py-3 text-left">Created</th>
+                <th className="px-4 py-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone/10">
+              {users.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-stone">No users found</td></tr>}
+              {users.map(u => (
+                <tr key={u.id} className="hover:bg-cream-deep/50 transition">
+                  <td className="px-4 py-3 font-medium text-brand-dark">{u.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[u.role] || 'bg-stone/20 text-stone'}`}>{u.role}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {u.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-stone text-xs">
+                    {u.student ? `${u.student.admission_no} • ${u.student.course?.name || 'N/A'}` : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-stone text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleToggleStatus(u.id, u.is_active)}
+                      disabled={updating === u.id}
+                      className="text-xs px-2 py-1 rounded-lg border border-stone/25 hover:border-brand transition disabled:opacity-50"
+                    >
+                      {updating === u.id ? '...' : (u.is_active ? 'Deactivate' : 'Activate')}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
+          <span>Page {page} of {Math.ceil(total / 20)}</span>
+          <div className="flex gap-2">
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
+            <button disabled={page >= Math.ceil(total / 20)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
