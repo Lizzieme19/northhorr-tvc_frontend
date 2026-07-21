@@ -32,6 +32,14 @@ export default function AdminDashboard() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [intake, setIntake] = useState('SEPTEMBER');
   const [studentCredentials, setStudentCredentials] = useState<any>(null);
+  const [appDocFiles, setAppDocFiles] = useState({
+    doc_kcpe: null as File | null,
+    doc_kcse: null as File | null,
+    doc_id_copy: null as File | null,
+    doc_birth_cert: null as File | null,
+    doc_medical: null as File | null,
+  });
+  const [uploadingAppDocs, setUploadingAppDocs] = useState(false);
   const [resources, setResources] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [resourceFile, setResourceFile] = useState<File | null>(null);
@@ -191,6 +199,39 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAppDocUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedApp) return;
+    setUploadingAppDocs(true);
+    try {
+      const formData = new FormData();
+      Object.entries(appDocFiles).forEach(([key, file]) => {
+        if (file) formData.append(key, file);
+      });
+      
+      await api.patch(`/applications/${selectedApp.id}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      alert('Documents uploaded successfully!');
+      setAppDocFiles({
+        doc_kcpe: null,
+        doc_kcse: null,
+        doc_id_copy: null,
+        doc_birth_cert: null,
+        doc_medical: null,
+      });
+      
+      const updated = await applicationsApi.getAll({ page, limit: 15, search, status: statusFilter });
+      setApplications(updated.data.applications);
+      setSelectedApp(updated.data.applications.find((a: Application) => a.id === selectedApp.id) || null);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to upload documents');
+    } finally {
+      setUploadingAppDocs(false);
+    }
+  };
+
   const handleFeeTypeSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingFeeType(true);
@@ -293,6 +334,16 @@ export default function AdminDashboard() {
       alert('Term deleted successfully');
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to delete term');
+    }
+  };
+
+  const handleTermToggleActive = async (id: string, currentStatus: boolean) => {
+    try {
+      await api.patch(`/terms/${id}`, { is_active: !currentStatus });
+      setTerms(prev => prev.map(t => t.id === id ? { ...t, is_active: !currentStatus } : t));
+      alert(`Term ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to update term status');
     }
   };
 
@@ -852,6 +903,12 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex gap-2 ml-4">
                         <button
+                          onClick={() => handleTermToggleActive(t.id, t.is_active)}
+                          className={`px-3 py-1 rounded-lg text-sm transition ${t.is_active ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}
+                        >
+                          {t.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
                           onClick={() => handleTermEdit(t)}
                           className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition"
                         >
@@ -1068,6 +1125,41 @@ export default function AdminDashboard() {
                   {selectedApp.doc_medical && <a href={selectedApp.doc_medical} target="_blank" className="px-3 py-1 bg-white border border-stone/20 rounded-full text-xs hover:bg-brand/10 hover:text-brand transition">📄 Medical</a>}
                   {!selectedApp.doc_kcpe && !selectedApp.doc_kcse && !selectedApp.doc_id_copy && !selectedApp.doc_birth_cert && !selectedApp.doc_medical && <span className="text-stone text-xs italic">No documents uploaded.</span>}
                 </div>
+
+                <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Upload Additional Documents</div>
+                <div className="col-span-2 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 text-xs">
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_kcpe: e.target.files?.[0] || null})} className="hidden" />
+                      <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 KCPE</span>
+                      {appDocFiles.doc_kcpe && <span className="text-xs text-green-600">✓</span>}
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_kcse: e.target.files?.[0] || null})} className="hidden" />
+                      <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 KCSE</span>
+                      {appDocFiles.doc_kcse && <span className="text-xs text-green-600">✓</span>}
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_id_copy: e.target.files?.[0] || null})} className="hidden" />
+                      <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 ID Copy</span>
+                      {appDocFiles.doc_id_copy && <span className="text-xs text-green-600">✓</span>}
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_birth_cert: e.target.files?.[0] || null})} className="hidden" />
+                      <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 Birth Cert</span>
+                      {appDocFiles.doc_birth_cert && <span className="text-xs text-green-600">✓</span>}
+                    </label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_medical: e.target.files?.[0] || null})} className="hidden" />
+                      <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 Medical</span>
+                      {appDocFiles.doc_medical && <span className="text-xs text-green-600">✓</span>}
+                    </label>
+                  </div>
+                  <button onClick={handleAppDocUpload} disabled={uploadingAppDocs || Object.values(appDocFiles).every(f => !f)}
+                    className="w-full py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50">
+                    {uploadingAppDocs ? 'Uploading…' : 'Upload Documents'}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1152,7 +1244,7 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
   }, [page, search]);
 
   useEffect(() => {
-    api.get('/terms').then(r => setTerms(r.data)).catch(() => {});
+    api.get('/terms').then(r => setTerms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
   }, []);
 
   const handleKuccpsImport = async () => {
@@ -1866,6 +1958,11 @@ function UsersTab() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [savingStaff, setSavingStaff] = useState(false);
   const [staffMsg, setStaffMsg] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ email: '', role: '', department_id: '', new_password: '', confirm_password: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editMsg, setEditMsg] = useState('');
 
   useEffect(() => {
     departmentsApi.getAll().then(r => setDepartments(r.data)).catch(() => {});
@@ -1876,8 +1973,10 @@ function UsersTab() {
     if (roleFilter) params.role = roleFilter;
     if (search) params.search = search;
     api.get('/auth/users', { params }).then(r => {
-      setUsers(r.data.users);
-      setTotal(r.data.pagination.total);
+      // Filter out students from the users list
+      const filteredUsers = r.data.users.filter((u: any) => u.role !== 'STUDENT');
+      setUsers(filteredUsers);
+      setTotal(filteredUsers.length);
     }).catch(err => {
       console.error('Failed to fetch users:', err);
       alert('Failed to load users. Please check your connection.');
@@ -1896,6 +1995,21 @@ function UsersTab() {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    setUpdating(userId);
+    try {
+      await api.delete(`/auth/users/${userId}`);
+      setUsers(users.filter(u => u.id !== userId));
+      setTotal(total - 1);
+      alert('User deleted successfully');
+    } catch (err) {
+      alert('Failed to delete user');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingStaff(true);
@@ -1906,12 +2020,61 @@ function UsersTab() {
       setStaffForm({ email: '', password: '', role: 'DEPT_HEAD', department_id: '' });
       setShowCreateForm(false);
       const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search } });
-      setUsers(updated.data.users);
-      setTotal(updated.data.pagination.total);
+      setUsers(updated.data.users.filter((u: any) => u.role !== 'STUDENT'));
+      setTotal(updated.data.users.filter((u: any) => u.role !== 'STUDENT').length);
     } catch (err: any) {
       setStaffMsg(err?.response?.data?.error || 'Failed to create staff account');
     } finally {
       setSavingStaff(false);
+    }
+  };
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setEditForm({
+      email: user.email,
+      role: user.role,
+      department_id: user.student?.department?.id || '',
+      new_password: '',
+      confirm_password: ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEdit(true);
+    setEditMsg('');
+    try {
+      const updateData: any = {
+        email: editForm.email,
+        role: editForm.role,
+      };
+      if (editForm.role === 'DEPT_HEAD' && editForm.department_id) {
+        updateData.department_id = editForm.department_id;
+      }
+      if (editForm.new_password) {
+        if (editForm.new_password !== editForm.confirm_password) {
+          setEditMsg('Passwords do not match');
+          setSavingEdit(false);
+          return;
+        }
+        updateData.password = editForm.new_password;
+      }
+      await api.patch(`/auth/users/${editingUser.id}`, updateData);
+      setEditMsg('✅ User updated successfully!');
+      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search } });
+      setUsers(updated.data.users.filter((u: any) => u.role !== 'STUDENT'));
+      setTotal(updated.data.users.filter((u: any) => u.role !== 'STUDENT').length);
+      setTimeout(() => {
+        setShowEditModal(false);
+        setEditingUser(null);
+        setEditMsg('');
+      }, 1500);
+    } catch (err: any) {
+      setEditMsg(err?.response?.data?.error || 'Failed to update user');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -1942,7 +2105,6 @@ function UsersTab() {
             <option value="STAFF">Staff</option>
             <option value="PROCUREMENT">Procurement</option>
             <option value="HR">HR</option>
-            <option value="STUDENT">Student</option>
           </select>
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search email…"
@@ -2002,6 +2164,70 @@ function UsersTab() {
         </div>
       )}
 
+      {/* Edit User Modal */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Edit User</h2>
+            <p className="text-sm text-stone mb-4">{editingUser.email}</p>
+            
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Email *</label>
+                <input type="email" required value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Role *</label>
+                <select required value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                  <option value="ADMIN">Admin</option>
+                  <option value="DEPT_HEAD">Dept Head</option>
+                  <option value="FINANCE">Finance</option>
+                  <option value="STAFF">Staff</option>
+                  <option value="PROCUREMENT">Procurement</option>
+                  <option value="HR">HR</option>
+                </select>
+              </div>
+              {editForm.role === 'DEPT_HEAD' && (
+                <div>
+                  <label className="block text-sm font-medium text-brand-dark mb-1">Department</label>
+                  <select value={editForm.department_id} onChange={e => setEditForm({...editForm, department_id: e.target.value})}
+                    className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                    <option value="">Select Department</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="border-t border-stone/10 pt-4">
+                <label className="block text-sm font-medium text-brand-dark mb-2">Change Password (optional)</label>
+                <input type="password" value={editForm.new_password} onChange={e => setEditForm({...editForm, new_password: e.target.value})}
+                  placeholder="New password" className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm mb-3" />
+                <input type="password" value={editForm.confirm_password} onChange={e => setEditForm({...editForm, confirm_password: e.target.value})}
+                  placeholder="Confirm new password" className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+              </div>
+              {editMsg && (
+                <div className={`p-3 rounded-xl text-sm ${editMsg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                  {editMsg}
+                </div>
+              )}
+              <div className="flex gap-3 pt-4">
+                <button type="submit" disabled={savingEdit}
+                  className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
+                  {savingEdit ? 'Saving…' : 'Save Changes'}
+                </button>
+                <button type="button" onClick={() => { setShowEditModal(false); setEditingUser(null); setEditMsg(''); }}
+                  className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -2033,13 +2259,28 @@ function UsersTab() {
                   </td>
                   <td className="px-4 py-3 text-stone text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleToggleStatus(u.id, u.is_active)}
-                      disabled={updating === u.id}
-                      className="text-xs px-2 py-1 rounded-lg border border-stone/25 hover:border-brand transition disabled:opacity-50"
-                    >
-                      {updating === u.id ? '...' : (u.is_active ? 'Deactivate' : 'Activate')}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditUser(u)}
+                        className="text-xs px-2 py-1 rounded-lg border border-stone/25 hover:border-brand transition"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(u.id, u.is_active)}
+                        disabled={updating === u.id}
+                        className="text-xs px-2 py-1 rounded-lg border border-stone/25 hover:border-brand transition disabled:opacity-50"
+                      >
+                        {updating === u.id ? '...' : (u.is_active ? 'Deactivate' : 'Activate')}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(u.id)}
+                        disabled={updating === u.id}
+                        className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

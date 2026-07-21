@@ -13,6 +13,9 @@ export default function StudentDashboard() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [updating, setUpdating] = useState(false);
+  const [terms, setTerms] = useState<any[]>([]);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [enrolling, setEnrolling] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'STUDENT')) router.replace('/login');
@@ -30,6 +33,16 @@ export default function StudentDashboard() {
           emergency_contact_phone: r.data.application?.emergency_phone || '',
         });
       }).catch(console.error);
+      
+      // Fetch active terms
+      api.get('/terms').then(r => {
+        setTerms(Array.isArray(r.data) ? r.data.filter((t: any) => t.is_active) : []);
+      }).catch(console.error);
+      
+      // Fetch current enrollments
+      api.get('/students/me/enrollments').then(r => {
+        setEnrollments(Array.isArray(r.data) ? r.data : []);
+      }).catch(console.error);
     }
   }, [user]);
 
@@ -46,6 +59,23 @@ export default function StudentDashboard() {
       alert(err?.response?.data?.error || 'Failed to update profile');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleEnrollTerm = async (termId: string) => {
+    if (!confirm('Are you sure you want to enroll in this term? This may have fee implications.')) return;
+    setEnrolling(termId);
+    try {
+      await api.post(`/fees/terms/${termId}/enroll`);
+      alert('Enrolled successfully!');
+      
+      // Refresh enrollments
+      const updated = await api.get('/fees/students/me/enrollments');
+      setEnrollments(Array.isArray(updated.data) ? updated.data : []);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to enroll in term');
+    } finally {
+      setEnrolling(null);
     }
   };
 
@@ -220,6 +250,58 @@ export default function StudentDashboard() {
                   </div>
                   <p className="text-xs text-stone">Official admission letter - available after admission approval.</p>
                 </div>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Term Enrollment</h2>
+              
+              <div className="space-y-3">
+                {/* Current Enrollments */}
+                {enrollments.length > 0 && (
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                    <div className="font-medium text-green-800 text-sm mb-2">Current Enrollments</div>
+                    {enrollments.map((enrollment: any) => (
+                      <div key={enrollment.id} className="flex items-center justify-between text-sm py-1">
+                        <span className="text-green-700">{enrollment.term.name} ({enrollment.term.academic_year})</span>
+                        <span className="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full">Enrolled</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Available Terms for Enrollment */}
+                {terms.length > 0 && (
+                  <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                    <div className="font-medium text-brand-dark text-sm mb-2">Available Terms</div>
+                    <div className="space-y-2">
+                      {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).map((term: any) => (
+                        <div key={term.id} className="flex items-center justify-between text-sm py-2 border-b border-stone/10 last:border-0">
+                          <div>
+                            <div className="font-medium text-brand-dark">{term.name}</div>
+                            <div className="text-xs text-stone">{term.academic_year} • {new Date(term.start_date).toLocaleDateString()} - {new Date(term.end_date).toLocaleDateString()}</div>
+                          </div>
+                          <button
+                            onClick={() => handleEnrollTerm(term.id)}
+                            disabled={enrolling === term.id}
+                            className="px-3 py-1 bg-brand text-cream rounded-full text-xs hover:bg-brand-dark transition disabled:opacity-50"
+                          >
+                            {enrolling === term.id ? 'Enrolling...' : 'Enroll'}
+                          </button>
+                        </div>
+                      ))}
+                      {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).length === 0 && (
+                        <div className="text-xs text-stone italic">No new terms available for enrollment</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {terms.length === 0 && (
+                  <div className="bg-stone/50 rounded-xl p-4 border border-stone/20 text-center">
+                    <p className="text-sm text-stone">No active terms available for enrollment</p>
+                  </div>
+                )}
               </div>
             </div>
 
