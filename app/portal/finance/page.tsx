@@ -44,7 +44,9 @@ export default function FinanceDashboard() {
   const markPaid = async (studentId: string, feeTypeId: string, amount?: number) => {
     setProcessing(`${studentId}-${feeTypeId}`);
     try {
-      await api.patch(`/finance/students/${studentId}/fees`, { fee_type_id: feeTypeId, amount });
+      console.log('Marking paid:', { studentId, feeTypeId, amount });
+      const response = await api.patch(`/finance/students/${studentId}/fees`, { fee_type_id: feeTypeId, amount });
+      console.log('Mark paid response:', response.data);
       // Refresh student list
       const params: any = { page, limit: 15 };
       if (search) params.search = search;
@@ -54,6 +56,7 @@ export default function FinanceDashboard() {
       // Update summary
       financeApi.getReports().then(r => setSummary(r.data));
     } catch (e: any) {
+      console.error('Mark paid error:', e);
       alert(e?.response?.data?.error || 'Failed to update fee');
     } finally { setProcessing(null); }
   };
