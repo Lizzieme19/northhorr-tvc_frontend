@@ -1161,6 +1161,7 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
   const [search, setSearch] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [updating, setUpdating] = useState(false);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [docFiles, setDocFiles] = useState({
@@ -1198,17 +1199,32 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
       mother_phone: student.application?.mother_phone || '',
       mother_email: student.application?.mother_email || '',
       mother_occupation: student.application?.mother_occupation || '',
+      level: student.level || '',
+      intake: student.intake || '',
+      year: student.year || '',
+      status: student.status || '',
+      course_id: student.course_id || '',
+      department_id: student.department_id || '',
     });
   };
 
   const handleUpdateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUploadingDocs(true);
+    setUpdating(true);
     try {
-      // First update the student profile data
+      // Upload profile photo if selected
+      if (profilePhoto) {
+        const photoFormData = new FormData();
+        photoFormData.append('photo', profilePhoto);
+        await api.post(`/students/${selectedStudent.id}/photo`, photoFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+
+      // Update the student profile data
       await studentsApi.update(selectedStudent.id, editForm);
       
-      // Then upload documents if any files are selected
+      // Upload documents if any files are selected
       const formData = new FormData();
       if (docFiles.id_copy_front) formData.append('id_copy_front', docFiles.id_copy_front);
       if (docFiles.id_copy_back) formData.append('id_copy_back', docFiles.id_copy_back);
@@ -1232,6 +1248,7 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
       const updated = await studentsApi.getAll({ page, limit: 15, search });
       setStudents(updated.data.students);
       setSelectedStudent(null);
+      setProfilePhoto(null);
       setDocFiles({ 
         id_copy_front: null, 
         id_copy_back: null, 
@@ -1318,6 +1335,65 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
             <p className="text-sm text-stone mb-4">{selectedStudent.admission_no} — {selectedStudent.application?.surname} {selectedStudent.application?.other_names}</p>
             
             <form onSubmit={handleUpdateStudent} className="flex-1 overflow-y-auto mb-5 pr-2 space-y-6">
+              {/* Profile Photo */}
+              <div>
+                <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Profile Photo</h3>
+                <div className="flex items-center gap-4">
+                  {selectedStudent.profile_picture_url && (
+                    <img src={selectedStudent.profile_picture_url} alt="Profile" className="w-20 h-20 rounded-full object-cover border-2 border-stone/20" />
+                  )}
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Upload New Photo</label>
+                    <input type="file" accept="image/*" onChange={e => setProfilePhoto(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Information */}
+              <div>
+                <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Academic Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Level</label>
+                    <select value={editForm.level} onChange={e => setEditForm({ ...editForm, level: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select Level</option>
+                      <option value="Level 3">Level 3 (Short Course)</option>
+                      <option value="Level 4">Level 4 (Artisan)</option>
+                      <option value="Level 5">Level 5 (Certificate)</option>
+                      <option value="Level 6">Level 6 (Diploma)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Intake</label>
+                    <select value={editForm.intake} onChange={e => setEditForm({ ...editForm, intake: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select Intake</option>
+                      <option value="JANUARY">January</option>
+                      <option value="MAY">May</option>
+                      <option value="SEPTEMBER">September</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Year</label>
+                    <input type="number" value={editForm.year} onChange={e => setEditForm({ ...editForm, year: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Status</label>
+                    <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select Status</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="DEFERRED">Deferred</option>
+                      <option value="GRADUATED">Graduated</option>
+                      <option value="WITHDRAWN">Withdrawn</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* Contact Information */}
               <div>
                 <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Contact Information</h3>
@@ -1433,11 +1509,10 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
                 </div>
               </div>
 
-              {/* Document Uploads - Only show when student has reported (ACTIVE status) */}
-              {selectedStudent.status === 'ACTIVE' && (
-                <div>
-                  <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Document Uploads</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Document Uploads */}
+              <div>
+                <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Document Uploads</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Front)</label>
                       <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, id_copy_front: e.target.files?.[0] || null})}
@@ -1479,14 +1554,13 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
                         className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                     </div>
                   </div>
-                </div>
-              )}
+              </div>
             </form>
 
             <div className="flex gap-3 pt-4 border-t border-stone/10">
-              <button type="submit" disabled={uploadingDocs} onClick={handleUpdateStudent}
+              <button type="submit" disabled={updating || uploadingDocs}
                 className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
-                {updating ? 'Saving...' : 'Save Changes'}
+                {updating || uploadingDocs ? 'Saving...' : 'Save Changes'}
               </button>
               <button type="button" onClick={() => setSelectedStudent(null)} className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
                 Cancel

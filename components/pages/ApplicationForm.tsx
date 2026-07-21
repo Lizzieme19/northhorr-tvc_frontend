@@ -27,8 +27,7 @@ export default function ApplicationForm() {
     father_present: true, father_name: '', father_phone: '', father_email: '', father_occupation: '',
     mother_present: true, mother_name: '', mother_phone: '', mother_email: '', mother_occupation: '',
     siblings_no: '',
-    emergency_name_1: '', emergency_phone_1: '', relationship_1: '', emergency_address_1: '',
-    emergency_contact_2_present: false, emergency_name_2: '', emergency_phone_2: '', relationship_2: '', emergency_address_2: '',
+    emergency_person: '', emergency_phone: '',
     department_id: '', course_id: '', level_applied: ''
   });
 
@@ -73,9 +72,9 @@ export default function ApplicationForm() {
       mother_phone: formData.mother_present ? formData.mother_phone : null,
       mother_email: formData.mother_present ? formData.mother_email : null,
       mother_occupation: formData.mother_present ? formData.mother_occupation : null,
-      // Map emergency details - use first emergency contact
-      emergency_person: formData.emergency_name_1,
-      emergency_phone: formData.emergency_phone_1,
+      // Map emergency details
+      emergency_person: formData.emergency_person,
+      emergency_phone: formData.emergency_phone,
     };
     
     Object.entries(backendData).forEach(([k, v]) => data.append(k, v as string));
@@ -228,27 +227,10 @@ export default function ApplicationForm() {
             </div>
             <div>
               <h3 className="text-lg font-display text-brand-dark mb-4">Emergency Details</h3>
-              <div className="grid sm:grid-cols-2 gap-5 mb-6">
-                <Field name="emergency_name_1" label="Emergency Contact Name" required value={formData.emergency_name_1} onChange={handleChange} />
-                <Field name="relationship_1" label="Relationship" required value={formData.relationship_1} onChange={handleChange} />
-                <Field name="emergency_phone_1" label="Phone Number" required value={formData.emergency_phone_1} onChange={handleChange} />
-                <Field name="emergency_address_1" label="Address" required value={formData.emergency_address_1} onChange={handleChange} />
+              <div className="grid sm:grid-cols-2 gap-5">
+                <Field name="emergency_person" label="Emergency Contact Name" required value={formData.emergency_person} onChange={handleChange} />
+                <Field name="emergency_phone" label="Phone Number" required value={formData.emergency_phone} onChange={handleChange} />
               </div>
-              <div className="flex items-center gap-3 mb-4">
-                <label className="text-sm text-stone">Add second emergency contact?</label>
-                <button type="button" onClick={() => setFormData({ ...formData, emergency_contact_2_present: !formData.emergency_contact_2_present })}
-                  className={`w-12 h-6 rounded-full transition ${formData.emergency_contact_2_present ? 'bg-brand' : 'bg-stone/30'}`}>
-                  <div className={`w-5 h-5 bg-white rounded-full transition ${formData.emergency_contact_2_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
-              {formData.emergency_contact_2_present && (
-                <div className="grid sm:grid-cols-2 gap-5">
-                  <Field name="emergency_name_2" label="Second Emergency Contact Name" value={formData.emergency_name_2} onChange={handleChange} />
-                  <Field name="relationship_2" label="Relationship" value={formData.relationship_2} onChange={handleChange} />
-                  <Field name="emergency_phone_2" label="Phone Number" value={formData.emergency_phone_2} onChange={handleChange} />
-                  <Field name="emergency_address_2" label="Address" value={formData.emergency_address_2} onChange={handleChange} />
-                </div>
-              )}
             </div>
           </div>
         )}
