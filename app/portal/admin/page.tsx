@@ -320,8 +320,8 @@ export default function AdminDashboard() {
           { key: 'overview', label: '📊 Overview' },
           { key: 'applications', label: '📋 Applications' },
           { key: 'students', label: '🎓 Students' },
+          { key: 'users', label: '👥 Users' },
           { key: 'courses', label: '📚 Dept & Courses' },
-          { key: 'staff', label: '👥 Staff & Import' },
           { key: 'resources', label: '📁 Resources' },
           { key: 'news', label: '📰 News' },
           { key: 'fee-types', label: '💰 Fee Types' },
@@ -1878,7 +1878,10 @@ function UsersTab() {
     api.get('/auth/users', { params }).then(r => {
       setUsers(r.data.users);
       setTotal(r.data.pagination.total);
-    }).catch(() => {});
+    }).catch(err => {
+      console.error('Failed to fetch users:', err);
+      alert('Failed to load users. Please check your connection.');
+    });
   }, [page, roleFilter, search]);
 
   const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
