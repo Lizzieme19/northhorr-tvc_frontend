@@ -1135,12 +1135,25 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const [showFeeModal, setShowFeeModal] = useState(false);
+  const [feeSummary, setFeeSummary] = useState<any>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [recordingPayment, setRecordingPayment] = useState(false);
+  const [showProgressionModal, setShowProgressionModal] = useState(false);
+  const [progressionForm, setProgressionForm] = useState({ toLevel: '', termId: '', notes: '', forcePromote: false });
+  const [promoting, setPromoting] = useState(false);
+  const [terms, setTerms] = useState<any[]>([]);
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
       .then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); })
       .catch(() => {});
   }, [page, search]);
+
+  useEffect(() => {
+    api.get('/terms').then(r => setTerms(r.data)).catch(() => {});
+  }, []);
 
   const handleKuccpsImport = async () => {
     if (!csvFile) return;
@@ -1154,6 +1167,58 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Import failed');
     } finally { setImporting(false); }
+  };
+
+  const handleViewFeeSummary = async (studentId: string) => {
+    try {
+      const r = await api.get(`/fees/students/${studentId}/summary`);
+      setFeeSummary(r.data);
+      setShowFeeModal(true);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to fetch fee summary');
+    }
+  };
+
+  const handleRecordPayment = async (studentId: string, termId: string) => {
+    if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
+      alert('Please enter a valid payment amount');
+      return;
+    }
+    setRecordingPayment(true);
+    try {
+      await api.post(`/fees/students/${studentId}/terms/${termId}/payment`, {
+        amount: parseFloat(paymentAmount),
+        notes: paymentNotes,
+      });
+      alert('Payment recorded successfully');
+      setPaymentAmount('');
+      setPaymentNotes('');
+      handleViewFeeSummary(studentId);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to record payment');
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
+
+  const handlePromoteStudent = async (studentId: string) => {
+    if (!progressionForm.toLevel || !progressionForm.termId) {
+      alert('Please select level and term');
+      return;
+    }
+    setPromoting(true);
+    try {
+      await api.post(`/fees/students/${studentId}/promote`, progressionForm);
+      alert('Student promoted successfully');
+      setShowProgressionModal(false);
+      setProgressionForm({ toLevel: '', termId: '', notes: '', forcePromote: false });
+      const updated = await studentsApi.getAll({ page, limit: 15, search });
+      setStudents(updated.data.students);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to promote student');
+    } finally {
+      setPromoting(false);
+    }
   };
 
   const handleEditStudent = (student: any) => {
@@ -1310,7 +1375,11 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit Profile</button>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
+                      <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>
+                      <button onClick={() => { setShowProgressionModal(true); setProgressionForm({ ...progressionForm, toLevel: s.level }); setSelectedStudent(s); }} className="text-purple-600 hover:text-purple-800 font-medium text-xs transition">Promote</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1620,6 +1689,164 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Fee Summary Modal */}
+      {showFeeModal && feeSummary && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Fee Summary</h2>
+            <p className="text-sm text-stone mb-4">{feeSummary.student.admission_no} — Level {feeSummary.student.level}</p>
+            
+            <div className="flex-1 overflow-y-auto mb-5 pr-2 space-y-4">
+              <div className="grid grid-cols-3 gap-4 p-4 bg-cream-deep rounded-xl">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-brand-dark">{feeSummary.summary.totalBalance.toLocaleString()}</div>
+                  <div className="text-xs text-stone">Total Balance</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{feeSummary.summary.totalPaid.toLocaleString()}</div>
+                  <div className="text-xs text-stone">Total Paid</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-brand">{feeSummary.summary.totalTerms}</div>
+                  <div className="text-xs text-stone">Terms Enrolled</div>
+                </div>
+              </div>
+
+              <h3 className="font-semibold text-brand-dark">Term Balances</h3>
+              <div className="space-y-2">
+                {feeSummary.balances.map((b: any) => (
+                  <div key={b.id} className="flex items-center justify-between p-3 border border-stone/10 rounded-lg">
+                    <div>
+                      <div className="font-medium text-brand-dark">{b.term.name}</div>
+                      <div className="text-xs text-stone">Level: {b.level}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-semibold ${b.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {b.balance > 0 ? b.balance.toLocaleString() : 'Paid'}
+                      </div>
+                      <div className="text-xs text-stone">{b.status}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="font-semibold text-brand-dark">Record Payment</h3>
+              {feeSummary.balances.length > 0 && feeSummary.balances[0].balance > 0 && (
+                <div className="space-y-3">
+                  <select
+                    value={paymentAmount}
+                    onChange={e => setPaymentAmount(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                  >
+                    <option value="">Select amount or enter custom</option>
+                    {feeSummary.balances.map((b: any) => (
+                      <option key={b.id} value={b.balance}>Full Term Payment ({b.balance.toLocaleString()})</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={e => setPaymentAmount(e.target.value)}
+                    placeholder="Or enter custom amount"
+                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={paymentNotes}
+                    onChange={e => setPaymentNotes(e.target.value)}
+                    placeholder="Payment notes (optional)"
+                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                  />
+                  <button
+                    onClick={() => handleRecordPayment(feeSummary.student.id, feeSummary.balances[0].term_id)}
+                    disabled={recordingPayment}
+                    className="w-full py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50"
+                  >
+                    {recordingPayment ? 'Recording...' : 'Record Payment'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => { setShowFeeModal(false); setFeeSummary(null); }} className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Progression Modal */}
+      {showProgressionModal && selectedStudent && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Promote Student</h2>
+            <p className="text-sm text-stone mb-4">{selectedStudent.admission_no} — Current: {selectedStudent.level}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">New Level</label>
+                <select
+                  value={progressionForm.toLevel}
+                  onChange={e => setProgressionForm({ ...progressionForm, toLevel: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                >
+                  <option value="">Select Level</option>
+                  <option value="Level 3">Level 3 (Short Course)</option>
+                  <option value="Level 4">Level 4 (Artisan)</option>
+                  <option value="Level 5">Level 5 (Certificate)</option>
+                  <option value="Level 6">Level 6 (Diploma)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Term</label>
+                <select
+                  value={progressionForm.termId}
+                  onChange={e => setProgressionForm({ ...progressionForm, termId: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                >
+                  <option value="">Select Term</option>
+                  {terms.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.academic_year})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Notes (optional)</label>
+                <textarea
+                  value={progressionForm.notes}
+                  onChange={e => setProgressionForm({ ...progressionForm, notes: e.target.value })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="forcePromote"
+                  checked={progressionForm.forcePromote}
+                  onChange={e => setProgressionForm({ ...progressionForm, forcePromote: e.target.checked })}
+                  className="rounded border-stone/25"
+                />
+                <label htmlFor="forcePromote" className="text-sm text-stone">Force promotion (ignore outstanding balances)</label>
+              </div>
+              <button
+                onClick={() => handlePromoteStudent(selectedStudent.id)}
+                disabled={promoting}
+                className="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 transition disabled:opacity-50"
+              >
+                {promoting ? 'Promoting...' : 'Promote Student'}
+              </button>
+              <button
+                onClick={() => { setShowProgressionModal(false); setProgressionForm({ toLevel: '', termId: '', notes: '', forcePromote: false }); }}
+                className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
