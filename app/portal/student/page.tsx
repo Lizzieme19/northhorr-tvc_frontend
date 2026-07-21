@@ -40,7 +40,7 @@ export default function StudentDashboard() {
       }).catch(console.error);
       
       // Fetch current enrollments
-      api.get('/students/me/enrollments').then(r => {
+      api.get('/fees/students/me/enrollments').then(r => {
         setEnrollments(Array.isArray(r.data) ? r.data : []);
       }).catch(console.error);
     }

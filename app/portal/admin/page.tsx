@@ -50,6 +50,7 @@ export default function AdminDashboard() {
   const [newsImage, setNewsImage] = useState<File | null>(null);
   const [uploadingNews, setUploadingNews] = useState(false);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
+  const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
   const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
   const [editingFeeType, setEditingFeeType] = useState<any>(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
@@ -80,6 +81,8 @@ export default function AdminDashboard() {
     if (tab === 'terms') {
       termsApi.getAll().then(r => setTerms(r.data.terms || [])).catch(() => setTerms([]));
     }
+    // Load fee types for payment recording
+    feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
   }, [tab]);
 
   useEffect(() => {
@@ -1428,15 +1431,21 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
       alert('Please enter a valid payment amount');
       return;
     }
+    if (!selectedFeeTypeId) {
+      alert('Please select a fee type');
+      return;
+    }
     setRecordingPayment(true);
     try {
       await api.post(`/fees/students/${studentId}/terms/${termId}/payment`, {
         amount: parseFloat(paymentAmount),
+        fee_type_id: selectedFeeTypeId,
         notes: paymentNotes,
       });
       alert('Payment recorded successfully');
       setPaymentAmount('');
       setPaymentNotes('');
+      setSelectedFeeTypeId('');
       handleViewFeeSummary(studentId);
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to record payment');
@@ -1981,6 +1990,16 @@ function StudentsTab({ generateLetter }: { generateLetter: (id: string) => void 
               <h3 className="font-semibold text-brand-dark">Record Payment</h3>
               {feeSummary.balances.length > 0 && feeSummary.balances[0].balance > 0 && (
                 <div className="space-y-3">
+                  <select
+                    value={selectedFeeTypeId}
+                    onChange={e => setSelectedFeeTypeId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                  >
+                    <option value="">Select fee type</option>
+                    {feeTypes.map((ft: any) => (
+                      <option key={ft.id} value={ft.id}>{ft.name} ({ft.code}) - KES {ft.amount}</option>
+                    ))}
+                  </select>
                   <select
                     value={paymentAmount}
                     onChange={e => setPaymentAmount(e.target.value)}
