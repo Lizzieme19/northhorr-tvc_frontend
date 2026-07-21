@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth, portalRoute } from '@/lib/auth';
+import api from '@/lib/api';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -19,11 +20,15 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      const token = localStorage.getItem('ntvc_access_token');
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        router.push(portalRoute(payload.role));
+      const response = await api.post('/auth/login', { email, password });
+      const { accessToken, refreshToken, user } = response.data;
+      localStorage.setItem('ntvc_access_token', accessToken);
+      localStorage.setItem('ntvc_refresh_token', refreshToken);
+      
+      if (user.mustChangePassword) {
+        router.push('/change-password');
+      } else {
+        router.push(portalRoute(user.role));
       }
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Invalid email or password');
