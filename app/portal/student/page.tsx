@@ -16,6 +16,28 @@ export default function StudentDashboard() {
   const [terms, setTerms] = useState<any[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+
+  const handleDownloadDocument = async (docType: string) => {
+    setDownloadingDoc(docType);
+    try {
+      const response = await api.get(`/students/documents/${docType}`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${docType.replace('_', ' ').toUpperCase()}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to download document');
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'STUDENT')) router.replace('/login');
@@ -66,11 +88,11 @@ export default function StudentDashboard() {
     if (!confirm('Are you sure you want to enroll in this term? This may have fee implications.')) return;
     setEnrolling(termId);
     try {
-      await api.post(`/fees/terms/${termId}/enroll`);
+      await api.post(`/students/me/enroll/${termId}`);
       alert('Enrolled successfully!');
       
       // Refresh enrollments
-      const updated = await api.get('/fees/students/me/enrollments');
+      const updated = await api.get('/students/me/enrollments');
       setEnrollments(Array.isArray(updated.data) ? updated.data : []);
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to enroll in term');
@@ -186,8 +208,8 @@ export default function StudentDashboard() {
             <p className="text-cream/80">{profile.course.name} • {profile.level}</p>
           </div>
 
-          <div className="p-8 grid sm:grid-cols-2 gap-8">
-            <div>
+          <div className="p-8 grid lg:grid-cols-2 gap-8">
+            <div className="lg:col-span-2">
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Academic Profile</h2>
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between border-b border-stone/10 pb-2">
@@ -209,17 +231,23 @@ export default function StudentDashboard() {
               </dl>
             </div>
 
-            <div>
+            <div className="lg:col-span-2">
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Documents</h2>
               
-              <div className="space-y-3">
+              <div className="grid sm:grid-cols-2 gap-4">
                 {/* Pre-admission documents - always available */}
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-brand-dark text-sm">Admission for Training Form</span>
-                    <a href="/Admission for Training.docx" download className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition">Download</a>
+                    <button
+                      onClick={() => handleDownloadDocument('admission_form')}
+                      disabled={downloadingDoc === 'admission_form'}
+                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      {downloadingDoc === 'admission_form' ? 'Downloading...' : 'Download (Prefilled)'}
+                    </button>
                   </div>
-                  <p className="text-xs text-stone">Required for all applicants - fill and submit with your application.</p>
+                  <p className="text-xs text-stone">Required for all applicants - fill and submit with your application. Document will be prefilled with your data.</p>
                 </div>
 
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
@@ -227,15 +255,21 @@ export default function StudentDashboard() {
                     <span className="font-medium text-brand-dark text-sm">Fee Structure</span>
                     <a href="/FEE STRUCTURE.docx" download className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition">Download</a>
                   </div>
-                  <p className="text-xs text-stone">Current fee structure for all programs.</p>
+                  <p className="text-xs text-stone">Detailed fee breakdown for all programs and levels.</p>
                 </div>
 
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-brand-dark text-sm">Medical Examination Form</span>
-                    <a href="/STUDENTS ENTRANCE MEDICAL EXAMINATION FORM.docx" download className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition">Download</a>
+                    <button
+                      onClick={() => handleDownloadDocument('medical_form')}
+                      disabled={downloadingDoc === 'medical_form'}
+                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      {downloadingDoc === 'medical_form' ? 'Downloading...' : 'Download (Prefilled)'}
+                    </button>
                   </div>
-                  <p className="text-xs text-stone">Required medical examination form for all students.</p>
+                  <p className="text-xs text-stone">Required medical examination form for all students - must be completed by a licensed medical practitioner. Document will be prefilled with your data.</p>
                 </div>
 
                 {/* Post-admission documents - only available after admission */}

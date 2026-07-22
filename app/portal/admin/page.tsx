@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms' | 'billing'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -415,6 +415,7 @@ export default function AdminDashboard() {
           { key: 'news', label: '📰 News' },
           { key: 'fee-types', label: '💰 Fee Types' },
           { key: 'terms', label: '📅 Terms' },
+          { key: 'billing', label: '📊 Billing' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
@@ -1092,6 +1093,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── BILLING ── */}
+        {tab === 'billing' && <BillingTab />}
       </main>
 
       {/* Student Credentials Modal */}
@@ -1374,7 +1378,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     id_copy_back: null as File | null,
     parent_id_copy_front: null as File | null,
     parent_id_copy_back: null as File | null,
-    medical_report: null as File | null,
     kcse_certificate: null as File | null,
     birth_certificate: null as File | null,
     other_documents: null as File | null,
@@ -1392,6 +1395,9 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [progressionForm, setProgressionForm] = useState({ toLevel: '', termId: '', notes: '', forcePromote: false });
   const [promoting, setPromoting] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
+  const [showTermAssignModal, setShowTermAssignModal] = useState(false);
+  const [assigningTerm, setAssigningTerm] = useState(false);
+  const [selectedTermId, setSelectedTermId] = useState('');
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -1475,6 +1481,26 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     }
   };
 
+  const handleAssignTerm = async () => {
+    if (!selectedTermId) {
+      alert('Please select a term');
+      return;
+    }
+    setAssigningTerm(true);
+    try {
+      await api.post(`/students/${selectedStudent.id}/term/${selectedTermId}`);
+      alert('Term assigned successfully!');
+      setShowTermAssignModal(false);
+      setSelectedTermId('');
+      const updated = await studentsApi.getAll({ page, limit: 15, search });
+      setStudents(updated.data.students);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to assign term');
+    } finally {
+      setAssigningTerm(false);
+    }
+  };
+
   const handleEditStudent = (student: any) => {
     setSelectedStudent(student);
     setEditForm({
@@ -1524,14 +1550,13 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       if (docFiles.id_copy_back) formData.append('id_copy_back', docFiles.id_copy_back);
       if (docFiles.parent_id_copy_front) formData.append('parent_id_copy_front', docFiles.parent_id_copy_front);
       if (docFiles.parent_id_copy_back) formData.append('parent_id_copy_back', docFiles.parent_id_copy_back);
-      if (docFiles.medical_report) formData.append('medical_report', docFiles.medical_report);
       if (docFiles.kcse_certificate) formData.append('kcse_certificate', docFiles.kcse_certificate);
       if (docFiles.birth_certificate) formData.append('birth_certificate', docFiles.birth_certificate);
       if (docFiles.other_documents) formData.append('other_documents', docFiles.other_documents);
       
       if (formData.has('id_copy_front') || formData.has('id_copy_back') || 
           formData.has('parent_id_copy_front') || formData.has('parent_id_copy_back') ||
-          formData.has('medical_report') || formData.has('kcse_certificate') ||
+          formData.has('kcse_certificate') ||
           formData.has('birth_certificate') || formData.has('other_documents')) {
         setUploadingDocs(true);
         await api.post(`/students/${selectedStudent.id}/documents`, formData, {
@@ -1548,7 +1573,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         id_copy_back: null, 
         parent_id_copy_front: null, 
         parent_id_copy_back: null,
-        medical_report: null,
         kcse_certificate: null,
         birth_certificate: null,
         other_documents: null
@@ -1632,6 +1656,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     <div className="flex gap-2">
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
                       <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>
+                      <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                       <button onClick={() => { setShowProgressionModal(true); setProgressionForm({ ...progressionForm, toLevel: s.level }); setSelectedStudent(s); }} className="text-purple-600 hover:text-purple-800 font-medium text-xs transition">Promote</button>
                     </div>
                   </td>
@@ -1859,11 +1884,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                         📄 Parent ID (Back)
                       </a>
                     )}
-                    {selectedStudent.medical_report_url && (
-                      <a href={selectedStudent.medical_report_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
-                        📄 Medical Report
-                      </a>
-                    )}
                     {selectedStudent.kcse_certificate_url && (
                       <a href={selectedStudent.kcse_certificate_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
                         📄 KCSE Certificate
@@ -1881,7 +1901,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     )}
                     {!selectedStudent.id_copy_front_url && !selectedStudent.id_copy_back_url && 
                      !selectedStudent.parent_id_copy_front_url && !selectedStudent.parent_id_copy_back_url &&
-                     !selectedStudent.medical_report_url && !selectedStudent.kcse_certificate_url &&
+                     !selectedStudent.kcse_certificate_url &&
                      !selectedStudent.birth_certificate_url && !selectedStudent.other_documents_url && (
                       <p className="text-stone col-span-2">No documents uploaded yet</p>
                     )}
@@ -1908,11 +1928,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     <div>
                       <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Back)</label>
                       <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, parent_id_copy_back: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">Medical Report</label>
-                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, medical_report: e.target.files?.[0] || null})}
                         className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                     </div>
                     <div>
@@ -2114,6 +2129,204 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
           </div>
         </div>
       )}
+
+      {/* Term Assignment Modal */}
+      {showTermAssignModal && selectedStudent && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Assign Term</h2>
+            <p className="text-sm text-stone mb-6">Assign {selectedStudent.admission_no} to a term</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Select Term</label>
+                <select
+                  value={selectedTermId}
+                  onChange={e => setSelectedTermId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                >
+                  <option value="">Select Term</option>
+                  {terms.map((term: any) => (
+                    <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={handleAssignTerm}
+                disabled={assigningTerm}
+                className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {assigningTerm ? 'Assigning...' : 'Assign Term'}
+              </button>
+              <button
+                onClick={() => { setShowTermAssignModal(false); setSelectedTermId(''); }}
+                className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BillingTab() {
+  const [balances, setBalances] = useState<any[]>([]);
+  const [terms, setTerms] = useState<any[]>([]);
+  const [selectedTermId, setSelectedTermId] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    api.get('/terms').then(r => setTerms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchBillingData();
+  }, [selectedTermId, selectedStatus, page]);
+
+  const fetchBillingData = async () => {
+    setLoading(true);
+    try {
+      const params: any = { page, limit: 50 };
+      if (selectedTermId) params.termId = selectedTermId;
+      if (selectedStatus) params.status = selectedStatus;
+      
+      const r = await api.get('/fees/billing/dashboard', { params });
+      setBalances(r.data.balances);
+      setTotal(r.data.pagination.total);
+      setSummary(r.data.summary);
+    } catch (err) {
+      console.error('Failed to fetch billing data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      PENDING: 'bg-red-100 text-red-800',
+      PARTIAL: 'bg-yellow-100 text-yellow-800',
+      PAID: 'bg-green-100 text-green-800',
+      OVERDUE: 'bg-red-200 text-red-900',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  return (
+    <div>
+      <h1 className="font-display text-2xl text-brand-dark mb-6">Billing Dashboard</h1>
+      
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-2xl p-5 border border-stone/10 shadow-sm">
+            <div className="text-sm text-stone mb-1">Total Fees</div>
+            <div className="text-2xl font-bold text-brand-dark">KES {summary.totalFees?.toLocaleString() || 0}</div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-stone/10 shadow-sm">
+            <div className="text-sm text-stone mb-1">Total Paid</div>
+            <div className="text-2xl font-bold text-green-600">KES {summary.totalPaid?.toLocaleString() || 0}</div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-stone/10 shadow-sm">
+            <div className="text-sm text-stone mb-1">Outstanding Balance</div>
+            <div className="text-2xl font-bold text-red-600">KES {summary.totalBalance?.toLocaleString() || 0}</div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-stone/10 shadow-sm">
+            <div className="text-sm text-stone mb-1">Collection Rate</div>
+            <div className="text-2xl font-bold text-blue-600">{summary.totalFees > 0 ? ((summary.totalPaid / summary.totalFees) * 100).toFixed(1) : 0}%</div>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white rounded-2xl p-4 border border-stone/10 shadow-sm mb-6">
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <label className="block text-sm font-medium text-brand-dark mb-1">Term</label>
+            <select
+              value={selectedTermId}
+              onChange={e => setSelectedTermId(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-stone/25 focus:outline-none focus:border-brand text-sm"
+            >
+              <option value="">All Terms</option>
+              {terms.map((t: any) => (
+                <option key={t.id} value={t.id}>{t.name} ({t.academic_year})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-brand-dark mb-1">Status</label>
+            <select
+              value={selectedStatus}
+              onChange={e => setSelectedStatus(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-stone/25 focus:outline-none focus:border-brand text-sm"
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="PARTIAL">Partial</option>
+              <option value="PAID">Paid</option>
+              <option value="OVERDUE">Overdue</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Balances Table */}
+      <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3 text-left">Student</th>
+                <th className="px-4 py-3 text-left">Admission No.</th>
+                <th className="px-4 py-3 text-left">Term</th>
+                <th className="px-4 py-3 text-right">Total Fees</th>
+                <th className="px-4 py-3 text-right">Paid</th>
+                <th className="px-4 py-3 text-right">Balance</th>
+                <th className="px-4 py-3 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">Loading...</td></tr>
+              ) : balances.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">No billing records found</td></tr>
+              ) : (
+                balances.map((b: any) => (
+                  <tr key={b.id} className="border-t border-stone/10 hover:bg-stone/5">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-brand-dark">
+                        {b.student.application.surname} {b.student.application.other_names}
+                      </div>
+                      <div className="text-xs text-stone">{b.student.course.name}</div>
+                    </td>
+                    <td className="px-4 py-3 text-stone">{b.student.admission_no}</td>
+                    <td className="px-4 py-3 text-stone">{b.term.name}</td>
+                    <td className="px-4 py-3 text-right font-medium">KES {b.total_fees?.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-green-600">KES {b.amount_paid?.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-medium text-red-600">KES {b.balance?.toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(b.status)}`}>{b.status}</span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
+          <span>Page {page} of {Math.ceil(total / 50)}</span>
+          <div className="flex gap-2">
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
+            <button disabled={page >= Math.ceil(total / 50)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
