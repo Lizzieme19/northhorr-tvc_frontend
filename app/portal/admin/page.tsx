@@ -55,7 +55,7 @@ export default function AdminDashboard() {
   const [editingFeeType, setEditingFeeType] = useState<any>(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
-  const [termForm, setTermForm] = useState({ name: '', start_date: '', end_date: '', academic_year: '', term_cost: '', is_active: true });
+  const [termForm, setTermForm] = useState({ name: '', start_date: '', end_date: '', academic_year: '', intake: '', term_cost: '', is_active: true });
   const [editingTerm, setEditingTerm] = useState<any>(null);
   const [savingTerm, setSavingTerm] = useState(false);
 
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
         setTerms(prev => [...prev, response.data.term]);
         alert('Term created successfully');
       }
-      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', term_cost: '', is_active: true });
+      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', intake: '', term_cost: '', is_active: true });
       setEditingTerm(null);
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to save term');
@@ -359,6 +359,7 @@ export default function AdminDashboard() {
       start_date: t.start_date.split('T')[0],
       end_date: t.end_date.split('T')[0],
       academic_year: t.academic_year,
+      intake: t.intake || '',
       term_cost: t.term_cost?.toString() || '',
       is_active: t.is_active,
     });
@@ -858,6 +859,20 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Intake *</label>
+                  <select
+                    required
+                    value={termForm.intake}
+                    onChange={e => setTermForm({...termForm, intake: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  >
+                    <option value="">Select Intake</option>
+                    <option value="SEPTEMBER">September</option>
+                    <option value="JANUARY">January</option>
+                    <option value="MAY">May</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Term Cost</label>
                   <input
                     type="number"
@@ -914,7 +929,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => {
                       setEditingTerm(null);
-                      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', term_cost: '', is_active: true });
+                      setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', intake: '', term_cost: '', is_active: true });
                     }}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
                   >
@@ -935,9 +950,9 @@ export default function AdminDashboard() {
                     <div key={t.id} className={`flex items-center justify-between p-4 rounded-xl border ${t.is_active ? 'bg-cream-deep/50 border-stone/10' : 'bg-stone/50 border-stone/20 opacity-60'}`}>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-brand-dark truncate">{t.name}</div>
-                        <div className="text-sm text-stone">{t.academic_year} • {new Date(t.start_date).toLocaleDateString()} - {new Date(t.end_date).toLocaleDateString()}</div>
+                        <div className="text-sm text-stone">{t.academic_year} • {t.intake || 'N/A'} • {new Date(t.start_date).toLocaleDateString()} - {new Date(t.end_date).toLocaleDateString()}</div>
                         <div className="text-xs text-stone mt-1">
-                          {t._count?.students || 0} students • {t._count?.student_balances || 0} balances
+                          KES {t.term_cost?.toLocaleString()} • {t._count?.students || 0} students • {t._count?.student_balances || 0} balances
                         </div>
                       </div>
                       <div className="flex gap-2 ml-4">
