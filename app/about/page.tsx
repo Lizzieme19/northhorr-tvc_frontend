@@ -21,7 +21,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-6 grid lg:grid-cols-2 gap-14 items-center">
           <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-xl">
             <Image
-              src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"
+              src="https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.46.48.jpeg"
               alt="Graduation"
               fill
               className="object-cover"

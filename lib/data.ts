@@ -39,7 +39,7 @@ export const heroSlides = [
 ]
 export const campusGallery = [
   {
-    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.43.49.jpeg",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.44.16.jpeg",
     alt: "Campus Gate",
   },
   {
@@ -47,7 +47,7 @@ export const campusGallery = [
     alt: "Library",
   },
   {
-    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp+Image+2026-06-10+at+21.43.57.jpeg",
+    image: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.45.31.jpeg",
     alt: "Workshop",
   },
   {
@@ -91,13 +91,13 @@ export const departments: Department[] = [
       "Hands-on training in sustainable farming, livestock production, dairy management and aquaculture geared for Kenya's agricultural future.",
     icon: "🌾",
     image:
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image0",
 
     overview: "The Department of Agriculture at North Horr Technical and Vocational College offers comprehensive training in sustainable farming, livestock production, dairy management, and aquaculture. Our programs are designed to equip students with practical skills and knowledge to meet the growing demands of Kenya's agricultural sector.",
     hod: {
       name: "Dr. John Mwangi",
       title: "Head of Department",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image00"
     },
     highlights: [
       "Hands-on training in sustainable farming practices",
@@ -120,9 +120,9 @@ export const departments: Department[] = [
       "Agricultural Research Assistant"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image0a",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image0b",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image0c"
     ],
     courses: [
       { name: "Sustainable Agriculture", levels: "Level 3, 4, 5, 6" },
@@ -148,12 +148,12 @@ export const departments: Department[] = [
       "Practical skills in motor vehicle, motorcycle and panel beating trades — equipping students for thriving careers in the automotive sector.",
     icon: "🔧",
     image:
-      "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-07-21 at 15.38.56 (1).jpeg",
     overview: "The Department of Mechanical Engineering at North Horr Technical and Vocational College offers comprehensive training in motor vehicle, motorcycle, and panel beating trades. Our programs are designed to equip students with practical skills and knowledge to meet the growing demands of Kenya's automotive sector.",
     hod: {
       name: "Mr. James Mwangi",
       title: "Head of Department",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image1"
     },
     highlights: [
       "Hands-on training in motor vehicle maintenance and repair",
@@ -168,9 +168,10 @@ export const departments: Department[] = [
       "Vehicle Maintenance Supervisor"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1632823471565-1ecdf5c6da77?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.45.17.jpeg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.45.34.jpeg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.45.37.jpeg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.45.13.jpeg"
     ],
     courses: [
       { name: "Automotive Technician", levels: "Level 5, 6" },
@@ -188,12 +189,12 @@ export const departments: Department[] = [
       "From food technology and baking to laboratory science — graduates emerge ready for the food, health and research industries.",
     icon: "🧪",
     image:
-      "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image2",
     overview: "The Department of Applied Sciences at North Horr Technical and Vocational College offers comprehensive training in food technology, baking, meat processing, and laboratory sciences. Our programs are designed to equip students with practical skills and knowledge to meet the demands of the food, health, and research industries.",
     hod: {
       name: "Dr. Sarah Kimani",
       title: "Head of Department",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image2a"
     },
     highlights: [
       "Hands-on training in food technology and baking",
@@ -208,9 +209,9 @@ export const departments: Department[] = [
       "Laboratory Technician"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image2a",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image2b",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image2c"
     ],
     courses: [
       { name: "Baking", levels: "Level 3, 4" },
@@ -228,12 +229,12 @@ export const departments: Department[] = [
       "Master the trades that build a nation — from masonry and carpentry to interior design and modern building technology.",
     icon: "🏗️",
     image:
-      "/images/department/building-civil-engineering/bce.jpg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image3",
     overview: "The Department of Building & Civil Engineering at North Horr Technical and Vocational College offers comprehensive training in construction trades and building technology. Our programs prepare students for careers in construction, masonry, carpentry, plumbing, and interior design.",
     hod: {
       name: "Mr. John Mwangi",
       title: "Head of Department",
-      image: "/images/departments/Building-civil/building.jpg"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image3a"
     },
     highlights: [
       "Hands-on training in modern construction techniques",
@@ -250,9 +251,9 @@ export const departments: Department[] = [
       "Building Inspector"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image3a",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image3b",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image3c"
     ],
     courses: [
       { name: "Building Technology", levels: "Level 5 & 6" },
@@ -274,12 +275,12 @@ export const departments: Department[] = [
       "Train as a community health worker, social worker or care professional and serve where the need is greatest.",
     icon: "🤝",
     image:
-      "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image4",
     overview: "The Department of Social Sciences at North Horr Technical and Vocational College offers training in community health, social work, and caregiving. Our programs prepare students for careers in healthcare, social services, and community development.",
     hod: {
       name: "Ms. Jane Wanjiku",
       title: "Head of Department",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image4a"
     },
     highlights: [
       "Training in community health and social work",
@@ -300,9 +301,9 @@ export const departments: Department[] = [
       "Social Work Practitioner"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image4a",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image4b",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image4c"
     ],
     courses: [
       { name: "Caregiving", levels: "Level 4" },
@@ -324,12 +325,12 @@ export const departments: Department[] = [
       "Future-ready business courses in HR, procurement, project management and storekeeping — designed for the modern workplace.",
     icon: "💼",
     image:
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image5",
     overview: "The Department of Business at North Horr Technical and Vocational College offers training in human resources, procurement, project management, and storekeeping. Our programs prepare students for careers in business administration, operations management, and supply chain management.",
     hod: {
       name: "Mr. John Mwangi",
       title: "Head of Department",
-      image: "/images/departments/Business/biz.jpg"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image5a"
     },
     highlights: [
       "Training in human resources, procurement, project management, and storekeeping",
@@ -347,9 +348,9 @@ export const departments: Department[] = [
       "Human Resources Manager"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image5a",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image5b",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image5c"
     ],
     courses: [
       { name: "Human Resource", levels: "Level 5, 6" },
@@ -366,12 +367,12 @@ export const departments: Department[] = [
       "Professional training in hair styling, makeup artistry, skincare and beauty therapy — launching careers in the booming beauty industry.",
     icon: "💇",
     image:
-      "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image6",
     overview: "The Department of Cosmetology at North Horr Technical and Vocational College offers comprehensive training in hair styling, makeup artistry, skincare, and beauty therapy. Our programs prepare students for successful careers in the beauty and wellness industry.",
     hod: {
       name: "Ms. Jane Wanjiku",
       title: "Head of Department",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image6a"
     },
     highlights: [
       "Hands-on training in hair styling and beauty therapy",
@@ -388,9 +389,9 @@ export const departments: Department[] = [
       "Skincare Specialist"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image6a",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image6b",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image6c"
     ],
     courses: [
       { name: "Cosmetology", levels: "Level 3, 4, 5, 6" },
@@ -404,12 +405,12 @@ export const departments: Department[] = [
       "Creative training in fashion design, garment construction and leather technology — transforming artistic talent into sustainable careers.",
     icon: "👗",
     image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image7",
     overview: "The Department of Fashion Design at North Horr Technical and Vocational College offers training in fashion design, garment construction, and leather technology. Our programs prepare students for careers in fashion design, garment production, and leather goods manufacturing.",
     hod: {
       name: "Ms. Aisha Hassan",
       title: "Head of Department",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image7a"
     },
     highlights: [
       "Hands-on training in fashion design and garment construction",
@@ -426,9 +427,9 @@ export const departments: Department[] = [
       "Fashion Entrepreneur"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1558171813-4c088753af8f?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image7a",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image7b",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image7c"
     ],
     courses: [
       { name: "Fashion Design", levels: "Level 3, 4, 5, 6" },
@@ -445,12 +446,12 @@ export const departments: Department[] = [
       "Build the skills that power the nation — from solar PV and refrigeration to advanced electronics and electrotechnical engineering.",
     icon: "⚡",
     image:
-      "/images/department/electrical-electronics/electrical.jpg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image8",
     overview: "The Department of Electrical & Electronics Engineering at North Horr Technical and Vocational College offers training in electrical engineering, electrical installation, solar PV system installation, refrigeration and air conditioning, electronics engineering, electronics technology, and electrotechnical engineering. Our programs prepare students for careers in electrical and electronics engineering.",
     hod: {
       name: "Mr. Peter Njoroge",
       title: "Head of Department",
-      image: "/images/department/electrical-electronics/electrical.jpg"
+      image: "https://northhorr.s3.ap-south-1.amazonaws.com/image8a"
     },
     highlights: [
       "Training in electrical engineering, electrical installation, solar PV system installation, refrigeration and air conditioning, electronics engineering, electronics technology, and electrotechnical engineering",
@@ -468,9 +469,9 @@ export const departments: Department[] = [
       "Electrotechnical Engineer"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.47.00.jpeg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.47.03.jpeg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.47.06.jpeg"
     ],
     courses: [
       { name: "Electrical Engineering", levels: "Level 5, 6" },
@@ -490,7 +491,7 @@ export const departments: Department[] = [
       "From basic computer operations to ICT technician training — a launchpad into Kenya's booming digital economy.",
     icon: "💻",
     image:
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-07-21 at 15.38.54 (2).jpeg",
     overview: "The Department of Computing & Informatics at North Horr Technical and Vocational College offers training in computer operations, ICT operator, and ICT technician. Our programs prepare students for careers in computing and informatics.",
     hod: {
       name: "Mr. James Mwangi",
@@ -509,9 +510,9 @@ export const departments: Department[] = [
       "ICT Technician"
     ],
     gallery: [
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=80"
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-07-21 at 15.38.56.jpeg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.46.50.jpeg",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.46.54.jpeg"
     ],
     courses: [
       { name: "Computer Operations", levels: "Level 3" },
@@ -539,7 +540,7 @@ export const newsItems: NewsItem[] = [
     date: "Aug 12, 2025",
     category: "Announcement",
     image:
-      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image9",
   },
   {
     id: "2",
@@ -549,7 +550,7 @@ export const newsItems: NewsItem[] = [
     date: "Sep 24, 2025",
     category: "Event",
     image:
-      "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image10",
   },
   {
     id: "3",
@@ -559,7 +560,7 @@ export const newsItems: NewsItem[] = [
     date: "Jul 30, 2025",
     category: "News",
     image:
-      "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image11",
   },
   {
     id: "4",
@@ -569,7 +570,7 @@ export const newsItems: NewsItem[] = [
     date: "Jul 14, 2025",
     category: "News",
     image:
-      "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image12",
   },
 ];
 
@@ -589,7 +590,7 @@ export const testimonials: Testimonial[] = [
     quote:
       "North Horr TVC didn't just teach me a trade — it gave me the confidence to start my own tailoring business. Today I employ four people from my village.",
     avatar:
-      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=400&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image13",
   },
   {
     name: "Galgalo Wario",
@@ -598,7 +599,7 @@ export const testimonials: Testimonial[] = [
     quote:
       "The hands-on training was world-class. I now run a solar installation company that has electrified over 200 homes in Marsabit County.",
     avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image14",
   },
   {
     name: "Fatuma Boru",
@@ -607,7 +608,7 @@ export const testimonials: Testimonial[] = [
     quote:
       "I came to North Horr TVC with a dream of serving my community. Today I work as a community health officer and I owe it all to the staff who believed in me.",
     avatar:
-      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
+      "https://northhorr.s3.ap-south-1.amazonaws.com/image15",
   },
 ];
 
@@ -618,18 +619,18 @@ export type GalleryImage = {
 };
 
 export const galleryImages: GalleryImage[] = [
-  { src: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80", caption: "Main campus building", category: "Campus" },
-  { src: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=1200&q=80", caption: "Electrical workshop in session", category: "Workshops" },
-  { src: "https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?auto=format&fit=crop&w=1200&q=80", caption: "Carpentry trainees", category: "Workshops" },
-  { src: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80", caption: "Graduation day", category: "Events" },
-  { src: "https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=1200&q=80", caption: "Library and study hall", category: "Campus" },
-  { src: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80", caption: "Group project session", category: "Students" },
-  { src: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1200&q=80", caption: "Computer lab", category: "Workshops" },
-  { src: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?auto=format&fit=crop&w=1200&q=80", caption: "Sports day", category: "Events" },
-  { src: "https://images.unsplash.com/photo-1607013251379-e6eecfffe234?auto=format&fit=crop&w=1200&q=80", caption: "Welding practical", category: "Workshops" },
-  { src: "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1200&q=80", caption: "Cosmetology training", category: "Workshops" },
-  { src: "https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&w=1200&q=80", caption: "Cultural day", category: "Events" },
-  { src: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1200&q=80", caption: "Student leaders", category: "Students" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-07-21 at 15.38.54 (1).jpeg", caption: "Main campus building", category: "Campus" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image16", caption: "Electrical workshop in session", category: "Workshops" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image17", caption: "Carpentry trainees", category: "Workshops" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image18", caption: "Graduation day", category: "Events" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image19", caption: "Library and study hall", category: "Campus" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.46.50.jpeg", caption: "Group project session", category: "Students" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-07-21 at 15.38.54 (2).jpeg", caption: "Computer lab", category: "Workshops" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image20", caption: "Sports day", category: "Events" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image21", caption: "Welding practical", category: "Workshops" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image22", caption: "Cosmetology training", category: "Workshops" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image23", caption: "Cultural day", category: "Events" },
+  { src: "https://northhorr.s3.ap-south-1.amazonaws.com/image24", caption: "Student leaders", category: "Students" },
 ];
 
 export type Resource = {
