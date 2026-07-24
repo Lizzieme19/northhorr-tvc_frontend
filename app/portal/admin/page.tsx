@@ -1418,6 +1418,11 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [showBulkTermModal, setShowBulkTermModal] = useState(false);
   const [bulkTermId, setBulkTermId] = useState('');
   const [assigningBulkTerm, setAssigningBulkTerm] = useState(false);
+  const [showBulkPaymentModal, setShowBulkPaymentModal] = useState(false);
+  const [bulkPaymentAmount, setBulkPaymentAmount] = useState('');
+  const [bulkPaymentFeeTypeId, setBulkPaymentFeeTypeId] = useState('');
+  const [bulkPaymentTermId, setBulkPaymentTermId] = useState('');
+  const [recordingBulkPayment, setRecordingBulkPayment] = useState(false);
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -1554,6 +1559,49 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     }
   };
 
+  const handleBulkRecordPayment = async () => {
+    if (selectedStudentIds.length === 0) {
+      alert('Please select at least one student');
+      return;
+    }
+    if (!bulkPaymentAmount || parseFloat(bulkPaymentAmount) <= 0) {
+      alert('Please enter a valid payment amount');
+      return;
+    }
+    if (!bulkPaymentFeeTypeId) {
+      alert('Please select a fee type');
+      return;
+    }
+    if (!bulkPaymentTermId) {
+      alert('Please select a term');
+      return;
+    }
+    setRecordingBulkPayment(true);
+    try {
+      const payments = selectedStudentIds.map(studentId => ({
+        studentId,
+        termId: bulkPaymentTermId,
+        amount: parseFloat(bulkPaymentAmount),
+        fee_type_id: bulkPaymentFeeTypeId,
+        notes: 'Bulk payment',
+      }));
+      const r = await api.post('/fees/bulk-record-payment', { payments });
+      alert(`Bulk payment completed: ${r.data.summary.successful} successful, ${r.data.summary.failed} failed`);
+      if (r.data.errors.length > 0) {
+        console.error('Bulk payment errors:', r.data.errors);
+      }
+      setShowBulkPaymentModal(false);
+      setBulkPaymentAmount('');
+      setBulkPaymentFeeTypeId('');
+      setBulkPaymentTermId('');
+      setSelectedStudentIds([]);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to record bulk payment');
+    } finally {
+      setRecordingBulkPayment(false);
+    }
+  };
+
   const handleEditStudent = (student: any) => {
     setSelectedStudent(student);
     setEditForm({
@@ -1648,12 +1696,20 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
             placeholder="Search admission no, name…"
             className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
           {selectedStudentIds.length > 0 && (
-            <button
-              onClick={() => setShowBulkTermModal(true)}
-              className="px-4 py-2 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition text-sm"
-            >
-              Assign Term ({selectedStudentIds.length})
-            </button>
+            <>
+              <button
+                onClick={() => setShowBulkTermModal(true)}
+                className="px-4 py-2 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition text-sm"
+              >
+                Assign Term ({selectedStudentIds.length})
+              </button>
+              <button
+                onClick={() => setShowBulkPaymentModal(true)}
+                className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
+              >
+                Record Payment ({selectedStudentIds.length})
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -2310,6 +2366,67 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               </button>
               <button
                 onClick={() => { setShowBulkTermModal(false); setBulkTermId(''); setSelectedStudentIds([]); }}
+                className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Fee Payment Modal */}
+      {showBulkPaymentModal && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Bulk Record Payment</h2>
+            <p className="text-sm text-stone mb-6">Record payment for {selectedStudentIds.length} students</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Select Term</label>
+                <select
+                  value={bulkPaymentTermId}
+                  onChange={e => setBulkPaymentTermId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                >
+                  <option value="">Select Term</option>
+                  {terms.map((term: any) => (
+                    <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Select Fee Type</label>
+                <select
+                  value={bulkPaymentFeeTypeId}
+                  onChange={e => setBulkPaymentFeeTypeId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                >
+                  <option value="">Select Fee Type</option>
+                  {feeTypes.map((ft: any) => (
+                    <option key={ft.id} value={ft.id}>{ft.name} ({ft.code}) - KES {ft.amount}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Payment Amount</label>
+                <input
+                  type="number"
+                  value={bulkPaymentAmount}
+                  onChange={e => setBulkPaymentAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                />
+              </div>
+              <button
+                onClick={handleBulkRecordPayment}
+                disabled={recordingBulkPayment}
+                className="w-full py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50"
+              >
+                {recordingBulkPayment ? 'Recording...' : `Record Payment for ${selectedStudentIds.length} Students`}
+              </button>
+              <button
+                onClick={() => { setShowBulkPaymentModal(false); setBulkPaymentAmount(''); setBulkPaymentFeeTypeId(''); setBulkPaymentTermId(''); setSelectedStudentIds([]); }}
                 className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
               >
                 Cancel
