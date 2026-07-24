@@ -239,13 +239,19 @@ export default function HRDashboard() {
                       <input name="last_name" required value={formData.last_name || ''} onChange={(e) => setFormData({...formData, last_name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Employee Number *</label>
-                    <input name="employee_number" required value={formData.employee_number || ''} onChange={(e) => setFormData({...formData, employee_number: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email *</label>
+                      <input name="email" type="email" required value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Password *</label>
+                      <input name="password" type="password" required value={formData.password || ''} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email *</label>
-                    <input name="email" type="email" required value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Employee Number</label>
+                    <input name="employee_number" value={formData.employee_number || ''} onChange={(e) => setFormData({...formData, employee_number: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="Auto-generated if empty" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
