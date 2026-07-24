@@ -1703,13 +1703,14 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                 <th className="px-4 py-3 text-left">Course</th>
                 <th className="px-4 py-3 text-left">Level</th>
                 <th className="px-4 py-3 text-left">Intake</th>
+                <th className="px-4 py-3 text-left">Current Term</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Letter</th>
                 <th className="px-4 py-3 text-left">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone/10">
-              {students.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
+              {students.length === 0 && <tr><td colSpan={10} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
               {students.map(s => (
                 <tr key={s.id} className="hover:bg-cream-deep/50 transition">
                   <td className="px-4 py-3">
@@ -1731,6 +1732,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                   <td className="px-4 py-3 text-stone text-xs">{s.course?.name}</td>
                   <td className="px-4 py-3 text-stone">{s.level}</td>
                   <td className="px-4 py-3 text-stone">{s.intake} {s.year}</td>
+                  <td className="px-4 py-3 text-stone text-xs">{s.current_term ? `${s.current_term.name} (${s.current_term.academic_year})` : '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-stone/20 text-stone'}`}>{s.status}</span>
                   </td>
