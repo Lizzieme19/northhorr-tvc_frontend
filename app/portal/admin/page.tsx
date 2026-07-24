@@ -1405,6 +1405,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
+  const [selectedPaymentTermId, setSelectedPaymentTermId] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [showProgressionModal, setShowProgressionModal] = useState(false);
   const [progressionForm, setProgressionForm] = useState({ toLevel: '', termId: '', notes: '', forcePromote: false });
@@ -1461,9 +1462,13 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       alert('Please select a fee type');
       return;
     }
+    if (!selectedPaymentTermId) {
+      alert('Please select a term to pay');
+      return;
+    }
     setRecordingPayment(true);
     try {
-      await api.post(`/fees/students/${studentId}/terms/${termId}/payment`, {
+      await api.post(`/fees/students/${studentId}/terms/${selectedPaymentTermId}/payment`, {
         amount: parseFloat(paymentAmount),
         fee_type_id: selectedFeeTypeId,
         notes: paymentNotes,
@@ -1472,6 +1477,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       setPaymentAmount('');
       setPaymentNotes('');
       setSelectedFeeTypeId('');
+      setSelectedPaymentTermId('');
       handleViewFeeSummary(studentId);
     } catch (e: any) {
       alert(e?.response?.data?.error || 'Failed to record payment');
@@ -2055,39 +2061,61 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
             <div className="flex-1 overflow-y-auto mb-5 pr-2 space-y-4">
               <div className="grid grid-cols-3 gap-4 p-4 bg-cream-deep rounded-xl">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-brand-dark">{feeSummary.summary.totalBalance.toLocaleString()}</div>
-                  <div className="text-xs text-stone">Total Balance</div>
+                  <div className="text-2xl font-bold text-brand-dark">{feeSummary.summary.totalFees.toLocaleString()}</div>
+                  <div className="text-xs text-stone">Total Fees</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{feeSummary.summary.totalPaid.toLocaleString()}</div>
                   <div className="text-xs text-stone">Total Paid</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-brand">{feeSummary.summary.totalTerms}</div>
-                  <div className="text-xs text-stone">Terms Enrolled</div>
+                  <div className="text-2xl font-bold text-red-600">{feeSummary.summary.totalBalance.toLocaleString()}</div>
+                  <div className="text-xs text-stone">Total Balance</div>
                 </div>
               </div>
 
-              <h3 className="font-semibold text-brand-dark">Term Balances</h3>
-              <div className="space-y-2">
-                {feeSummary.balances.map((b: any) => (
-                  <div key={b.id} className="flex items-center justify-between p-3 border border-stone/10 rounded-lg">
-                    <div>
-                      <div className="font-medium text-brand-dark">{b.term.name}</div>
-                      <div className="text-xs text-stone">Level: {b.level}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`font-semibold ${b.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {b.balance > 0 ? b.balance.toLocaleString() : 'Paid'}
+              <h3 className="font-semibold text-brand-dark">Term Breakdown</h3>
+              <div className="space-y-3">
+                {feeSummary.termBreakdown.map((b: any) => (
+                  <div key={b.term.id} className="p-4 border border-stone/10 rounded-xl bg-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="font-medium text-brand-dark">{b.term.name}</div>
+                        <div className="text-xs text-stone">{b.term.academic_year} {b.term.intake ? `• ${b.term.intake}` : ''}</div>
                       </div>
-                      <div className="text-xs text-stone">{b.status}</div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        b.status === 'PAID' ? 'bg-green-100 text-green-800' : 
+                        b.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-red-100 text-red-800'
+                      }`}>{b.status}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                      <div>
+                        <div className="text-stone">Term Cost</div>
+                        <div className="font-medium">{b.term.term_cost.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-stone">Total Fees</div>
+                        <div className="font-medium">{b.total_fees.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-stone">Level</div>
+                        <div className="font-medium">{b.level}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-stone/10">
+                      <div className="text-xs text-stone">{b.payment_count} payment(s)</div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-green-600">{b.amount_paid.toLocaleString()} paid</div>
+                        <div className="text-sm font-semibold text-red-600">{b.balance.toLocaleString()} balance</div>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
 
               <h3 className="font-semibold text-brand-dark">Record Payment</h3>
-              {feeSummary.balances.length > 0 && feeSummary.balances[0].balance > 0 && (
+              {feeSummary.termBreakdown.length > 0 && feeSummary.termBreakdown.some((b: any) => b.balance > 0) && (
                 <div className="space-y-3">
                   <select
                     value={selectedFeeTypeId}
@@ -2100,13 +2128,13 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     ))}
                   </select>
                   <select
-                    value={paymentAmount}
-                    onChange={e => setPaymentAmount(e.target.value)}
+                    value={selectedPaymentTermId}
+                    onChange={e => { setSelectedPaymentTermId(e.target.value); }}
                     className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
                   >
-                    <option value="">Select amount or enter custom</option>
-                    {feeSummary.balances.map((b: any) => (
-                      <option key={b.id} value={b.balance}>Full Term Payment ({b.balance.toLocaleString()})</option>
+                    <option value="">Select term to pay</option>
+                    {feeSummary.termBreakdown.filter((b: any) => b.balance > 0).map((b: any) => (
+                      <option key={b.term.id} value={b.term.id}>{b.term.name} - Full Payment ({b.balance.toLocaleString()})</option>
                     ))}
                   </select>
                   <input
@@ -2124,7 +2152,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
                   />
                   <button
-                    onClick={() => handleRecordPayment(feeSummary.student.id, feeSummary.balances[0].term_id)}
+                    onClick={() => handleRecordPayment(feeSummary.student.id, feeSummary.termBreakdown[0].term.id)}
                     disabled={recordingPayment}
                     className="w-full py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50"
                   >
