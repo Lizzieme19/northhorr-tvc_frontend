@@ -23,7 +23,7 @@ export default function HRDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    staffApi.getAll().then(r => setStaff(Array.isArray(r.data) ? r.data : (r.data?.staff || []))).catch(() => setStaff([]));
+    staffApi.getAll().then(r => setStaff(Array.isArray(r.data?.staff) ? r.data.staff : [])).catch(() => setStaff([]));
     designationsApi.getAll().then(r => setDesignations(Array.isArray(r.data) ? r.data : [])).catch(() => setDesignations([]));
     leavesApi.getAll().then(r => setLeaves(r.data?.leaves || [])).catch(() => setLeaves([]));
   }, []);
@@ -44,7 +44,7 @@ export default function HRDashboard() {
     if (!confirm('Are you sure you want to delete this item?')) return;
     try {
       await api.delete(id);
-      if (tab === 'staff') staffApi.getAll().then(r => setStaff(Array.isArray(r.data) ? r.data : (r.data?.staff || [])));
+      if (tab === 'staff') staffApi.getAll().then(r => setStaff(Array.isArray(r.data?.staff) ? r.data.staff : []));
       if (tab === 'designations') designationsApi.getAll().then(r => setDesignations(Array.isArray(r.data) ? r.data : []));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to delete');
@@ -61,7 +61,7 @@ export default function HRDashboard() {
         } else {
           await staffApi.create(formData);
         }
-        staffApi.getAll().then(r => setStaff(r.data || []));
+        staffApi.getAll().then(r => setStaff(Array.isArray(r.data?.staff) ? r.data.staff : []));
       } else if (tab === 'designations') {
         if (editingItem) {
           await designationsApi.update(editingItem.id, formData);

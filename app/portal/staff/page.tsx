@@ -13,7 +13,7 @@ export default function StaffDashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [leaves, setLeaves] = useState<any[]>([]);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
-  const [leaveForm, setLeaveForm] = useState({ type: '', start_date: '', end_date: '', reason: '' });
+  const [leaveForm, setLeaveForm] = useState({ leave_type: '', start_date: '', end_date: '', reason: '' });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function StaffDashboard() {
     try {
       await leavesApi.create(leaveForm);
       setShowLeaveForm(false);
-      setLeaveForm({ type: '', start_date: '', end_date: '', reason: '' });
+      setLeaveForm({ leave_type: '', start_date: '', end_date: '', reason: '' });
       leavesApi.getAll().then(r => setLeaves(r.data || []));
       alert('Leave request submitted successfully');
     } catch (err: any) {
@@ -125,7 +125,7 @@ export default function StaffDashboard() {
               <div className="grid sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-brand-dark mb-1">Leave Type</label>
-                  <select value={leaveForm.type} onChange={e => setLeaveForm({ ...leaveForm, type: e.target.value })}
+                  <select value={leaveForm.leave_type} onChange={e => setLeaveForm({ ...leaveForm, leave_type: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" required>
                     <option value="">Select type</option>
                     <option value="ANNUAL">Annual Leave</option>
