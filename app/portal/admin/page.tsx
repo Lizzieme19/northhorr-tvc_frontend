@@ -1413,6 +1413,10 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [showTermAssignModal, setShowTermAssignModal] = useState(false);
   const [assigningTerm, setAssigningTerm] = useState(false);
   const [selectedTermId, setSelectedTermId] = useState('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [showBulkTermModal, setShowBulkTermModal] = useState(false);
+  const [bulkTermId, setBulkTermId] = useState('');
+  const [assigningBulkTerm, setAssigningBulkTerm] = useState(false);
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -1516,6 +1520,34 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     }
   };
 
+  const handleBulkAssignTerm = async () => {
+    if (selectedStudentIds.length === 0) {
+      alert('Please select at least one student');
+      return;
+    }
+    if (!bulkTermId) {
+      alert('Please select a term');
+      return;
+    }
+    setAssigningBulkTerm(true);
+    try {
+      const r = await api.post('/students/bulk-assign-term', { studentIds: selectedStudentIds, termId: bulkTermId });
+      alert(`Bulk assignment completed: ${r.data.summary.successful} successful, ${r.data.summary.failed} failed`);
+      if (r.data.errors.length > 0) {
+        console.error('Bulk assignment errors:', r.data.errors);
+      }
+      setShowBulkTermModal(false);
+      setSelectedStudentIds([]);
+      setBulkTermId('');
+      const updated = await studentsApi.getAll({ page, limit: 15, search });
+      setStudents(updated.data.students);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to bulk assign term');
+    } finally {
+      setAssigningBulkTerm(false);
+    }
+  };
+
   const handleEditStudent = (student: any) => {
     setSelectedStudent(student);
     setEditForm({
@@ -1609,6 +1641,14 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search admission no, name…"
             className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
+          {selectedStudentIds.length > 0 && (
+            <button
+              onClick={() => setShowBulkTermModal(true)}
+              className="px-4 py-2 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition text-sm"
+            >
+              Assign Term ({selectedStudentIds.length})
+            </button>
+          )}
         </div>
       </div>
 
@@ -1638,6 +1678,20 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
           <table className="w-full text-sm">
             <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedStudentIds.length === students.length && students.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedStudentIds(students.map(s => s.id));
+                      } else {
+                        setSelectedStudentIds([]);
+                      }
+                    }}
+                    className="rounded border-stone/25"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left">Admission No.</th>
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Course</th>
@@ -1649,9 +1703,23 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               </tr>
             </thead>
             <tbody className="divide-y divide-stone/10">
-              {students.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
+              {students.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
               {students.map(s => (
                 <tr key={s.id} className="hover:bg-cream-deep/50 transition">
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedStudentIds.includes(s.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedStudentIds([...selectedStudentIds, s.id]);
+                        } else {
+                          setSelectedStudentIds(selectedStudentIds.filter(id => id !== s.id));
+                        }
+                      }}
+                      className="rounded border-stone/25"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-brand">{s.admission_no}</td>
                   <td className="px-4 py-3 font-medium text-brand-dark">{s.application?.surname} {s.application?.other_names}</td>
                   <td className="px-4 py-3 text-stone text-xs">{s.course?.name}</td>
@@ -2174,6 +2242,44 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               </button>
               <button
                 onClick={() => { setShowTermAssignModal(false); setSelectedTermId(''); }}
+                className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Term Assignment Modal */}
+      {showBulkTermModal && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Bulk Assign Term</h2>
+            <p className="text-sm text-stone mb-6">Assign {selectedStudentIds.length} students to a term</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-dark mb-1">Select Term</label>
+                <select
+                  value={bulkTermId}
+                  onChange={e => setBulkTermId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                >
+                  <option value="">Select Term</option>
+                  {terms.map((term: any) => (
+                    <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={handleBulkAssignTerm}
+                disabled={assigningBulkTerm}
+                className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+              >
+                {assigningBulkTerm ? 'Assigning...' : `Assign Term to ${selectedStudentIds.length} Students`}
+              </button>
+              <button
+                onClick={() => { setShowBulkTermModal(false); setBulkTermId(''); setSelectedStudentIds([]); }}
                 className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
               >
                 Cancel
