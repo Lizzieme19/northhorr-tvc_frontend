@@ -21,6 +21,12 @@ export default function FinanceDashboard() {
   const [selectedStudentBalance, setSelectedStudentBalance] = useState<any>(null);
   const [editingStudentFees, setEditingStudentFees] = useState<any>(null);
   const [studentFeeForm, setStudentFeeForm] = useState({ full_year_paid: false, fee_adjustment: '' });
+  const [showBillingDashboard, setShowBillingDashboard] = useState(false);
+  const [billingData, setBillingData] = useState<any>(null);
+  const [billingTermId, setBillingTermId] = useState('');
+  const [billingStatus, setBillingStatus] = useState('');
+  const [loadingBilling, setLoadingBilling] = useState(false);
+  const [terms, setTerms] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'FINANCE')) router.replace('/login');
@@ -29,6 +35,7 @@ export default function FinanceDashboard() {
   useEffect(() => {
     financeApi.getReports().then(r => setSummary(r.data)).catch(() => {});
     feeTypesApi.getAll({ is_active: 'true' }).then(r => setFeeTypes(r.data.fee_types || [])).catch(() => {});
+    api.get('/terms').then(r => setTerms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -97,6 +104,22 @@ export default function FinanceDashboard() {
     }
   };
 
+  const handleLoadBillingDashboard = async () => {
+    setLoadingBilling(true);
+    try {
+      const params: any = { page: 1, limit: 50 };
+      if (billingTermId) params.termId = billingTermId;
+      if (billingStatus) params.status = billingStatus;
+      const r = await api.get('/fees/billing/dashboard', { params });
+      setBillingData(r.data);
+      setShowBillingDashboard(true);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to load billing dashboard');
+    } finally {
+      setLoadingBilling(false);
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
@@ -146,6 +169,12 @@ export default function FinanceDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="font-display text-xl text-brand-dark">Fee Clearance List</h2>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowBillingDashboard(true)}
+              className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
+            >
+              Billing Dashboard
+            </button>
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
               placeholder="Search admission no, name…"
               className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
@@ -359,6 +388,138 @@ export default function FinanceDashboard() {
                 </button>
                 <button onClick={() => setEditingStudentFees(null)} className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
                   Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Billing Dashboard Modal */}
+        {showBillingDashboard && (
+          <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+            <div className="bg-white rounded-3xl p-8 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-display text-2xl text-brand-dark">Billing Dashboard</h2>
+                <button
+                  onClick={() => setShowBillingDashboard(false)}
+                  className="text-stone hover:text-brand transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Filters */}
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Filter by Term</label>
+                    <select
+                      value={billingTermId}
+                      onChange={e => setBillingTermId(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                    >
+                      <option value="">All Terms</option>
+                      {terms.map((term: any) => (
+                        <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Filter by Status</label>
+                    <select
+                      value={billingStatus}
+                      onChange={e => setBillingStatus(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                    >
+                      <option value="">All Status</option>
+                      <option value="PAID">Paid</option>
+                      <option value="PARTIAL">Partial</option>
+                      <option value="PENDING">Pending</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleLoadBillingDashboard}
+                      disabled={loadingBilling}
+                      className="px-6 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      {loadingBilling ? 'Loading...' : 'Apply Filters'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Summary Cards */}
+                {billingData && (
+                  <div className="grid sm:grid-cols-4 gap-4">
+                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                      <div className="text-sm text-stone mb-1">Total Students</div>
+                      <div className="font-display text-2xl font-bold text-brand-dark">{billingData.totalStudents || 0}</div>
+                    </div>
+                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                      <div className="text-sm text-stone mb-1">Total Fees</div>
+                      <div className="font-display text-xl font-bold text-brand-dark">KES {(billingData.totalFees || 0).toLocaleString()}</div>
+                    </div>
+                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                      <div className="text-sm text-stone mb-1">Total Paid</div>
+                      <div className="font-display text-xl font-bold text-green-600">KES {(billingData.totalPaid || 0).toLocaleString()}</div>
+                    </div>
+                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                      <div className="text-sm text-stone mb-1">Total Balance</div>
+                      <div className="font-display text-xl font-bold text-red-500">KES {(billingData.totalBalance || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Student Balances Table */}
+                {billingData && billingData.balances && billingData.balances.length > 0 && (
+                  <div className="bg-white rounded-xl border border-stone/10 overflow-hidden">
+                    <h3 className="font-semibold text-brand-dark p-4 border-b border-stone/10">Student Balances</h3>
+                    <div className="overflow-x-auto max-h-96">
+                      <table className="w-full text-sm">
+                        <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider sticky top-0">
+                          <tr>
+                            <th className="px-4 py-3 text-left">Admission No.</th>
+                            <th className="px-4 py-3 text-left">Student</th>
+                            <th className="px-4 py-3 text-left">Term</th>
+                            <th className="px-4 py-3 text-left">Total Fees</th>
+                            <th className="px-4 py-3 text-left">Paid</th>
+                            <th className="px-4 py-3 text-left">Balance</th>
+                            <th className="px-4 py-3 text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone/10">
+                          {billingData.balances.map((balance: any) => (
+                            <tr key={balance.id} className="hover:bg-cream-deep/50 transition">
+                              <td className="px-4 py-3 font-mono text-xs text-brand">{balance.student?.admission_no || '-'}</td>
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-brand-dark">{balance.student?.application?.surname} {balance.student?.application?.other_names}</div>
+                              </td>
+                              <td className="px-4 py-3 text-stone">{balance.term?.name}</td>
+                              <td className="px-4 py-3">KES {balance.total_fees?.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-green-600">KES {balance.amount_paid?.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-red-500">KES {balance.balance?.toLocaleString()}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  balance.balance <= 0 ? 'bg-green-100 text-green-800' :
+                                  balance.amount_paid > 0 ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {balance.balance <= 0 ? 'PAID' : balance.amount_paid > 0 ? 'PARTIAL' : 'PENDING'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowBillingDashboard(false)}
+                  className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
+                >
+                  Close
                 </button>
               </div>
             </div>
