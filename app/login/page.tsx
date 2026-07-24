@@ -20,15 +20,12 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const response = await api.post('/auth/login', { email, password });
-      const { accessToken, refreshToken, user } = response.data;
-      localStorage.setItem('ntvc_access_token', accessToken);
-      localStorage.setItem('ntvc_refresh_token', refreshToken);
-      
-      if (user.mustChangePassword) {
+      await login(email, password);
+      const { data } = await api.get('/auth/me');
+      if (data.mustChangePassword) {
         router.push('/change-password');
       } else {
-        router.push(portalRoute(user.role));
+        router.push(portalRoute(data.role));
       }
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Invalid email or password');
