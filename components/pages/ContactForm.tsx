@@ -21,7 +21,7 @@ export default function ContactForm() {
     };
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.northhorrtvc.ac.ke'}/api/contact`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.northhorrtvc.ac.ke/api'}/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
