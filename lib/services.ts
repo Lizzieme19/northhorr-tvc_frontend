@@ -78,10 +78,13 @@ export const designationsApi = {
 export const leavesApi = {
   getAll: (params?: any) => api.get('/leaves', { params }),
   getById: (id: string) => api.get(`/leaves/${id}`),
+  getMyLeaveRequests: () => api.get('/leaves/me'),
+  getMyLeaveBalance: (params?: any) => api.get('/leaves/balance', { params }),
+  getStatistics: (params?: any) => api.get('/leaves/stats', { params }),
   create: (data: any) => api.post('/leaves', data),
   update: (id: string, data: any) => api.put(`/leaves/${id}`, data),
   approve: (id: string, data: any) => api.patch(`/leaves/${id}/approve`, data),
-  reject: (id: string, data: any) => api.patch(`/leaves/${id}/reject`, data),
+  reject: (id: string, data: any) => api.patch(`/leaves/${id}/approve`, { ...data, status: 'REJECTED' }),
   cancel: (id: string) => api.patch(`/leaves/${id}/cancel`),
 };
 

@@ -13,6 +13,7 @@ export default function HRDashboard() {
   const [staff, setStaff] = useState<any[]>([]);
   const [designations, setDesignations] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
+  const [leaveStats, setLeaveStats] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
@@ -26,6 +27,7 @@ export default function HRDashboard() {
     staffApi.getAll().then(r => setStaff(Array.isArray(r.data?.staff) ? r.data.staff : [])).catch(() => setStaff([]));
     designationsApi.getAll().then(r => setDesignations(Array.isArray(r.data) ? r.data : [])).catch(() => setDesignations([]));
     leavesApi.getAll().then(r => setLeaves(r.data?.leaves || [])).catch(() => setLeaves([]));
+    leavesApi.getStatistics().then(r => setLeaveStats(r.data)).catch(() => setLeaveStats(null));
   }, []);
 
   const handleCreate = () => {
@@ -83,9 +85,9 @@ export default function HRDashboard() {
   const handleLeaveAction = async (id: string, action: 'approve' | 'reject', notes?: string) => {
     try {
       if (action === 'approve') {
-        await leavesApi.approve(id, { notes });
+        await leavesApi.approve(id, { status: 'APPROVED', notes });
       } else {
-        await leavesApi.reject(id, { notes });
+        await leavesApi.reject(id, { status: 'REJECTED', notes });
       }
       leavesApi.getAll().then(r => setLeaves(r.data || []));
     } catch (err: any) {
@@ -190,32 +192,64 @@ export default function HRDashboard() {
             </div>
           )}
           {tab === 'leaves' && (
-            <div className="space-y-4">
-              {leaves.length === 0 ? <p className="text-stone">No leave requests found</p> :
-                leaves.map(l => (
-                  <div key={l.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-brand-dark">{l.staff?.first_name} {l.staff?.last_name || 'Unknown'}</div>
-                      <div className="text-sm text-stone">{l.type} • {new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()}</div>
-                      <div className="text-xs mt-1">
-                        <span className={`px-2 py-0.5 rounded-full ${l.status === 'APPROVED' ? 'bg-green-100 text-green-800' : l.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : l.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-stone/20 text-stone'}`}>
-                          {l.status}
-                        </span>
+            <div className="space-y-6">
+              {/* Leave Statistics */}
+              {leaveStats && (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 bg-brand text-cream rounded-xl">
+                    <div className="text-2xl font-bold">{leaveStats.summary?.total_requests || 0}</div>
+                    <div className="text-sm text-cream/80">Total Requests</div>
+                  </div>
+                  <div className="p-4 bg-yellow-100 text-yellow-800 rounded-xl">
+                    <div className="text-2xl font-bold">{leaveStats.summary?.pending || 0}</div>
+                    <div className="text-sm text-yellow-700">Pending</div>
+                  </div>
+                  <div className="p-4 bg-green-100 text-green-800 rounded-xl">
+                    <div className="text-2xl font-bold">{leaveStats.summary?.approved || 0}</div>
+                    <div className="text-sm text-green-700">Approved</div>
+                  </div>
+                  <div className="p-4 bg-blue-100 text-blue-800 rounded-xl">
+                    <div className="text-2xl font-bold">{leaveStats.days?.total_approved || 0}</div>
+                    <div className="text-sm text-blue-700">Total Days Approved</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Leave Requests List */}
+              <div className="space-y-4">
+                {leaves.length === 0 ? <p className="text-stone">No leave requests found</p> :
+                  leaves.map(l => (
+                    <div key={l.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="font-semibold text-brand-dark">{l.staff?.first_name} {l.staff?.last_name || 'Unknown'}</div>
+                          <div className="text-sm text-stone">{l.staff?.department?.name || 'No department'} • {l.staff?.designation?.title || 'No designation'}</div>
+                          <div className="text-sm text-stone mt-1">
+                            {l.leave_type} • {new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()} ({l.total_days} days)
+                          </div>
+                          {l.reason && <div className="text-xs text-stone mt-1">{l.reason}</div>}
+                          <div className="text-xs mt-1">
+                            <span className={`px-2 py-0.5 rounded-full ${l.status === 'APPROVED' ? 'bg-green-100 text-green-800' : l.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : l.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-stone/20 text-stone'}`}>
+                              {l.status}
+                            </span>
+                            {l.approver && <span className="ml-2 text-stone">Approved by: {l.approver.email}</span>}
+                          </div>
+                        </div>
+                        {l.status === 'PENDING' && (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleLeaveAction(l.id, 'approve')} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">
+                              Approve
+                            </button>
+                            <button onClick={() => handleLeaveAction(l.id, 'reject')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
+                              Reject
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {l.status === 'PENDING' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => handleLeaveAction(l.id, 'approve')} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">
-                          Approve
-                        </button>
-                        <button onClick={() => handleLeaveAction(l.id, 'reject')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
-                          Reject
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))
-              }
+                  ))
+                }
+              </div>
             </div>
           )}
         </div>
