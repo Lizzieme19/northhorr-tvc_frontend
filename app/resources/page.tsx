@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+"use client";
+
 import { PageHero } from "@/components/ui/PageHero";
 import { resourcesApi } from "@/lib/services";
+import { useEffect, useState } from "react";
 
-export const metadata: Metadata = { title: "Downloadable Resources" };
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const categories = ["Prospectus", "Forms", "Timetables", "Policies"] as const;
 
@@ -13,25 +15,24 @@ const typeColors: Record<string, string> = {
   FILE: "bg-stone/15 text-stone",
 };
 
-async function getResources() {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/resources`, {
-      cache: 'no-store',
-    });
-    if (!response.ok) {
-     console.error('Resources API error:', response.status);
-      return [];
-    }
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.error('Failed to fetch resources:', error);
-    return [];
-  }
-}
+export default function ResourcesPage() {
+  const [resources, setResources] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function ResourcesPage() {
-  const resources = await getResources();
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const response = await resourcesApi.getAll();
+        setResources(response.data || []);
+      } catch (error) {
+        console.error('Failed to fetch resources:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResources();
+  }, []);
 
   return (
     <>
@@ -44,7 +45,12 @@ export default async function ResourcesPage() {
 
       <section className="py-16">
         <div className="mx-auto max-w-6xl px-6 space-y-14">
-          {resources.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="text-5xl mb-4">⏳</div>
+              <h3 className="font-display text-xl text-brand-dark mb-2">Loading resources...</h3>
+            </div>
+          ) : resources.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-5xl mb-4">📄</div>
               <h3 className="font-display text-xl text-brand-dark mb-2">No resources available</h3>
@@ -82,9 +88,7 @@ export default async function ResourcesPage() {
                           <div className="mt-1 text-xs text-stone-soft">{r.file_size}</div>
                         </div>
                         <a
-                          href={`${process.env.NEXT_PUBLIC_API_URL}/api/resources/${r.id}/download`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`${API_BASE}/resources/${r.id}/download`}
                           className="shrink-0 px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition"
                           title="Download"
                         >
