@@ -273,8 +273,11 @@ export default function HRDashboard() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Designation ID</label>
-                    <input name="designation_id" value={formData.designation_id || ''} onChange={(e) => setFormData({...formData, designation_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Designation</label>
+                    <select name="designation_id" value={formData.designation_id || ''} onChange={(e) => setFormData({...formData, designation_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Designation</option>
+                      {designations.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department ID</label>
