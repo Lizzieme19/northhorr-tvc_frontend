@@ -89,7 +89,7 @@ export default function HRDashboard() {
       } else {
         await leavesApi.reject(id, { status: 'REJECTED', notes });
       }
-      leavesApi.getAll().then(r => setLeaves(r.data || []));
+      leavesApi.getAll().then(r => setLeaves(r.data?.leaves || []));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to update leave request');
     }

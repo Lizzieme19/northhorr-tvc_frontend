@@ -2607,7 +2607,7 @@ function UsersTab() {
   const [roleFilter, setRoleFilter] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [staffForm, setStaffForm] = useState({ email: '', password: '', role: 'DEPT_HEAD', department_id: '' });
+  const [staffForm, setStaffForm] = useState({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '' });
   const [departments, setDepartments] = useState<any[]>([]);
   const [savingStaff, setSavingStaff] = useState(false);
   const [staffMsg, setStaffMsg] = useState('');
@@ -2670,7 +2670,7 @@ function UsersTab() {
     try {
       await api.post('/auth/create-staff', staffForm);
       setStaffMsg('✅ Staff account created successfully!');
-      setStaffForm({ email: '', password: '', role: 'DEPT_HEAD', department_id: '' });
+      setStaffForm({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '' });
       setShowCreateForm(false);
       const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search } });
       setUsers(updated.data.users.filter((u: any) => u.role !== 'STUDENT'));
@@ -2771,6 +2771,16 @@ function UsersTab() {
           <h2 className="font-display text-lg text-brand-dark mb-5">Create Staff Account</h2>
           <form onSubmit={handleCreateStaff} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">First Name *</label>
+                <input type="text" required value={staffForm.first_name} onChange={e => setStaffForm({...staffForm, first_name: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Last Name *</label>
+                <input type="text" required value={staffForm.last_name} onChange={e => setStaffForm({...staffForm, last_name: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email *</label>
                 <input type="email" required value={staffForm.email} onChange={e => setStaffForm({...staffForm, email: e.target.value})}

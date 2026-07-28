@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi } from '@/lib/services';
+import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 
 export default function ProcurementDashboard() {
@@ -16,6 +16,7 @@ export default function ProcurementDashboard() {
   const [lpos, setLpos] = useState<any[]>([]);
   const [grns, setGrns] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
@@ -32,6 +33,7 @@ export default function ProcurementDashboard() {
     lposApi.getAll().then(r => setLpos(r.data?.lpos || [])).catch(() => setLpos([]));
     grnsApi.getAll().then(r => setGrns(r.data?.grns || [])).catch(() => setGrns([]));
     inventoryApi.getAll().then(r => setInventory(r.data?.items || [])).catch(() => setInventory([]));
+    departmentsApi.getAll().then(r => setDepartments(Array.isArray(r.data) ? r.data : [])).catch(() => setDepartments([]));
   }, []);
 
   const handleCreate = () => {
@@ -74,19 +76,32 @@ export default function ProcurementDashboard() {
         }
         suppliersApi.getAll().then(r => setSuppliers(r.data || []));
       } else if (tab === 'requisitions') {
+        // Transform form data to match backend API expectations
+        const requisitionData = {
+          department_id: formData.department_id,
+          priority: formData.priority || 'MEDIUM',
+          justification: formData.justification,
+          items: [{
+            item_name: formData.item_name,
+            description: formData.description,
+            quantity: parseInt(formData.quantity),
+            unit_price: parseFloat(formData.unit_price),
+            specifications: formData.specifications,
+          }],
+        };
         if (editingItem) {
-          await requisitionsApi.update(editingItem.id, formData);
+          await requisitionsApi.update(editingItem.id, requisitionData);
         } else {
-          await requisitionsApi.create(formData);
+          await requisitionsApi.create(requisitionData);
         }
-        requisitionsApi.getAll().then(r => setRequisitions(r.data || []));
+        requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
       } else if (tab === 'inventory') {
         if (editingItem) {
           await inventoryApi.update(editingItem.id, formData);
         } else {
           await inventoryApi.create(formData);
         }
-        inventoryApi.getAll().then(r => setInventory(r.data || []));
+        inventoryApi.getAll().then(r => setInventory(r.data?.items || []));
       }
       setShowModal(false);
       setFormData({});
@@ -102,8 +117,8 @@ export default function ProcurementDashboard() {
     try {
       await api.approve(id);
       // Refresh data
-      if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data || []));
-      if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data || []));
+      if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
+      if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to approve');
     }
@@ -281,11 +296,11 @@ export default function ProcurementDashboard() {
                 inventory.map(i => (
                   <div key={i.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-brand-dark">{i.item_name}</div>
-                      <div className="text-sm text-stone">Stock: {i.quantity} • Location: {i.location}</div>
+                      <div className="font-semibold text-brand-dark">{i.name || i.item_name}</div>
+                      <div className="text-sm text-stone">Stock: {i.current_stock || i.quantity} • Location: {i.location}</div>
                       <div className="text-xs mt-1">
-                        <span className={`px-2 py-0.5 rounded-full ${i.quantity > i.reorder_level ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {i.quantity > i.reorder_level ? 'In Stock' : 'Low Stock'}
+                        <span className={`px-2 py-0.5 rounded-full ${(i.current_stock || i.quantity) > i.reorder_level ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {(i.current_stock || i.quantity) > i.reorder_level ? 'In Stock' : 'Low Stock'}
                         </span>
                       </div>
                     </div>
@@ -330,6 +345,13 @@ export default function ProcurementDashboard() {
                     <input name="address" value={formData.address || ''} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                   </div>
                   <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department</label>
+                    <select name="department_id" value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Category</label>
                     <input name="category" value={formData.category || ''} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                   </div>
@@ -338,32 +360,61 @@ export default function ProcurementDashboard() {
               {tab === 'requisitions' && (
                 <>
                   <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department ID *</label>
+                    <input name="department_id" required value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                  <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name *</label>
                     <input name="item_name" required value={formData.item_name || ''} onChange={(e) => setFormData({...formData, item_name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Quantity *</label>
-                    <input name="quantity" type="number" required value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
+                    <input name="description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Quantity *</label>
+                      <input name="quantity" type="number" required value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Unit Price (KES) *</label>
+                      <input name="unit_price" type="number" required value={formData.unit_price || ''} onChange={(e) => setFormData({...formData, unit_price: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Budget (KES) *</label>
-                    <input name="budget" type="number" required value={formData.budget || ''} onChange={(e) => setFormData({...formData, budget: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Specifications</label>
+                    <textarea name="specifications" value={formData.specifications || ''} onChange={(e) => setFormData({...formData, specifications: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department ID</label>
-                    <input name="department_id" value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Priority</label>
+                    <select name="priority" value={formData.priority || 'MEDIUM'} onChange={(e) => setFormData({...formData, priority: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                      <option value="URGENT">Urgent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Justification</label>
+                    <textarea name="justification" value={formData.justification || ''} onChange={(e) => setFormData({...formData, justification: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
                   </div>
                 </>
               )}
               {tab === 'inventory' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name *</label>
-                    <input name="item_name" required value={formData.item_name || ''} onChange={(e) => setFormData({...formData, item_name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Code *</label>
+                      <input name="item_code" required value={formData.item_code || ''} onChange={(e) => setFormData({...formData, item_code: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name *</label>
+                      <input name="name" required value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Quantity *</label>
-                    <input name="quantity" type="number" required value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Current Stock</label>
+                    <input name="current_stock" type="number" value={formData.current_stock || ''} onChange={(e) => setFormData({...formData, current_stock: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Location *</label>
