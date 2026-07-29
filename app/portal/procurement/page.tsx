@@ -53,12 +53,12 @@ export default function ProcurementDashboard() {
     try {
       await api.delete(id);
       // Refresh data
-      if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data || []));
-      if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data || []));
-      if (tab === 'rfqs') rfqsApi.getAll().then(r => setRfqs(r.data || []));
-      if (tab === 'lpos') lposApi.getAll().then(r => setLpos(r.data || []));
-      if (tab === 'grns') grnsApi.getAll().then(r => setGrns(r.data || []));
-      if (tab === 'inventory') inventoryApi.getAll().then(r => setInventory(r.data || []));
+      if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
+      if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
+      if (tab === 'rfqs') rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
+      if (tab === 'lpos') lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
+      if (tab === 'grns') grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
+      if (tab === 'inventory') inventoryApi.getAll().then(r => setInventory(r.data?.items || []));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to delete');
     }
@@ -74,7 +74,7 @@ export default function ProcurementDashboard() {
         } else {
           await suppliersApi.create(formData);
         }
-        suppliersApi.getAll().then(r => setSuppliers(r.data || []));
+        suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
       } else if (tab === 'requisitions') {
         // Transform form data to match backend API expectations
         const requisitionData = {
@@ -95,6 +95,49 @@ export default function ProcurementDashboard() {
           await requisitionsApi.create(requisitionData);
         }
         requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
+      } else if (tab === 'rfqs') {
+        const rfqData = {
+          requisition_id: formData.requisition_id,
+          title: formData.title,
+          description: formData.description,
+          opening_date: formData.opening_date,
+          closing_date: formData.closing_date,
+          supplier_ids: formData.supplier_ids || [],
+        };
+        if (editingItem) {
+          await rfqsApi.update(editingItem.id, rfqData);
+        } else {
+          await rfqsApi.create(rfqData);
+        }
+        rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
+      } else if (tab === 'lpos') {
+        const lpoData = {
+          rfq_id: formData.rfq_id,
+          supplier_id: formData.supplier_id,
+          department_id: formData.department_id,
+          delivery_date: formData.delivery_date,
+          payment_terms: formData.payment_terms,
+          items: [], // Items will be populated from RFQ
+        };
+        if (editingItem) {
+          await lposApi.update(editingItem.id, lpoData);
+        } else {
+          await lposApi.create(lpoData);
+        }
+        lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
+      } else if (tab === 'grns') {
+        const grnData = {
+          lpo_id: formData.lpo_id,
+          notes: formData.notes,
+          discrepancies: formData.discrepancies,
+          items: [], // Items will be populated from LPO
+        };
+        if (editingItem) {
+          await grnsApi.update(editingItem.id, grnData);
+        } else {
+          await grnsApi.create(grnData);
+        }
+        grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
       } else if (tab === 'inventory') {
         if (editingItem) {
           await inventoryApi.update(editingItem.id, formData);
@@ -125,6 +168,54 @@ export default function ProcurementDashboard() {
       if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to approve');
+    }
+  };
+
+  const handleSelectQuotation = async (rfqId: string, quotationId: string) => {
+    try {
+      await rfqsApi.award(rfqId, { quotation_id: quotationId });
+      rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
+      alert('Quotation selected successfully');
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to select quotation');
+    }
+  };
+
+  const handleApproveLPO = async (id: string) => {
+    try {
+      await lposApi.approve(id);
+      lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
+      alert('LPO approved successfully');
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to approve LPO');
+    }
+  };
+
+  const handleIssueLPO = async (id: string) => {
+    try {
+      await lposApi.issue(id);
+      lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
+      alert('LPO issued successfully');
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to issue LPO');
+    }
+  };
+
+  const handleDownloadLPO = async (id: string) => {
+    try {
+      window.open(`/api/lpos/${id}/pdf`, '_blank');
+    } catch (err: any) {
+      alert('Failed to download PDF');
+    }
+  };
+
+  const handleVerifyGRN = async (id: string, status: string) => {
+    try {
+      await grnsApi.verify(id, { status });
+      grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
+      alert(`GRN ${status.toLowerCase()} successfully`);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || `Failed to ${status.toLowerCase()} GRN`);
     }
   };
 
@@ -173,7 +264,7 @@ export default function ProcurementDashboard() {
         <div className="bg-white rounded-2xl border border-stone/10 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl text-brand-dark capitalize">{tab}</h2>
-            {(tab === 'suppliers' || tab === 'requisitions' || tab === 'inventory') && (
+            {(tab === 'suppliers' || tab === 'requisitions' || tab === 'inventory' || tab === 'rfqs' || tab === 'lpos' || tab === 'grns') && (
               <button onClick={handleCreate} className="px-4 py-2 rounded-lg bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition">
                 + Add New
               </button>
@@ -188,13 +279,13 @@ export default function ProcurementDashboard() {
                       <div className="font-semibold text-brand-dark">{s.name}</div>
                       <div className="text-sm text-stone">{s.email} • {s.phone}</div>
                       <div className="text-xs mt-1">
-                        <span className={`px-2 py-0.5 rounded-full ${s.approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                          {s.approved ? 'Approved' : 'Pending'}
+                        <span className={`px-2 py-0.5 rounded-full ${s.is_approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {s.is_approved ? 'Approved' : 'Pending'}
                         </span>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {!s.approved && (
+                      {!s.is_approved && (
                         <button onClick={() => handleApprove(s.id, suppliersApi)} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">
                           Approve
                         </button>
@@ -257,13 +348,44 @@ export default function ProcurementDashboard() {
               {rfqs.length === 0 ? <p className="text-stone">No RFQs found</p> :
                 rfqs.map(r => (
                   <div key={r.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
-                    <div className="font-semibold text-brand-dark">{r.title}</div>
-                    <div className="text-sm text-stone">Deadline: {new Date(r.deadline).toLocaleDateString()}</div>
-                    <div className="text-xs mt-1">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <div className="font-semibold text-brand-dark">{r.rfq_no || r.title}</div>
+                        <div className="text-sm text-stone">{r.requisition?.department?.name} • {r.requisition?.items?.length || 0} items</div>
+                        <div className="text-xs text-stone">Closing: {r.closing_date ? new Date(r.closing_date).toLocaleDateString() : 'N/A'}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        {r.status === 'OPEN' && (
+                          <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">Edit</button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs mt-1 mb-3">
                       <span className={`px-2 py-0.5 rounded-full ${r.status === 'CLOSED' ? 'bg-red-100 text-red-800' : r.status === 'AWARDED' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                         {r.status}
                       </span>
                     </div>
+                    {r.quotations && r.quotations.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-stone/10">
+                        <div className="text-sm font-medium text-brand-dark mb-2">Quotations</div>
+                        <div className="space-y-2">
+                          {r.quotations.map((q: any) => (
+                            <div key={q.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-stone/10">
+                              <div>
+                                <div className="text-sm font-medium">{q.supplier?.name}</div>
+                                <div className="text-xs text-stone">KES {q.amount?.toLocaleString()}</div>
+                              </div>
+                              {r.status === 'OPEN' && (
+                                <button onClick={() => handleSelectQuotation(r.id, q.id)} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">Select</button>
+                              )}
+                              {q.is_selected && (
+                                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs">Selected</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               }
@@ -273,13 +395,27 @@ export default function ProcurementDashboard() {
             <div className="space-y-4">
               {lpos.length === 0 ? <p className="text-stone">No LPOs found</p> :
                 lpos.map(l => (
-                  <div key={l.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
-                    <div className="font-semibold text-brand-dark">LPO-{l.po_number}</div>
-                    <div className="text-sm text-stone">Supplier: {l.supplier?.name} • KES {l.total_amount}</div>
-                    <div className="text-xs mt-1">
-                      <span className={`px-2 py-0.5 rounded-full ${l.status === 'ISSUED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {l.status}
-                      </span>
+                  <div key={l.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-brand-dark">{l.lpo_no}</div>
+                      <div className="text-sm text-stone">{l.supplier?.name} • {l.department?.name}</div>
+                      <div className="text-sm text-stone">KES {l.total_amount?.toLocaleString()}</div>
+                      <div className="text-xs mt-1">
+                        <span className={`px-2 py-0.5 rounded-full ${l.status === 'ISSUED' ? 'bg-green-100 text-green-800' : l.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {l.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {l.status === 'DRAFT' && (
+                        <button onClick={() => handleApproveLPO(l.id)} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">Approve</button>
+                      )}
+                      {l.status === 'APPROVED' && (
+                        <button onClick={() => handleIssueLPO(l.id)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">Issue</button>
+                      )}
+                      {l.status === 'APPROVED' && (
+                        <button onClick={() => handleDownloadLPO(l.id)} className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 text-sm hover:bg-purple-200 transition">PDF</button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -290,13 +426,24 @@ export default function ProcurementDashboard() {
             <div className="space-y-4">
               {grns.length === 0 ? <p className="text-stone">No GRNs found</p> :
                 grns.map(g => (
-                  <div key={g.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
-                    <div className="font-semibold text-brand-dark">GRN-{g.grn_number}</div>
-                    <div className="text-sm text-stone">LPO: {g.lpo_number} • Verified: {g.verified ? 'Yes' : 'No'}</div>
-                    <div className="text-xs mt-1">
-                      <span className={`px-2 py-0.5 rounded-full ${g.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {g.verified ? 'Verified' : 'Pending'}
-                      </span>
+                  <div key={g.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-brand-dark">{g.grn_no}</div>
+                      <div className="text-sm text-stone">{g.lpo?.lpo_no} • {g.lpo?.supplier?.name}</div>
+                      <div className="text-sm text-stone">{g.items?.length || 0} items</div>
+                      <div className="text-xs mt-1">
+                        <span className={`px-2 py-0.5 rounded-full ${g.status === 'VERIFIED' ? 'bg-green-100 text-green-800' : g.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {g.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {g.status === 'PENDING' && (
+                        <button onClick={() => handleVerifyGRN(g.id, 'VERIFIED')} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">Verify</button>
+                      )}
+                      {g.status === 'PENDING' && (
+                        <button onClick={() => handleVerifyGRN(g.id, 'REJECTED')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">Reject</button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -413,6 +560,105 @@ export default function ProcurementDashboard() {
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Justification</label>
                     <textarea name="justification" value={formData.justification || ''} onChange={(e) => setFormData({...formData, justification: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
+                  </div>
+                </>
+              )}
+              {tab === 'rfqs' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Requisition *</label>
+                    <select name="requisition_id" required value={formData.requisition_id || ''} onChange={(e) => setFormData({...formData, requisition_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Approved Requisition</option>
+                      {requisitions.filter(r => r.status === 'APPROVED').map(r => <option key={r.id} value={r.id}>{r.requisition_no} - {r.department?.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Title *</label>
+                    <input name="title" required value={formData.title || ''} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
+                    <textarea name="description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Opening Date *</label>
+                      <input name="opening_date" type="date" required value={formData.opening_date || ''} onChange={(e) => setFormData({...formData, opening_date: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Closing Date *</label>
+                      <input name="closing_date" type="date" required value={formData.closing_date || ''} onChange={(e) => setFormData({...formData, closing_date: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Invite Suppliers</label>
+                    <div className="space-y-2 max-h-32 overflow-y-auto border border-stone/25 rounded-xl p-3">
+                      {suppliers.filter(s => s.is_approved).map(s => (
+                        <label key={s.id} className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" checked={formData.supplier_ids?.includes(s.id)} onChange={(e) => {
+                            const ids = formData.supplier_ids || [];
+                            if (e.target.checked) {
+                              setFormData({...formData, supplier_ids: [...ids, s.id]});
+                            } else {
+                              setFormData({...formData, supplier_ids: ids.filter((id: string) => id !== s.id)});
+                            }
+                          }} />
+                          {s.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              {tab === 'lpos' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">RFQ *</label>
+                    <select name="rfq_id" required value={formData.rfq_id || ''} onChange={(e) => setFormData({...formData, rfq_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Awarded RFQ</option>
+                      {rfqs.filter(r => r.status === 'AWARDED').map(r => <option key={r.id} value={r.id}>{r.rfq_no || r.title} - {r.requisition?.department?.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Supplier *</label>
+                    <select name="supplier_id" required value={formData.supplier_id || ''} onChange={(e) => setFormData({...formData, supplier_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Supplier</option>
+                      {suppliers.filter(s => s.is_approved).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department *</label>
+                    <select name="department_id" required value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Delivery Date</label>
+                    <input name="delivery_date" type="date" value={formData.delivery_date || ''} onChange={(e) => setFormData({...formData, delivery_date: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Payment Terms</label>
+                    <textarea name="payment_terms" value={formData.payment_terms || ''} onChange={(e) => setFormData({...formData, payment_terms: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
+                  </div>
+                </>
+              )}
+              {tab === 'grns' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">LPO *</label>
+                    <select name="lpo_id" required value={formData.lpo_id || ''} onChange={(e) => setFormData({...formData, lpo_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Issued LPO</option>
+                      {lpos.filter(l => l.status === 'ISSUED' || l.status === 'APPROVED').map(l => <option key={l.id} value={l.id}>{l.lpo_no} - {l.supplier?.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes</label>
+                    <textarea name="notes" value={formData.notes || ''} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Discrepancies</label>
+                    <textarea name="discrepancies" value={formData.discrepancies || ''} onChange={(e) => setFormData({...formData, discrepancies: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
                   </div>
                 </>
               )}
