@@ -44,7 +44,7 @@ export default function ResourcesPage() {
       />
 
       <section className="py-16">
-        <div className="mx-auto max-w-6xl px-6 space-y-14">
+        <div className="mx-auto max-w-6xl px-6">
           {loading ? (
             <div className="text-center py-12">
               <div className="text-5xl mb-4">⏳</div>
@@ -57,49 +57,53 @@ export default function ResourcesPage() {
               <p className="text-stone">Check back later for downloadable resources.</p>
             </div>
           ) : (
-            categories.map((cat) => {
-              const items = resources.filter((r: any) => r.category === cat);
-              if (items.length === 0) return null;
-              return (
-                <div key={cat}>
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="h-10 w-1.5 rounded-full bg-gold" />
-                    <h2 className="font-display text-2xl text-brand-dark">{cat}</h2>
-                    <span className="text-stone text-sm">({items.length})</span>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {items.map((r: any) => (
-                      <div
-                        key={r.id}
-                        className="group flex items-center gap-4 p-5 bg-white rounded-2xl border border-stone/15 hover:border-brand hover:shadow-md transition"
-                      >
+            <div className="grid md:grid-cols-2 gap-8">
+              {categories.map((cat) => {
+                const items = resources.filter((r: any) => r.category === cat);
+                if (items.length === 0) return null;
+                return (
+                  <div key={cat}>
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="h-10 w-1.5 rounded-full bg-gold" />
+                      <h2 className="font-display text-2xl text-brand-dark">{cat}</h2>
+                      <span className="text-stone text-sm">({items.length})</span>
+                    </div>
+                    <div className="space-y-4">
+                      {items.map((r: any) => (
                         <div
-                          className={`h-14 w-14 rounded-xl grid place-items-center font-display font-bold text-sm ${typeColors[r.file_type] || typeColors.FILE}`}
+                          key={r.id}
+                          className="group flex items-center gap-4 p-5 bg-white rounded-2xl border border-stone/15 hover:border-brand hover:shadow-md transition"
                         >
-                          {r.file_type}
+                          <div
+                            className={`h-14 w-14 rounded-xl grid place-items-center font-display font-bold text-sm ${typeColors[r.file_type] || typeColors.FILE}`}
+                          >
+                            {r.file_type}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-display font-semibold text-brand-dark truncate">
+                              {r.title}
+                            </h3>
+                            <p className="text-sm text-stone line-clamp-1">
+                              {r.description}
+                            </p>
+                            <div className="mt-1 text-xs text-stone-soft">{r.file_size}</div>
+                          </div>
+                          <a
+                            href={`${process.env.NEXT_PUBLIC_API_URL}/api/resources/${r.id}/download`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition"
+                            title="Download"
+                          >
+                            ↓ Download
+                          </a>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-display font-semibold text-brand-dark truncate">
-                            {r.title}
-                          </h3>
-                          <p className="text-sm text-stone line-clamp-1">
-                            {r.description}
-                          </p>
-                          <div className="mt-1 text-xs text-stone-soft">{r.file_size}</div>
-                        </div>
-                        <a
-                          href={`${API_BASE}/resources/${r.id}/download`}
-                          className="shrink-0 px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition"
-                          title="Download"
-                        >
-                          ↓ Download
-                        </a>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
       </section>
