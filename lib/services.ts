@@ -70,7 +70,7 @@ export const staffApi = {
 export const designationsApi = {
   getAll: () => api.get('/designations'),
   create: (data: any) => api.post('/designations', data),
-  update: (id: string, data: any) => api.put(`/designations/${id}`, data),
+  update: (id: string, data: any) => api.patch(`/designations/${id}`, data),
   delete: (id: string) => api.delete(`/designations/${id}`),
 };
 

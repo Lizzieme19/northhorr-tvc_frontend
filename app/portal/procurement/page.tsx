@@ -115,7 +115,11 @@ export default function ProcurementDashboard() {
 
   const handleApprove = async (id: string, api: any) => {
     try {
-      await api.approve(id);
+      if (tab === 'requisitions') {
+        await api.approve(id, { status: 'APPROVED' });
+      } else {
+        await api.approve(id);
+      }
       // Refresh data
       if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
       if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
@@ -213,26 +217,35 @@ export default function ProcurementDashboard() {
                 requisitions.map(r => (
                   <div key={r.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-brand-dark">{r.item_name}</div>
-                      <div className="text-sm text-stone">Qty: {r.quantity} • Budget: KES {r.budget}</div>
+                      <div className="font-semibold text-brand-dark">{r.requisition_no}</div>
+                      <div className="text-sm text-stone">{r.department?.name} • {r.items?.length || 0} items • KES {r.total_amount?.toLocaleString()}</div>
                       <div className="text-xs mt-1">
-                        <span className={`px-2 py-0.5 rounded-full ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' : r.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-stone/20 text-stone'}`}>
+                        <span className={`px-2 py-0.5 rounded-full ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' : r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' : r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 'bg-stone/20 text-stone'}`}>
                           {r.status}
                         </span>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {r.status === 'PENDING' && (
+                      {r.status === 'DRAFT' && (
+                        <button onClick={() => requisitionsApi.submit(r.id).then(() => requisitionsApi.getAll().then(res => setRequisitions(res.data?.requisitions || [])))} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
+                          Submit
+                        </button>
+                      )}
+                      {r.status === 'PENDING_APPROVAL' && (
                         <button onClick={() => handleApprove(r.id, requisitionsApi)} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">
                           Approve
                         </button>
                       )}
-                      <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
-                        Edit
-                      </button>
-                      <button onClick={() => handleDelete(r.id, requisitionsApi)} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
-                        Delete
-                      </button>
+                      {r.status === 'DRAFT' && (
+                        <>
+                          <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
+                            Edit
+                          </button>
+                          <button onClick={() => handleDelete(r.id, requisitionsApi)} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
