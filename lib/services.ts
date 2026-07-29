@@ -115,6 +115,7 @@ export const rfqsApi = {
   update: (id: string, data: any) => api.put(`/rfqs/${id}`, data),
   close: (id: string) => api.patch(`/rfqs/${id}/close`),
   award: (id: string, data: any) => api.patch(`/rfqs/${id}/award`, data),
+  submitQuotation: (id: string, data: any) => api.post(`/rfqs/${id}/quotations`, data),
 };
 
 export const lposApi = {

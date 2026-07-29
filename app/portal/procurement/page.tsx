@@ -21,6 +21,9 @@ export default function ProcurementDashboard() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
+  const [showQuotationModal, setShowQuotationModal] = useState(false);
+  const [selectedRfqForQuotation, setSelectedRfqForQuotation] = useState<any>(null);
+  const [quotationData, setQuotationData] = useState<any>({});
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'PROCUREMENT')) router.replace('/login');
@@ -178,6 +181,20 @@ export default function ProcurementDashboard() {
       alert('Quotation selected successfully');
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Failed to select quotation');
+    }
+  };
+
+  const handleSubmitQuotation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await rfqsApi.submitQuotation(selectedRfqForQuotation.id, quotationData);
+      rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
+      setShowQuotationModal(false);
+      setQuotationData({});
+      setSelectedRfqForQuotation(null);
+      alert('Quotation submitted successfully');
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to submit quotation');
     }
   };
 
@@ -356,7 +373,10 @@ export default function ProcurementDashboard() {
                       </div>
                       <div className="flex gap-2">
                         {r.status === 'OPEN' && (
-                          <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">Edit</button>
+                          <>
+                            <button onClick={() => { setSelectedRfqForQuotation(r); setShowQuotationModal(true); setQuotationData({}); }} className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 text-sm hover:bg-purple-200 transition">Submit Quotation</button>
+                            <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">Edit</button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -694,6 +714,57 @@ export default function ProcurementDashboard() {
                 </button>
                 <button type="submit" disabled={submitting} className="flex-1 py-3 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
                   {submitting ? 'Saving...' : (editingItem ? 'Update' : 'Create')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {showQuotationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-stone/10">
+              <h3 className="text-xl font-bold text-brand-dark">Submit Quotation</h3>
+              <p className="text-sm text-stone mt-1">RFQ: {selectedRfqForQuotation?.rfq_no || selectedRfqForQuotation?.title}</p>
+            </div>
+            <form onSubmit={handleSubmitQuotation} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Supplier *</label>
+                <select required value={quotationData.supplier_id || ''} onChange={(e) => setQuotationData({...quotationData, supplier_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                  <option value="">Select Supplier</option>
+                  {suppliers.filter(s => s.is_approved).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Quotation Number *</label>
+                <input required type="text" value={quotationData.quotation_no || ''} onChange={(e) => setQuotationData({...quotationData, quotation_no: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="e.g., QT-2024-001" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Amount (KES) *</label>
+                <input required type="number" value={quotationData.amount || ''} onChange={(e) => setQuotationData({...quotationData, amount: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Currency</label>
+                <select value={quotationData.currency || 'KES'} onChange={(e) => setQuotationData({...quotationData, currency: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                  <option value="KES">KES</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Validity Period (days)</label>
+                <input type="number" value={quotationData.validity_period || ''} onChange={(e) => setQuotationData({...quotationData, validity_period: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="e.g., 30" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes</label>
+                <textarea value={quotationData.notes || ''} onChange={(e) => setQuotationData({...quotationData, notes: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} placeholder="Additional details..." />
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setShowQuotationModal(false)} className="flex-1 py-3 rounded-xl border border-stone/25 text-stone font-semibold hover:bg-stone/5 transition">
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 py-3 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">
+                  Submit Quotation
                 </button>
               </div>
             </form>
