@@ -360,8 +360,11 @@ export default function ProcurementDashboard() {
               {tab === 'requisitions' && (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department ID *</label>
-                    <input name="department_id" required value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department *</label>
+                    <select name="department_id" required value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name *</label>
