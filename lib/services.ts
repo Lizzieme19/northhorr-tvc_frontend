@@ -93,7 +93,7 @@ export const suppliersApi = {
   getAll: (params?: any) => api.get('/suppliers', { params }),
   getById: (id: string) => api.get(`/suppliers/${id}`),
   create: (data: any) => api.post('/suppliers', data),
-  update: (id: string, data: any) => api.put(`/suppliers/${id}`, data),
+  update: (id: string, data: any) => api.patch(`/suppliers/${id}`, data),
   delete: (id: string) => api.delete(`/suppliers/${id}`),
   approve: (id: string) => api.patch(`/suppliers/${id}/approve`),
 };
@@ -112,7 +112,7 @@ export const rfqsApi = {
   getAll: (params?: any) => api.get('/rfqs', { params }),
   getById: (id: string) => api.get(`/rfqs/${id}`),
   create: (data: any) => api.post('/rfqs', data),
-  update: (id: string, data: any) => api.put(`/rfqs/${id}`, data),
+  update: (id: string, data: any) => api.patch(`/rfqs/${id}`, data),
   close: (id: string) => api.patch(`/rfqs/${id}/close`),
   award: (id: string, data: any) => api.patch(`/rfqs/${id}/award`, data),
   submitQuotation: (id: string, data: any) => api.post(`/rfqs/${id}/quotations`, data),
@@ -122,7 +122,7 @@ export const lposApi = {
   getAll: (params?: any) => api.get('/lpos', { params }),
   getById: (id: string) => api.get(`/lpos/${id}`),
   create: (data: any) => api.post('/lpos', data),
-  update: (id: string, data: any) => api.put(`/lpos/${id}`, data),
+  update: (id: string, data: any) => api.patch(`/lpos/${id}`, data),
   approve: (id: string) => api.patch(`/lpos/${id}/approve`),
   issue: (id: string) => api.patch(`/lpos/${id}/issue`),
 };
@@ -131,7 +131,7 @@ export const grnsApi = {
   getAll: (params?: any) => api.get('/grns', { params }),
   getById: (id: string) => api.get(`/grns/${id}`),
   create: (data: any) => api.post('/grns', data),
-  update: (id: string, data: any) => api.put(`/grns/${id}`, data),
+  update: (id: string, data: any) => api.patch(`/grns/${id}`, data),
   verify: (id: string, data: any) => api.patch(`/grns/${id}/verify`, data),
 };
 
@@ -139,7 +139,7 @@ export const inventoryApi = {
   getAll: (params?: any) => api.get('/inventory', { params }),
   getById: (id: string) => api.get(`/inventory/${id}`),
   create: (data: any) => api.post('/inventory', data),
-  update: (id: string, data: any) => api.put(`/inventory/${id}`, data),
+  update: (id: string, data: any) => api.patch(`/inventory/${id}`, data),
   adjustStock: (id: string, data: any) => api.post(`/inventory/${id}/adjust`, data),
 };
 

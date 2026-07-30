@@ -504,7 +504,7 @@ export default function ProcurementDashboard() {
       {showModal && (
         <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
           <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
-            <h2 className="font-display text-xl text-brand-dark mb-4">{editingItem ? 'Edit' : 'Create'} {tab.slice(0, -1)}</h2>
+            <h2 className="font-display text-xl text-brand-dark mb-4">{editingItem ? 'Edit' : 'Create'} {tab === 'inventory' ? 'Inventory Item' : tab === 'rfqs' ? 'RFQ' : tab === 'lpos' ? 'LPO' : tab === 'grns' ? 'GRN' : tab.slice(0, -1)}</h2>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4">
               {tab === 'suppliers' && (
                 <>
