@@ -9,8 +9,10 @@ export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
-  studentId?: string;
-  admissionNo?: string;
+  student?: {
+    id: string;
+    admission_no: string;
+  };
 }
 
 interface AuthContextType {
