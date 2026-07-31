@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms' | 'billing'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms' | 'billing' | 'requisitions'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -417,6 +417,7 @@ export default function AdminDashboard() {
           { key: 'fee-types', label: '💰 Fee Types' },
           { key: 'terms', label: '📅 Terms' },
           { key: 'billing', label: '📊 Billing' },
+          { key: 'requisitions', label: '📝 Requisitions' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
@@ -1111,6 +1112,9 @@ export default function AdminDashboard() {
 
         {/* ── BILLING ── */}
         {tab === 'billing' && <BillingTab />}
+
+        {/* ── REQUISITIONS ── */}
+        {tab === 'requisitions' && <RequisitionsTab />}
       </main>
 
       {/* Student Credentials Modal */}
@@ -2593,6 +2597,119 @@ function BillingTab() {
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
             <button disabled={page >= Math.ceil(total / 50)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequisitionsTab() {
+  const [requisitions, setRequisitions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [approving, setApproving] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const params: any = {};
+    if (statusFilter) params.status = statusFilter;
+    api.get('/requisitions', { params }).then(r => {
+      setRequisitions(r.data?.requisitions || []);
+    }).catch(err => {
+      console.error('Failed to fetch requisitions:', err);
+      alert('Failed to load requisitions');
+    }).finally(() => setLoading(false));
+  }, [statusFilter]);
+
+  const handleApprove = async (id: string) => {
+    setApproving(id);
+    try {
+      await api.patch(`/requisitions/${id}/approve`);
+      setRequisitions(requisitions.map(r => r.id === id ? { ...r, status: 'APPROVED' } : r));
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to approve requisition');
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  return (
+    <div>
+      <h1 className="font-display text-2xl text-brand-dark mb-6">Purchase Requisitions</h1>
+      
+      <div className="bg-white rounded-2xl p-4 border border-stone/10 shadow-sm mb-6">
+        <div className="flex gap-4">
+          <div>
+            <label className="block text-sm font-medium text-brand-dark mb-1">Status</label>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-stone/25 focus:outline-none focus:border-brand text-sm"
+            >
+              <option value="">All Statuses</option>
+              <option value="DRAFT">Draft</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3 text-left">Requisition No.</th>
+                <th className="px-4 py-3 text-left">Department</th>
+                <th className="px-4 py-3 text-left">Items</th>
+                <th className="px-4 py-3 text-right">Total Amount</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Date</th>
+                <th className="px-4 py-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">Loading...</td></tr>
+              ) : requisitions.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">No requisitions found</td></tr>
+              ) : (
+                requisitions.map((r: any) => (
+                  <tr key={r.id} className="border-t border-stone/10 hover:bg-stone/5">
+                    <td className="px-4 py-3 font-medium text-brand-dark">{r.requisition_no}</td>
+                    <td className="px-4 py-3">{r.department?.name || 'N/A'}</td>
+                    <td className="px-4 py-3">{r.items?.length || 0} items</td>
+                    <td className="px-4 py-3 text-right">KES {r.total_amount?.toLocaleString() || 0}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
+                        r.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                        r.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                        r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
+                        r.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                        'bg-stone/20 text-stone'
+                      }`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{new Date(r.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      {r.status === 'PENDING' && (
+                        <button
+                          onClick={() => handleApprove(r.id)}
+                          disabled={approving === r.id}
+                          className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition disabled:opacity-50"
+                        >
+                          {approving === r.id ? 'Approving...' : 'Approve'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
