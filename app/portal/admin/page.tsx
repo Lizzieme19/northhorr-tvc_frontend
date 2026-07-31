@@ -2607,7 +2607,7 @@ function UsersTab() {
   const [roleFilter, setRoleFilter] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [staffForm, setStaffForm] = useState({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '' });
+  const [staffForm, setStaffForm] = useState({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '', phone: '' });
   const [departments, setDepartments] = useState<any[]>([]);
   const [savingStaff, setSavingStaff] = useState(false);
   const [staffMsg, setStaffMsg] = useState('');
@@ -2670,7 +2670,7 @@ function UsersTab() {
     try {
       await api.post('/auth/create-staff', staffForm);
       setStaffMsg('✅ Staff account created successfully!');
-      setStaffForm({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '' });
+      setStaffForm({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '', phone: '' });
       setShowCreateForm(false);
       const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search } });
       setUsers(updated.data.users.filter((u: any) => u.role !== 'STUDENT'));
@@ -2790,6 +2790,11 @@ function UsersTab() {
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Password *</label>
                 <input type="password" required value={staffForm.password} onChange={e => setStaffForm({...staffForm, password: e.target.value})}
                   className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
+                <input type="tel" value={staffForm.phone} onChange={e => setStaffForm({...staffForm, phone: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="07XXXXXXXX" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Role *</label>
