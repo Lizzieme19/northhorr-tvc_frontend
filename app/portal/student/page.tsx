@@ -20,6 +20,7 @@ export default function StudentDashboard() {
   const [feeSummary, setFeeSummary] = useState<any>(null);
   const [loadingFeeSummary, setLoadingFeeSummary] = useState(false);
   const [showFeeSummary, setShowFeeSummary] = useState(false);
+  const [userNeedsPasswordChange, setUserNeedsPasswordChange] = useState(false);
 
   const handleDownloadDocument = async (docType: string) => {
     setDownloadingDoc(docType);
@@ -47,7 +48,7 @@ export default function StudentDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (user?.role === 'STUDENT') {
+    if (user?.role === 'STUDENT' && !user.mustChangePassword) {
       api.get('/students/me').then(r => {
         setProfile(r.data);
         setEditForm({
@@ -104,6 +105,17 @@ export default function StudentDashboard() {
     }
   };
 
+  const handlePasswordChanged = () => {
+    setUserNeedsPasswordChange(false);
+    // Reload user data to get updated mustChangePassword status
+    api.get('/auth/me').then(r => {
+      // Update user state through auth context would be ideal, but for now reload page
+      setTimeout(() => {
+        router.refresh();
+      }, 500);
+    }).catch(console.error);
+  };
+
   const handleViewFeeSummary = async () => {
     setLoadingFeeSummary(true);
     try {
@@ -117,7 +129,27 @@ export default function StudentDashboard() {
     }
   };
 
-  if (loading || !user || !profile) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
+  if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
+
+  // Show password change screen if required
+  if (user.mustChangePassword) {
+    return (
+      <div className="min-h-screen bg-cream-deep flex items-center justify-center px-6">
+        <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md border border-stone/10">
+          <div className="text-center mb-6">
+            <div className="h-16 w-16 rounded-full bg-brand/10 grid place-items-center mx-auto mb-4">
+              <span className="text-3xl">🔐</span>
+            </div>
+            <h1 className="font-display text-2xl text-brand-dark mb-2">Change Your Password</h1>
+            <p className="text-stone text-sm">You must change your password before accessing your student portal.</p>
+          </div>
+          <ChangePassword onPasswordChanged={handlePasswordChanged} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-cream-deep">

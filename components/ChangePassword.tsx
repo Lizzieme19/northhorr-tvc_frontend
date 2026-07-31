@@ -1,15 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 
-export default function ChangePassword() {
+export default function ChangePassword({ onPasswordChanged }: { onPasswordChanged?: () => void }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +38,15 @@ export default function ChangePassword() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      
+      // Notify parent component and reload page to update user state
+      if (onPasswordChanged) {
+        onPasswordChanged();
+      } else {
+        setTimeout(() => {
+          router.refresh();
+        }, 1500);
+      }
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to change password');
     } finally {

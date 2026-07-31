@@ -9,6 +9,7 @@ export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
+  mustChangePassword?: boolean;
   student?: {
     id: string;
     admission_no: string;
