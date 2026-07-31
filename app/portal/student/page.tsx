@@ -427,19 +427,19 @@ export default function StudentDashboard() {
                     <h3 className="font-semibold text-brand-dark mb-3">Term Breakdown</h3>
                     <div className="space-y-3">
                       {feeSummary.termBreakdown.map((term: any) => (
-                        <div key={term.termId} className="bg-white rounded-xl p-4 border border-stone/10">
+                        <div key={term.term.id} className="bg-white rounded-xl p-4 border border-stone/10">
                           <div className="flex items-center justify-between mb-2">
-                            <div className="font-medium text-brand-dark">{term.termName}</div>
-                            <div className="text-xs text-stone">{term.academicYear}</div>
+                            <div className="font-medium text-brand-dark">{term.term.name}</div>
+                            <div className="text-xs text-stone">{term.term.academic_year}</div>
                           </div>
                           <div className="grid grid-cols-3 gap-4 text-sm">
                             <div>
                               <div className="text-stone text-xs mb-1">Total</div>
-                              <div className="font-medium">KES {term.totalFees?.toLocaleString() || 0}</div>
+                              <div className="font-medium">KES {term.total_fees?.toLocaleString() || 0}</div>
                             </div>
                             <div>
                               <div className="text-stone text-xs mb-1">Paid</div>
-                              <div className="font-medium text-green-600">KES {term.paid?.toLocaleString() || 0}</div>
+                              <div className="font-medium text-green-600">KES {term.amount_paid?.toLocaleString() || 0}</div>
                             </div>
                             <div>
                               <div className="text-stone text-xs mb-1">Balance</div>
@@ -453,11 +453,11 @@ export default function StudentDashboard() {
                 )}
 
                 {/* Fee Records */}
-                {feeSummary.feeRecords && feeSummary.feeRecords.length > 0 && (
+                {feeSummary.paymentHistory && feeSummary.paymentHistory.length > 0 && (
                   <div>
                     <h3 className="font-semibold text-brand-dark mb-3">Payment History</h3>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {feeSummary.feeRecords.map((record: any) => (
+                      {feeSummary.paymentHistory.map((record: any) => (
                         <div key={record.id} className="bg-cream-deep rounded-xl p-3 border border-stone/10 text-sm">
                           <div className="flex items-center justify-between">
                             <div>
