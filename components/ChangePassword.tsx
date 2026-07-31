@@ -58,6 +58,12 @@ export default function ChangePassword({ onPasswordChanged }: { onPasswordChange
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 text-sm">
         ✅ Password changed successfully!
+        <button 
+          onClick={() => router.push('/login')}
+          className="ml-2 text-green-700 underline hover:text-green-900"
+        >
+          Go to login
+        </button>
       </div>
     );
   }
