@@ -17,6 +17,7 @@ export default function StudentDashboard() {
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [downloadingIDCard, setDownloadingIDCard] = useState(false);
   const [feeSummary, setFeeSummary] = useState<any>(null);
   const [loadingFeeSummary, setLoadingFeeSummary] = useState(false);
   const [showFeeSummary, setShowFeeSummary] = useState(false);
@@ -40,6 +41,27 @@ export default function StudentDashboard() {
       alert(err?.response?.data?.error || 'Failed to download document');
     } finally {
       setDownloadingDoc(null);
+    }
+  };
+
+  const handleDownloadIDCard = async () => {
+    setDownloadingIDCard(true);
+    try {
+      const response = await api.get('/students/me/id-card', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ID-${profile.admission_no}.png`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to download ID card. Please ensure you have uploaded a profile picture with white background.');
+    } finally {
+      setDownloadingIDCard(false);
     }
   };
 
@@ -292,20 +314,11 @@ export default function StudentDashboard() {
                       disabled={downloadingDoc === 'admission_form'}
                       className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
                     >
-                      {downloadingDoc === 'admission_form' ? 'Downloading...' : 'Download (Prefilled)'}
+                      {downloadingDoc === 'admission_form' ? 'Downloading...' : 'Download'}
                     </button>
                   </div>
-                  <p className="text-xs text-stone">Required for all applicants - fill and submit with your application. Document will be prefilled with your data.</p>
+                  <p className="text-xs text-stone">Required admission form for all students - document will be prefilled with your data.</p>
                 </div>
-
-                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Fee Structure</span>
-                    <a href="/FEE STRUCTURE.docx" download className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition">Download</a>
-                  </div>
-                  <p className="text-xs text-stone">Detailed fee breakdown for all programs and levels.</p>
-                </div>
-
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-brand-dark text-sm">Medical Examination Form</span>
@@ -314,7 +327,7 @@ export default function StudentDashboard() {
                       disabled={downloadingDoc === 'medical_form'}
                       className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
                     >
-                      {downloadingDoc === 'medical_form' ? 'Downloading...' : 'Download (Prefilled)'}
+                      {downloadingDoc === 'medical_form' ? 'Downloading...' : 'Download'}
                     </button>
                   </div>
                   <p className="text-xs text-stone">Required medical examination form for all students - must be completed by a licensed medical practitioner. Document will be prefilled with your data.</p>
@@ -330,61 +343,75 @@ export default function StudentDashboard() {
                       <span className="text-xs px-3 py-1 bg-stone/20 text-stone rounded-full">Pending Admission</span>
                     )}
                   </div>
-                  <p className="text-xs text-stone">Official admission letter - available after admission approval.</p>
+                </div>
+                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-brand-dark text-sm">Student ID Card</span>
+                    {profile.profile_picture_url ? (
+                      <button
+                        onClick={handleDownloadIDCard}
+                        disabled={downloadingIDCard}
+                        className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
+                      >
+                        {downloadingIDCard ? 'Downloading...' : 'Download PNG'}
+                      </button>
+                    ) : (
+                      <span className="text-xs px-3 py-1 bg-stone/20 text-stone rounded-full">Upload Profile Photo</span>
+                    )}
+                  </div>
+                  {!profile.profile_picture_url && (
+                    <p className="text-xs text-stone mt-1">Upload a passport-style photo with white background to enable ID card download</p>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div>
-              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Term Enrollment</h2>
-              
-              <div className="space-y-3">
-                {/* Current Enrollments */}
-                {enrollments.length > 0 && (
-                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-                    <div className="font-medium text-green-800 text-sm mb-2">Current Enrollments</div>
-                    {enrollments.map((enrollment: any) => (
-                      <div key={enrollment.id} className="flex items-center justify-between text-sm py-1">
-                        <span className="text-green-700">{enrollment.term.name} ({enrollment.term.academic_year})</span>
-                        <span className="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full">Enrolled</span>
+            <div className="space-y-3">
+              {/* Current Enrollments */}
+              {enrollments.length > 0 && (
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <div className="font-medium text-green-800 text-sm mb-2">Current Enrollments</div>
+                  {enrollments.map((enrollment: any) => (
+                    <div key={enrollment.id} className="flex items-center justify-between text-sm py-1">
+                      <span className="text-green-700">{enrollment.term.name} ({enrollment.term.academic_year})</span>
+                      <span className="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full">Enrolled</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Available Terms for Enrollment */}
+              {terms.length > 0 && (
+                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                  <div className="font-medium text-brand-dark text-sm mb-2">Available Terms</div>
+                  <div className="space-y-2">
+                    {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).map((term: any) => (
+                      <div key={term.id} className="flex items-center justify-between text-sm py-2 border-b border-stone/10 last:border-0">
+                        <div>
+                          <div className="font-medium text-brand-dark">{term.name}</div>
+                          <div className="text-xs text-stone">{term.academic_year} • {new Date(term.start_date).toLocaleDateString()} - {new Date(term.end_date).toLocaleDateString()}</div>
+                        </div>
+                        <button
+                          onClick={() => handleEnrollTerm(term.id)}
+                          disabled={enrolling === term.id}
+                          className="px-3 py-1 bg-brand text-cream rounded-full text-xs hover:bg-brand-dark transition disabled:opacity-50"
+                        >
+                          {enrolling === term.id ? 'Enrolling...' : 'Enroll'}
+                        </button>
                       </div>
                     ))}
+                    {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).length === 0 && (
+                      <div className="text-xs text-stone italic">No new terms available for enrollment</div>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Available Terms for Enrollment */}
-                {terms.length > 0 && (
-                  <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                    <div className="font-medium text-brand-dark text-sm mb-2">Available Terms</div>
-                    <div className="space-y-2">
-                      {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).map((term: any) => (
-                        <div key={term.id} className="flex items-center justify-between text-sm py-2 border-b border-stone/10 last:border-0">
-                          <div>
-                            <div className="font-medium text-brand-dark">{term.name}</div>
-                            <div className="text-xs text-stone">{term.academic_year} • {new Date(term.start_date).toLocaleDateString()} - {new Date(term.end_date).toLocaleDateString()}</div>
-                          </div>
-                          <button
-                            onClick={() => handleEnrollTerm(term.id)}
-                            disabled={enrolling === term.id}
-                            className="px-3 py-1 bg-brand text-cream rounded-full text-xs hover:bg-brand-dark transition disabled:opacity-50"
-                          >
-                            {enrolling === term.id ? 'Enrolling...' : 'Enroll'}
-                          </button>
-                        </div>
-                      ))}
-                      {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).length === 0 && (
-                        <div className="text-xs text-stone italic">No new terms available for enrollment</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {terms.length === 0 && (
-                  <div className="bg-stone/50 rounded-xl p-4 border border-stone/20 text-center">
-                    <p className="text-sm text-stone">No active terms available for enrollment</p>
-                  </div>
-                )}
-              </div>
+              {terms.length === 0 && (
+                <div className="bg-stone/50 rounded-xl p-4 border border-stone/20 text-center">
+                  <p className="text-sm text-stone">No active terms available for enrollment</p>
+                </div>
+              )}
             </div>
 
             <div>

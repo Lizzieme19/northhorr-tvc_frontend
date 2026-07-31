@@ -1427,6 +1427,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [bulkPaymentFeeTypeId, setBulkPaymentFeeTypeId] = useState('');
   const [bulkPaymentTermId, setBulkPaymentTermId] = useState('');
   const [recordingBulkPayment, setRecordingBulkPayment] = useState(false);
+  const [downloadingIDCard, setDownloadingIDCard] = useState<string | null>(null);
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -1437,6 +1438,27 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   useEffect(() => {
     api.get('/terms').then(r => setTerms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
   }, []);
+
+  const handleDownloadIDCard = async (studentId: string) => {
+    setDownloadingIDCard(studentId);
+    try {
+      const response = await api.get(`/students/${studentId}/id-card`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ID-${studentId}.png`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to download ID card. Student must have a profile picture with white background.');
+    } finally {
+      setDownloadingIDCard(null);
+    }
+  };
 
   const handleKuccpsImport = async () => {
     if (!csvFile) return;
@@ -1809,6 +1831,13 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                       <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                       <button onClick={() => { setShowProgressionModal(true); setProgressionForm({ ...progressionForm, toLevel: s.level }); setSelectedStudent(s); }} className="text-purple-600 hover:text-purple-800 font-medium text-xs transition">Promote</button>
+                      <button 
+                        onClick={() => handleDownloadIDCard(s.id)} 
+                        disabled={downloadingIDCard === s.id || !s.profile_picture_url}
+                        className="text-orange-600 hover:text-orange-800 font-medium text-xs transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {downloadingIDCard === s.id ? 'Downloading...' : 'ID Card'}
+                      </button>
                     </div>
                   </td>
                 </tr>
