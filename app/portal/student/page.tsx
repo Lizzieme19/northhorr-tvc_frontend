@@ -18,6 +18,8 @@ export default function StudentDashboard() {
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [downloadingIDCard, setDownloadingIDCard] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [feeSummary, setFeeSummary] = useState<any>(null);
   const [loadingFeeSummary, setLoadingFeeSummary] = useState(false);
   const [showFeeSummary, setShowFeeSummary] = useState(false);
@@ -62,6 +64,30 @@ export default function StudentDashboard() {
       alert(err?.response?.data?.error || 'Failed to download ID card. Please ensure you have uploaded a profile picture with white background.');
     } finally {
       setDownloadingIDCard(false);
+    }
+  };
+
+  const handleProfilePhotoUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profilePhoto) return;
+    
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('profile_picture', profilePhoto);
+      
+      const response = await api.patch('/students/me/profile-picture', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const updated = await api.get('/students/me');
+      setProfile(updated.data);
+      setProfilePhoto(null);
+      alert('Profile picture uploaded successfully');
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to upload profile picture. Please ensure it has a white background.');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -193,6 +219,33 @@ export default function StudentDashboard() {
           <div className="bg-white rounded-3xl shadow-xl p-8 mb-6 border border-stone/10">
             <h2 className="font-display text-2xl text-brand-dark mb-6">Edit Profile</h2>
             <form onSubmit={handleProfileUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Profile Photo</label>
+                <div className="space-y-2">
+                  {profile.profile_picture_url && (
+                    <img src={profile.profile_picture_url} alt="Profile" className="w-24 h-24 rounded-full object-cover border-2 border-stone/20" />
+                  )}
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={(e) => setProfilePhoto(e.target.files?.[0] || null)}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                    />
+                    {profilePhoto && (
+                      <button
+                        type="button"
+                        onClick={handleProfilePhotoUpload}
+                        disabled={uploadingPhoto}
+                        className="mt-2 px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                      >
+                        {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-stone">Upload a passport-style photo with white background (min 300x300px, max 5MB)</p>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone Number</label>
                 <input
