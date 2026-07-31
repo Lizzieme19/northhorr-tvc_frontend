@@ -2608,6 +2608,8 @@ function RequisitionsTab() {
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [approving, setApproving] = useState<string | null>(null);
+  const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -2633,6 +2635,11 @@ function RequisitionsTab() {
     }
   };
 
+  const handleViewDetails = (requisition: any) => {
+    setSelectedRequisition(requisition);
+    setShowDetailModal(true);
+  };
+
   return (
     <div>
       <h1 className="font-display text-2xl text-brand-dark mb-6">Purchase Requisitions</h1>
@@ -2648,7 +2655,7 @@ function RequisitionsTab() {
             >
               <option value="">All Statuses</option>
               <option value="DRAFT">Draft</option>
-              <option value="PENDING">Pending</option>
+              <option value="PENDING_APPROVAL">Pending</option>
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
             </select>
@@ -2665,6 +2672,7 @@ function RequisitionsTab() {
                 <th className="px-4 py-3 text-left">Department</th>
                 <th className="px-4 py-3 text-left">Items</th>
                 <th className="px-4 py-3 text-right">Total Amount</th>
+                <th className="px-4 py-3 text-left">Priority</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Actions</th>
@@ -2672,9 +2680,9 @@ function RequisitionsTab() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">Loading...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-stone">Loading...</td></tr>
               ) : requisitions.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">No requisitions found</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-stone">No requisitions found</td></tr>
               ) : (
                 requisitions.map((r: any) => (
                   <tr key={r.id} className="border-t border-stone/10 hover:bg-stone/5">
@@ -2684,8 +2692,18 @@ function RequisitionsTab() {
                     <td className="px-4 py-3 text-right">KES {r.total_amount?.toLocaleString() || 0}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs ${
+                        r.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                        r.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                        r.priority === 'LOW' ? 'bg-green-100 text-green-800' :
+                        'bg-stone/20 text-stone'
+                      }`}>
+                        {r.priority}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
                         r.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                        r.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                        r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' :
                         r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
                         r.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
                         'bg-stone/20 text-stone'
@@ -2695,15 +2713,23 @@ function RequisitionsTab() {
                     </td>
                     <td className="px-4 py-3">{new Date(r.created_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
-                      {r.status === 'PENDING' && (
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => handleApprove(r.id)}
-                          disabled={approving === r.id}
-                          className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition disabled:opacity-50"
+                          onClick={() => handleViewDetails(r)}
+                          className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition"
                         >
-                          {approving === r.id ? 'Approving...' : 'Approve'}
+                          View
                         </button>
-                      )}
+                        {r.status === 'PENDING_APPROVAL' && (
+                          <button
+                            onClick={() => handleApprove(r.id)}
+                            disabled={approving === r.id}
+                            className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition disabled:opacity-50"
+                          >
+                            {approving === r.id ? 'Approving...' : 'Approve'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -2712,6 +2738,127 @@ function RequisitionsTab() {
           </table>
         </div>
       </div>
+
+      {/* Requisition Detail Modal */}
+      {showDetailModal && selectedRequisition && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl text-brand-dark">Requisition Details</h2>
+              <button onClick={() => setShowDetailModal(false)} className="text-stone hover:text-brand-dark text-2xl">×</button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Header Info */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-stone mb-1">Requisition No.</div>
+                  <div className="font-semibold text-brand-dark">{selectedRequisition.requisition_no}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-stone mb-1">Department</div>
+                  <div className="font-semibold text-brand-dark">{selectedRequisition.department?.name || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-stone mb-1">Requested By</div>
+                  <div className="font-semibold text-brand-dark">{selectedRequisition.requester?.email || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-stone mb-1">Date</div>
+                  <div className="font-semibold text-brand-dark">{new Date(selectedRequisition.created_at).toLocaleDateString()}</div>
+                </div>
+              </div>
+
+              {/* Status & Priority */}
+              <div className="flex gap-4">
+                <div>
+                  <div className="text-sm text-stone mb-1">Status</div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    selectedRequisition.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                    selectedRequisition.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedRequisition.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
+                    selectedRequisition.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                    'bg-stone/20 text-stone'
+                  }`}>
+                    {selectedRequisition.status}
+                  </span>
+                </div>
+                <div>
+                  <div className="text-sm text-stone mb-1">Priority</div>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    selectedRequisition.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                    selectedRequisition.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedRequisition.priority === 'LOW' ? 'bg-green-100 text-green-800' :
+                    'bg-stone/20 text-stone'
+                  }`}>
+                    {selectedRequisition.priority}
+                  </span>
+                </div>
+              </div>
+
+              {/* Justification */}
+              {selectedRequisition.justification && (
+                <div>
+                  <div className="text-sm text-stone mb-1">Justification</div>
+                  <div className="bg-cream-deep/50 rounded-xl p-4 text-brand-dark">{selectedRequisition.justification}</div>
+                </div>
+              )}
+
+              {/* Items */}
+              <div>
+                <div className="text-sm font-semibold text-brand-dark mb-3">Items ({selectedRequisition.items?.length || 0})</div>
+                <div className="bg-cream-deep/50 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Item Name</th>
+                        <th className="px-4 py-3 text-left">Description</th>
+                        <th className="px-4 py-3 text-right">Quantity</th>
+                        <th className="px-4 py-3 text-right">Unit Price</th>
+                        <th className="px-4 py-3 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedRequisition.items?.map((item: any) => (
+                        <tr key={item.id} className="border-t border-stone/10">
+                          <td className="px-4 py-3 font-medium">{item.item_name}</td>
+                          <td className="px-4 py-3 text-stone">{item.description || '-'}</td>
+                          <td className="px-4 py-3 text-right">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right">KES {item.unit_price?.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right font-medium">KES {item.total_price?.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-cream-deep font-semibold">
+                      <tr>
+                        <td colSpan={4} className="px-4 py-3 text-right">Total</td>
+                        <td className="px-4 py-3 text-right">KES {selectedRequisition.total_amount?.toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* Approval Info */}
+              {selectedRequisition.approver && (
+                <div>
+                  <div className="text-sm text-stone mb-1">Approved By</div>
+                  <div className="font-semibold text-brand-dark">{selectedRequisition.approver?.email}</div>
+                  <div className="text-xs text-stone">{new Date(selectedRequisition.approved_at).toLocaleString()}</div>
+                </div>
+              )}
+
+              {/* Rejection Reason */}
+              {selectedRequisition.rejection_reason && (
+                <div>
+                  <div className="text-sm text-stone mb-1">Rejection Reason</div>
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800">{selectedRequisition.rejection_reason}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
