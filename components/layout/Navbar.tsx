@@ -54,7 +54,7 @@ export function Navbar() {
             </a>
             <span>|</span>
             <a href="tel:+254717977218" className="hover:text-gold transition">
-              +254 717 977 218
+              +254721998512
             </a>
             <span>|</span>
             <PortalLinkButton />
@@ -152,7 +152,7 @@ export function Navbar() {
               <div className="flex items-center gap-2 text-cream/90">
                 <span>📞</span>
                 <a href="tel:+254717977218" className="hover:text-gold transition">
-                  +254 717 977 218
+                  +254721998512
                 </a>
               </div>
             </div>
