@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { staffApi, designationsApi, leavesApi } from '@/lib/services';
+import { staffApi, designationsApi, leavesApi, departmentsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
@@ -14,6 +14,7 @@ export default function HRDashboard() {
   const [staff, setStaff] = useState<any[]>([]);
   const [designations, setDesignations] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [leaveStats, setLeaveStats] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -27,6 +28,7 @@ export default function HRDashboard() {
   useEffect(() => {
     staffApi.getAll().then(r => setStaff(Array.isArray(r.data?.staff) ? r.data.staff : [])).catch(() => setStaff([]));
     designationsApi.getAll().then(r => setDesignations(Array.isArray(r.data) ? r.data : [])).catch(() => setDesignations([]));
+    departmentsApi.getAll().then(r => setDepartments(Array.isArray(r.data?.departments) ? r.data.departments : [])).catch(() => setDepartments([]));
     leavesApi.getAll().then(r => setLeaves(r.data?.leaves || [])).catch(() => setLeaves([]));
     leavesApi.getStatistics().then(r => setLeaveStats(r.data)).catch(() => setLeaveStats(null));
   }, []);
@@ -315,8 +317,11 @@ export default function HRDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department ID</label>
-                    <input name="department_id" value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department</label>
+                    <select name="department_id" value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Department</option>
+                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
