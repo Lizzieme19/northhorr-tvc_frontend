@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function ChangePasswordPage() {
   const { user } = useAuth();
@@ -34,10 +35,10 @@ export default function ChangePasswordPage() {
         currentPassword,
         newPassword,
       });
-      alert('Password changed successfully');
+      toast.success('Password changed successfully');
       router.push(user ? `/portal/${user.role.toLowerCase().replace('_', '-')}` : '/login');
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to change password');
+      toast.error(err?.response?.data?.error || 'Failed to change password');
     } finally {
       setLoading(false);
     }

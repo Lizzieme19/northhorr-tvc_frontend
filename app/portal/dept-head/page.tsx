@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { applicationsApi, studentsApi, requisitionsApi, departmentsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import { toast } from 'sonner';
 
 export default function DeptHeadDashboard() {
   const { user, logout, loading } = useAuth();
@@ -79,9 +80,9 @@ export default function DeptHeadDashboard() {
       setStudents(updated.data.students);
       setStudentTotal(updated.data.pagination.total);
       setSelectedStudent(null);
-      alert('Student profile updated successfully');
+      toast.success('Student profile updated successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to update student profile');
+      toast.error(err?.response?.data?.error || 'Failed to update student profile');
     } finally {
       setUpdating(false);
     }
@@ -111,9 +112,9 @@ export default function DeptHeadDashboard() {
       });
       setShowReqModal(false);
       requisitionsApi.getAll().then(r => { setRequisitions(r.data?.requisitions || []); setReqTotal(r.data?.requisitions?.length || 0); });
-      alert('Requisition created successfully');
+      toast.success('Requisition created successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to create requisition');
+      toast.error(err?.response?.data?.error || 'Failed to create requisition');
     } finally {
       setSubmitting(false);
     }
@@ -139,9 +140,9 @@ export default function DeptHeadDashboard() {
     try {
       await requisitionsApi.submit(id);
       requisitionsApi.getAll().then(r => { setRequisitions(r.data?.requisitions || []); setReqTotal(r.data?.requisitions?.length || 0); });
-      alert('Requisition submitted for approval');
+      toast.success('Requisition submitted for approval');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to submit requisition');
+      toast.error(err?.response?.data?.error || 'Failed to submit requisition');
     }
   };
 

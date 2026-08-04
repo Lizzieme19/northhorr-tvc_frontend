@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { departmentsApi } from '@/lib/services';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 
 const Field = ({ label, name, type = 'text', required = false, value, onChange, ...props }: any) => (
   <div>
@@ -84,7 +85,7 @@ export default function ApplicationForm() {
       const res = await api.post('/applications', data, { headers: { 'Content-Type': 'multipart/form-data' } });
       setSuccess(res.data);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to submit application. Please try again.');
+      toast.error(err?.response?.data?.error || 'Failed to submit application. Please try again.');
     } finally {
       setSubmitting(false);
     }

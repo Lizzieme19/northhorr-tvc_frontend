@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import { toast } from 'sonner';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
 interface Application { id: string; application_no: string; surname: string; other_names: string; email: string; status: string; type: string; created_at: string; course?: { name: string }; department?: { name: string }; [key: string]: any; }
@@ -134,23 +135,23 @@ export default function AdminDashboard() {
         setStudentCredentials(response.data.student_credentials);
       }
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Error updating status');
+      toast.error(e?.response?.data?.error || 'Error updating status');
     } finally { setApproving(null); }
   };
 
   const generateLetter = async (studentId: string) => {
     try {
       const r = await api.post(`/admissions/generate/${studentId}`);
-      alert('Admission letter generated! URL: ' + r.data.letter_url);
+      toast.success('Admission letter generated! URL: ' + r.data.letter_url);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to generate letter');
+      toast.error(e?.response?.data?.error || 'Failed to generate letter');
     }
   };
 
   const handleResourceUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resourceFile || !resourceForm.title || !resourceForm.category) {
-      alert('Please fill in all required fields');
+      toast.warning('Please fill in all required fields');
       return;
     }
     setUploading(true);
@@ -165,12 +166,12 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      alert('Resource uploaded successfully!');
+      toast.success('Resource uploaded successfully!');
       setResourceFile(null);
       setResourceForm({ title: '', description: '', category: 'Prospectus' });
       resourcesApi.getAll().then(r => setResources(r.data || []));
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to upload resource');
+      toast.error(e?.response?.data?.error || 'Failed to upload resource');
     } finally {
       setUploading(false);
     }
@@ -181,16 +182,16 @@ export default function AdminDashboard() {
     try {
       await resourcesApi.delete(id);
       setResources(prev => prev.filter(r => r.id !== id));
-      alert('Resource deleted successfully');
+      toast.success('Resource deleted successfully');
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to delete resource');
+      toast.error(e?.response?.data?.error || 'Failed to delete resource');
     }
   };
 
   const handleNewsUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsForm.title || !newsForm.excerpt || !newsForm.category) {
-      alert('Please fill in all required fields');
+      toast.warning('Please fill in all required fields');
       return;
     }
     setUploadingNews(true);
@@ -208,12 +209,12 @@ export default function AdminDashboard() {
       
       await newsApi.create(formData);
       
-      alert('News created successfully!');
+      toast.success('News created successfully!');
       setNewsForm({ title: '', excerpt: '', content: '', category: 'News', is_featured: false, is_published: false });
       setNewsImage(null);
       newsApi.getAll().then(r => setNews(r.data.news || []));
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to create news');
+      toast.error(e?.response?.data?.error || 'Failed to create news');
     } finally {
       setUploadingNews(false);
     }
@@ -224,9 +225,9 @@ export default function AdminDashboard() {
     try {
       await newsApi.delete(id);
       setNews(prev => prev.filter(n => n.id !== id));
-      alert('News deleted successfully');
+      toast.success('News deleted successfully');
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to delete news');
+      toast.error(e?.response?.data?.error || 'Failed to delete news');
     }
   };
 
@@ -251,7 +252,7 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      alert('Application updated successfully!');
+      toast.success('Application updated successfully!');
       setAppDocFiles({
         doc_kcpe: null,
         doc_kcse: null,
@@ -264,7 +265,7 @@ export default function AdminDashboard() {
       setApplications(updated.data.applications);
       setSelectedApp(updated.data.applications.find((a: Application) => a.id === selectedApp.id) || null);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to update application');
+      toast.error(e?.response?.data?.error || 'Failed to update application');
     } finally {
       setUploadingAppDocs(false);
     }
@@ -282,16 +283,16 @@ export default function AdminDashboard() {
       if (editingFeeType) {
         await feeTypesApi.update(editingFeeType.id, data);
         setFeeTypes(prev => prev.map(ft => ft.id === editingFeeType.id ? { ...ft, ...data } : ft));
-        alert('Fee type updated successfully');
+        toast.success('Fee type updated successfully');
       } else {
         const response = await feeTypesApi.create(data);
         setFeeTypes(prev => [...prev, response.data.fee_type]);
-        alert('Fee type created successfully');
+        toast.success('Fee type created successfully');
       }
       setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
       setEditingFeeType(null);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to save fee type');
+      toast.error(e?.response?.data?.error || 'Failed to save fee type');
     } finally {
       setSavingFeeType(false);
     }
@@ -318,9 +319,9 @@ export default function AdminDashboard() {
     try {
       await feeTypesApi.delete(id);
       setFeeTypes(prev => prev.filter(ft => ft.id !== id));
-      alert('Fee type deleted successfully');
+      toast.success('Fee type deleted successfully');
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to delete fee type');
+      toast.error(e?.response?.data?.error || 'Failed to delete fee type');
     }
   };
 
@@ -337,16 +338,16 @@ export default function AdminDashboard() {
       if (editingTerm) {
         await termsApi.update(editingTerm.id, data);
         setTerms(prev => prev.map(t => t.id === editingTerm.id ? { ...t, ...data } : t));
-        alert('Term updated successfully');
+        toast.success('Term updated successfully');
       } else {
         const response = await termsApi.create(data);
         setTerms(prev => [...prev, response.data.term]);
-        alert('Term created successfully');
+        toast.success('Term created successfully');
       }
       setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', intake: '', term_cost: '', is_active: true });
       setEditingTerm(null);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to save term');
+      toast.error(e?.response?.data?.error || 'Failed to save term');
     } finally {
       setSavingTerm(false);
     }
@@ -370,9 +371,9 @@ export default function AdminDashboard() {
     try {
       await termsApi.delete(id);
       setTerms(prev => prev.filter(t => t.id !== id));
-      alert('Term deleted successfully');
+      toast.success('Term deleted successfully');
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to delete term');
+      toast.error(e?.response?.data?.error || 'Failed to delete term');
     }
   };
 
@@ -380,9 +381,9 @@ export default function AdminDashboard() {
     try {
       await api.patch(`/terms/${id}`, { is_active: !currentStatus });
       setTerms(prev => prev.map(t => t.id === id ? { ...t, is_active: !currentStatus } : t));
-      alert(`Term ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+      toast.success(`Term ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to update term status');
+      toast.error(e?.response?.data?.error || 'Failed to update term status');
     }
   };
 
@@ -1454,7 +1455,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to download ID card. Student must have a profile picture with white background.');
+      toast.error(e?.response?.data?.error || 'Failed to download ID card. Student must have a profile picture with white background.');
     } finally {
       setDownloadingIDCard(null);
     }
@@ -1470,7 +1471,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       setStudents(updated.data.students);
       setTotal(updated.data.pagination.total);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Import failed');
+      toast.error(e?.response?.data?.error || 'Import failed');
     } finally { setImporting(false); }
   };
 
@@ -1480,21 +1481,21 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       setFeeSummary(r.data);
       setShowFeeModal(true);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to fetch fee summary');
+      toast.error(e?.response?.data?.error || 'Failed to fetch fee summary');
     }
   };
 
   const handleRecordPayment = async (studentId: string, termId: string) => {
     if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
-      alert('Please enter a valid payment amount');
+      toast.warning('Please enter a valid payment amount');
       return;
     }
     if (!selectedFeeTypeId) {
-      alert('Please select a fee type');
+      toast.warning('Please select a fee type');
       return;
     }
     if (!selectedPaymentTermId) {
-      alert('Please select a term to pay');
+      toast.warning('Please select a term to pay');
       return;
     }
     setRecordingPayment(true);
@@ -1504,14 +1505,14 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         fee_type_id: selectedFeeTypeId,
         notes: paymentNotes,
       });
-      alert('Payment recorded successfully');
+      toast.success('Payment recorded successfully');
       setPaymentAmount('');
       setPaymentNotes('');
       setSelectedFeeTypeId('');
       setSelectedPaymentTermId('');
       handleViewFeeSummary(studentId);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to record payment');
+      toast.error(e?.response?.data?.error || 'Failed to record payment');
     } finally {
       setRecordingPayment(false);
     }
@@ -1519,19 +1520,19 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
 
   const handlePromoteStudent = async (studentId: string) => {
     if (!progressionForm.toLevel || !progressionForm.termId) {
-      alert('Please select level and term');
+      toast.warning('Please select level and term');
       return;
     }
     setPromoting(true);
     try {
       await api.post(`/fees/students/${studentId}/promote`, progressionForm);
-      alert('Student promoted successfully');
+      toast.success('Student promoted successfully');
       setShowProgressionModal(false);
       setProgressionForm({ toLevel: '', termId: '', notes: '', forcePromote: false });
       const updated = await studentsApi.getAll({ page, limit: 15, search });
       setStudents(updated.data.students);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to promote student');
+      toast.error(e?.response?.data?.error || 'Failed to promote student');
     } finally {
       setPromoting(false);
     }
@@ -1539,19 +1540,19 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
 
   const handleAssignTerm = async () => {
     if (!selectedTermId) {
-      alert('Please select a term');
+      toast.warning('Please select a term');
       return;
     }
     setAssigningTerm(true);
     try {
       await api.post(`/students/${selectedStudent.id}/term/${selectedTermId}`);
-      alert('Term assigned successfully!');
+      toast.success('Term assigned successfully!');
       setShowTermAssignModal(false);
       setSelectedTermId('');
       const updated = await studentsApi.getAll({ page, limit: 15, search });
       setStudents(updated.data.students);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to assign term');
+      toast.error(err?.response?.data?.error || 'Failed to assign term');
     } finally {
       setAssigningTerm(false);
     }
@@ -1559,17 +1560,17 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
 
   const handleBulkAssignTerm = async () => {
     if (selectedStudentIds.length === 0) {
-      alert('Please select at least one student');
+      toast.warning('Please select at least one student');
       return;
     }
     if (!bulkTermId) {
-      alert('Please select a term');
+      toast.warning('Please select a term');
       return;
     }
     setAssigningBulkTerm(true);
     try {
       const r = await api.post('/students/bulk-assign-term', { studentIds: selectedStudentIds, termId: bulkTermId });
-      alert(`Bulk assignment completed: ${r.data.summary.successful} successful, ${r.data.summary.failed} failed`);
+      toast.success(`Bulk assignment completed: ${r.data.summary.successful} successful, ${r.data.summary.failed} failed`);
       if (r.data.errors.length > 0) {
         console.error('Bulk assignment errors:', r.data.errors);
       }
@@ -1579,7 +1580,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       const updated = await studentsApi.getAll({ page, limit: 15, search });
       setStudents(updated.data.students);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to bulk assign term');
+      toast.error(err?.response?.data?.error || 'Failed to bulk assign term');
     } finally {
       setAssigningBulkTerm(false);
     }
@@ -1587,19 +1588,19 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
 
   const handleBulkRecordPayment = async () => {
     if (selectedStudentIds.length === 0) {
-      alert('Please select at least one student');
+      toast.warning('Please select at least one student');
       return;
     }
     if (!bulkPaymentAmount || parseFloat(bulkPaymentAmount) <= 0) {
-      alert('Please enter a valid payment amount');
+      toast.warning('Please enter a valid payment amount');
       return;
     }
     if (!bulkPaymentFeeTypeId) {
-      alert('Please select a fee type');
+      toast.warning('Please select a fee type');
       return;
     }
     if (!bulkPaymentTermId) {
-      alert('Please select a term');
+      toast.warning('Please select a term');
       return;
     }
     setRecordingBulkPayment(true);
@@ -1612,7 +1613,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         notes: 'Bulk payment',
       }));
       const r = await api.post('/fees/bulk-record-payment', { payments });
-      alert(`Bulk payment completed: ${r.data.summary.successful} successful, ${r.data.summary.failed} failed`);
+      toast.success(`Bulk payment completed: ${r.data.summary.successful} successful, ${r.data.summary.failed} failed`);
       if (r.data.errors.length > 0) {
         console.error('Bulk payment errors:', r.data.errors);
       }
@@ -1622,7 +1623,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       setBulkPaymentTermId('');
       setSelectedStudentIds([]);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to record bulk payment');
+      toast.error(err?.response?.data?.error || 'Failed to record bulk payment');
     } finally {
       setRecordingBulkPayment(false);
     }
@@ -1704,9 +1705,9 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         birth_certificate: null,
         other_documents: null
       });
-      alert('Student profile updated successfully');
+      toast.success('Student profile updated successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to update student profile');
+      toast.error(err?.response?.data?.error || 'Failed to update student profile');
     } finally {
       setUpdating(false);
       setUploadingDocs(false);
@@ -2648,7 +2649,7 @@ function RequisitionsTab() {
       setRequisitions(r.data?.requisitions || []);
     }).catch(err => {
       console.error('Failed to fetch requisitions:', err);
-      alert('Failed to load requisitions');
+      toast.error('Failed to load requisitions');
     }).finally(() => setLoading(false));
   }, [statusFilter]);
 
@@ -2658,7 +2659,7 @@ function RequisitionsTab() {
       await api.patch(`/requisitions/${id}/approve`);
       setRequisitions(requisitions.map(r => r.id === id ? { ...r, status: 'APPROVED' } : r));
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to approve requisition');
+      toast.error(err?.response?.data?.error || 'Failed to approve requisition');
     } finally {
       setApproving(null);
     }
@@ -2925,7 +2926,7 @@ function UsersTab() {
       setTotal(filteredUsers.length);
     }).catch(err => {
       console.error('Failed to fetch users:', err);
-      alert('Failed to load users. Please check your connection.');
+      toast.error('Failed to load users. Please check your connection.');
     });
   }, [page, roleFilter, search]);
 
@@ -2935,7 +2936,7 @@ function UsersTab() {
       await api.patch(`/auth/users/${userId}`, { is_active: !currentStatus });
       setUsers(users.map(u => u.id === userId ? { ...u, is_active: !currentStatus } : u));
     } catch (err) {
-      alert('Failed to update user status');
+      toast.error('Failed to update user status');
     } finally {
       setUpdating(null);
     }
@@ -2948,9 +2949,9 @@ function UsersTab() {
       await api.delete(`/auth/users/${userId}`);
       setUsers(users.filter(u => u.id !== userId));
       setTotal(total - 1);
-      alert('User deleted successfully');
+      toast.success('User deleted successfully');
     } catch (err) {
-      alert('Failed to delete user');
+      toast.error('Failed to delete user');
     } finally {
       setUpdating(null);
     }
@@ -3313,7 +3314,7 @@ function CoursesTab() {
       setIsDeptModalOpen(false);
       setDeptForm({ id: '', name: '', tagline: '', description: '', icon: '🏢', image_url: '' });
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to save department');
+      toast.error(err?.response?.data?.error || 'Failed to save department');
     } finally {
       setSavingDept(false);
     }
@@ -3325,7 +3326,7 @@ function CoursesTab() {
       await departmentsApi.delete(id);
       fetchDepts();
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to delete department');
+      toast.error(err?.response?.data?.error || 'Failed to delete department');
     }
   };
 
@@ -3342,7 +3343,7 @@ function CoursesTab() {
       setIsCourseModalOpen(false);
       setCourseForm({ id: '', name: '', levels: '', shortcode: '', department_id: '' });
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to save course');
+      toast.error(err?.response?.data?.error || 'Failed to save course');
     } finally {
       setSavingCourse(false);
     }
@@ -3354,7 +3355,7 @@ function CoursesTab() {
       await coursesApi.delete(id);
       fetchCourses();
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to delete course');
+      toast.error(err?.response?.data?.error || 'Failed to delete course');
     }
   };
 

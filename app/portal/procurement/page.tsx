@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import { toast } from 'sonner';
 
 export default function ProcurementDashboard() {
   const { user, logout, loading } = useAuth();
@@ -63,7 +64,7 @@ export default function ProcurementDashboard() {
       if (tab === 'grns') grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
       if (tab === 'inventory') inventoryApi.getAll().then(r => setInventory(r.data?.items || []));
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to delete');
+      toast.error(err?.response?.data?.error || 'Failed to delete');
     }
   };
 
@@ -153,7 +154,7 @@ export default function ProcurementDashboard() {
       setFormData({});
       setEditingItem(null);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to save');
+      toast.error(err?.response?.data?.error || 'Failed to save');
     } finally {
       setSubmitting(false);
     }
@@ -170,7 +171,7 @@ export default function ProcurementDashboard() {
       if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
       if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to approve');
+      toast.error(err?.response?.data?.error || 'Failed to approve');
     }
   };
 
@@ -178,9 +179,9 @@ export default function ProcurementDashboard() {
     try {
       await rfqsApi.award(rfqId, { quotation_id: quotationId });
       rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
-      alert('Quotation selected successfully');
+      toast.success('Quotation selected successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to select quotation');
+      toast.error(err?.response?.data?.error || 'Failed to select quotation');
     }
   };
 
@@ -192,9 +193,9 @@ export default function ProcurementDashboard() {
       setShowQuotationModal(false);
       setQuotationData({});
       setSelectedRfqForQuotation(null);
-      alert('Quotation submitted successfully');
+      toast.success('Quotation submitted successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to submit quotation');
+      toast.error(err?.response?.data?.error || 'Failed to submit quotation');
     }
   };
 
@@ -202,9 +203,9 @@ export default function ProcurementDashboard() {
     try {
       await lposApi.approve(id);
       lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
-      alert('LPO approved successfully');
+      toast.success('LPO approved successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to approve LPO');
+      toast.error(err?.response?.data?.error || 'Failed to approve LPO');
     }
   };
 
@@ -212,9 +213,9 @@ export default function ProcurementDashboard() {
     try {
       await lposApi.issue(id);
       lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
-      alert('LPO issued successfully');
+      toast.success('LPO issued successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to issue LPO');
+      toast.error(err?.response?.data?.error || 'Failed to issue LPO');
     }
   };
 
@@ -222,7 +223,7 @@ export default function ProcurementDashboard() {
     try {
       window.open(`/api/lpos/${id}/pdf`, '_blank');
     } catch (err: any) {
-      alert('Failed to download PDF');
+      toast.error('Failed to download PDF');
     }
   };
 
@@ -230,9 +231,9 @@ export default function ProcurementDashboard() {
     try {
       await grnsApi.verify(id, { status });
       grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
-      alert(`GRN ${status.toLowerCase()} successfully`);
+      toast.success(`GRN ${status.toLowerCase()} successfully`);
     } catch (err: any) {
-      alert(err?.response?.data?.error || `Failed to ${status.toLowerCase()} GRN`);
+      toast.error(err?.response?.data?.error || `Failed to ${status.toLowerCase()} GRN`);
     }
   };
 
