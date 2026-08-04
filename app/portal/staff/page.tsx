@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { leavesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import { toast } from 'sonner';
 
 export default function StaffDashboard() {
   const { user, logout, loading } = useAuth();
@@ -35,9 +36,9 @@ export default function StaffDashboard() {
       setShowLeaveForm(false);
       setLeaveForm({ leave_type: '', start_date: '', end_date: '', reason: '' });
       leavesApi.getMyLeaveRequests().then(r => setLeaves(r.data || []));
-      alert('Leave request submitted successfully');
+      toast.success('Leave request submitted successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to submit leave request');
+      toast.error(err?.response?.data?.error || 'Failed to submit leave request');
     } finally {
       setSubmitting(false);
     }

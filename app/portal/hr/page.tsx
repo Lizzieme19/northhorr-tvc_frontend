@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { staffApi, designationsApi, leavesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import { toast } from 'sonner';
 
 export default function HRDashboard() {
   const { user, logout, loading } = useAuth();
@@ -49,7 +50,7 @@ export default function HRDashboard() {
       if (tab === 'staff') staffApi.getAll().then(r => setStaff(Array.isArray(r.data?.staff) ? r.data.staff : []));
       if (tab === 'designations') designationsApi.getAll().then(r => setDesignations(Array.isArray(r.data) ? r.data : []));
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to delete');
+      toast.error(err?.response?.data?.error || 'Failed to delete');
     }
   };
 
@@ -76,7 +77,7 @@ export default function HRDashboard() {
       setFormData({});
       setEditingItem(null);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to save');
+      toast.error(err?.response?.data?.error || 'Failed to save');
     } finally {
       setSubmitting(false);
     }
@@ -91,7 +92,7 @@ export default function HRDashboard() {
       }
       leavesApi.getAll().then(r => setLeaves(r.data?.leaves || []));
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to update leave request');
+      toast.error(err?.response?.data?.error || 'Failed to update leave request');
     }
   };
 

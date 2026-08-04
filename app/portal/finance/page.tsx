@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { financeApi, feeTypesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import { toast } from 'sonner';
 
 export default function FinanceDashboard() {
   const { user, logout, loading } = useAuth();
@@ -64,7 +65,7 @@ export default function FinanceDashboard() {
       financeApi.getReports().then(r => setSummary(r.data));
     } catch (e: any) {
       console.error('Mark paid error:', e);
-      alert(e?.response?.data?.error || 'Failed to update fee');
+      toast.error(e?.response?.data?.error || 'Failed to update fee');
     } finally { setProcessing(null); }
   };
 
@@ -73,7 +74,7 @@ export default function FinanceDashboard() {
       const r = await api.get(`/finance/students/${studentId}/balance`);
       setSelectedStudentBalance(r.data);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to fetch balance');
+      toast.error(e?.response?.data?.error || 'Failed to fetch balance');
     }
   };
 
@@ -91,7 +92,7 @@ export default function FinanceDashboard() {
         full_year_paid: studentFeeForm.full_year_paid,
         fee_adjustment: parseFloat(studentFeeForm.fee_adjustment) || 0,
       });
-      alert('Student fee settings updated');
+      toast.success('Student fee settings updated');
       setEditingStudentFees(null);
       // Refresh student list
       const params: any = { page, limit: 15 };
@@ -100,7 +101,7 @@ export default function FinanceDashboard() {
       const r = await financeApi.getFeeRecords(params);
       setStudents(r.data.students);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to update student fees');
+      toast.error(e?.response?.data?.error || 'Failed to update student fees');
     }
   };
 
@@ -114,7 +115,7 @@ export default function FinanceDashboard() {
       setBillingData(r.data);
       setShowBillingDashboard(true);
     } catch (e: any) {
-      alert(e?.response?.data?.error || 'Failed to load billing dashboard');
+      toast.error(e?.response?.data?.error || 'Failed to load billing dashboard');
     } finally {
       setLoadingBilling(false);
     }
@@ -265,7 +266,7 @@ export default function FinanceDashboard() {
                       <button onClick={() => editStudentFees(s)} className="text-xs text-brand hover:underline">Edit Fees</button>
                     </td>
                     <td className="px-4 py-3">
-                      <button disabled={!s.student_id_fee_paid} onClick={() => alert('Student ID printing queue triggered.')}
+                      <button disabled={!s.student_id_fee_paid} onClick={() => toast.info('Student ID printing queue triggered.')}
                         className="text-xs px-3 py-1.5 rounded bg-stone-100 border border-stone-200 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1">
                         🖨️ Print ID
                       </button>

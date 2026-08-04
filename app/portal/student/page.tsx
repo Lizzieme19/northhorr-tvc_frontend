@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import ChangePassword from '@/components/ChangePassword';
+import { toast } from 'sonner';
 
 export default function StudentDashboard() {
   const { user, logout, loading } = useAuth();
@@ -40,7 +41,7 @@ export default function StudentDashboard() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to download document');
+      toast.error(err?.response?.data?.error || 'Failed to download document');
     } finally {
       setDownloadingDoc(null);
     }
@@ -61,7 +62,7 @@ export default function StudentDashboard() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to download ID card. Please ensure you have uploaded a profile picture with white background.');
+      toast.error(err?.response?.data?.error || 'Failed to download ID card. Please ensure you have uploaded a profile picture with white background.');
     } finally {
       setDownloadingIDCard(false);
     }
@@ -83,9 +84,9 @@ export default function StudentDashboard() {
       const updated = await api.get('/students/me');
       setProfile(updated.data);
       setProfilePhoto(null);
-      alert('Profile picture uploaded successfully');
+      toast.success('Profile picture uploaded successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to upload profile picture. Please ensure it has a white background.');
+      toast.error(err?.response?.data?.error || 'Failed to upload profile picture. Please ensure it has a white background.');
     } finally {
       setUploadingPhoto(false);
     }
@@ -128,9 +129,9 @@ export default function StudentDashboard() {
       const updated = await api.get('/students/me');
       setProfile(updated.data);
       setShowProfileEdit(false);
-      alert('Profile updated successfully');
+      toast.success('Profile updated successfully');
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to update profile');
+      toast.error(err?.response?.data?.error || 'Failed to update profile');
     } finally {
       setUpdating(false);
     }
@@ -141,13 +142,13 @@ export default function StudentDashboard() {
     setEnrolling(termId);
     try {
       await api.post(`/students/me/enroll/${termId}`);
-      alert('Enrolled successfully!');
+      toast.success('Enrolled successfully!');
       
       // Refresh enrollments
       const updated = await api.get('/students/me/enrollments');
       setEnrollments(Array.isArray(updated.data) ? updated.data : []);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to enroll in term');
+      toast.error(err?.response?.data?.error || 'Failed to enroll in term');
     } finally {
       setEnrolling(null);
     }
@@ -171,7 +172,7 @@ export default function StudentDashboard() {
       setFeeSummary(r.data);
       setShowFeeSummary(true);
     } catch (err: any) {
-      alert(err?.response?.data?.error || 'Failed to fetch fee summary');
+      toast.error(err?.response?.data?.error || 'Failed to fetch fee summary');
     } finally {
       setLoadingFeeSummary(false);
     }
