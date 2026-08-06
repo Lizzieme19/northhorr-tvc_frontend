@@ -28,7 +28,15 @@ export default function HRDashboard() {
   useEffect(() => {
     staffApi.getAll().then(r => setStaff(Array.isArray(r.data?.staff) ? r.data.staff : [])).catch(() => setStaff([]));
     designationsApi.getAll().then(r => setDesignations(Array.isArray(r.data) ? r.data : [])).catch(() => setDesignations([]));
-    departmentsApi.getAll().then(r => setDepartments(Array.isArray(r.data) ? r.data : [])).catch(() => setDepartments([]));
+    departmentsApi.getAll()
+      .then(r => {
+        console.log('Departments response:', r);
+        setDepartments(Array.isArray(r.data) ? r.data : []);
+      })
+      .catch((err) => {
+        console.error('Departments error:', err);
+        setDepartments([]);
+      });
     leavesApi.getAll().then(r => setLeaves(r.data?.leaves || [])).catch(() => setLeaves([]));
     leavesApi.getStatistics().then(r => setLeaveStats(r.data)).catch(() => setLeaveStats(null));
   }, []);
