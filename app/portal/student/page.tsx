@@ -29,17 +29,43 @@ export default function StudentDashboard() {
   const handleDownloadDocument = async (docType: string) => {
     setDownloadingDoc(docType);
     try {
-      const response = await api.get(`/students/documents/${docType}`, {
+      let endpoint = '';
+      let filename = '';
+      
+      switch (docType) {
+        case 'letter_of_acceptance':
+          endpoint = `/students/${profile.id}/documents/letter-of-acceptance`;
+          filename = `Letter_of_Acceptance_${profile.admission_no}.docx`;
+          break;
+        case 'admission_for_training':
+          endpoint = `/students/${profile.id}/documents/admission-for-training`;
+          filename = `Admission_for_Training_${profile.admission_no}.docx`;
+          break;
+        case 'fee_structure':
+          endpoint = `/students/${profile.id}/documents/fee-structure`;
+          filename = `Fee_Structure_${profile.admission_no}.docx`;
+          break;
+        case 'personal_information':
+          endpoint = `/students/${profile.id}/documents/personal-information`;
+          filename = `Student_Personal_Information_${profile.admission_no}.docx`;
+          break;
+        default:
+          endpoint = `/students/documents/${docType}`;
+          filename = `${docType.replace('_', ' ').toUpperCase()}.docx`;
+      }
+      
+      const response = await api.get(endpoint, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${docType.replace('_', ' ').toUpperCase()}.docx`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      toast.success('Document downloaded successfully');
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Failed to download document');
     } finally {
@@ -362,42 +388,58 @@ export default function StudentDashboard() {
                 {/* Pre-admission documents - always available */}
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Admission for Training Form</span>
+                    <span className="font-medium text-brand-dark text-sm">Letter of Acceptance</span>
                     <button
-                      onClick={() => handleDownloadDocument('admission_form')}
-                      disabled={downloadingDoc === 'admission_form'}
+                      onClick={() => handleDownloadDocument('letter_of_acceptance')}
+                      disabled={downloadingDoc === 'letter_of_acceptance'}
                       className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
                     >
-                      {downloadingDoc === 'admission_form' ? 'Downloading...' : 'Download'}
+                      {downloadingDoc === 'letter_of_acceptance' ? 'Downloading...' : 'Download'}
                     </button>
                   </div>
-                  <p className="text-xs text-stone">Required admission form for all students - document will be prefilled with your data.</p>
+                  <p className="text-xs text-stone">Letter of acceptance - prefilled with your data.</p>
                 </div>
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Medical Examination Form</span>
+                    <span className="font-medium text-brand-dark text-sm">Admission for Training</span>
                     <button
-                      onClick={() => handleDownloadDocument('medical_form')}
-                      disabled={downloadingDoc === 'medical_form'}
+                      onClick={() => handleDownloadDocument('admission_for_training')}
+                      disabled={downloadingDoc === 'admission_for_training'}
                       className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
                     >
-                      {downloadingDoc === 'medical_form' ? 'Downloading...' : 'Download'}
+                      {downloadingDoc === 'admission_for_training' ? 'Downloading...' : 'Download'}
                     </button>
                   </div>
-                  <p className="text-xs text-stone">Required medical examination form for all students - must be completed by a licensed medical practitioner. Document will be prefilled with your data.</p>
+                  <p className="text-xs text-stone">Admission for training form - prefilled with your data.</p>
+                </div>
+                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-brand-dark text-sm">Fee Structure</span>
+                    <button
+                      onClick={() => handleDownloadDocument('fee_structure')}
+                      disabled={downloadingDoc === 'fee_structure'}
+                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      {downloadingDoc === 'fee_structure' ? 'Downloading...' : 'Download'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-stone">Fee structure document - prefilled with your data.</p>
+                </div>
+                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-brand-dark text-sm">Student Personal Information</span>
+                    <button
+                      onClick={() => handleDownloadDocument('personal_information')}
+                      disabled={downloadingDoc === 'personal_information'}
+                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      {downloadingDoc === 'personal_information' ? 'Downloading...' : 'Download'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-stone">Personal information form - prefilled with your data.</p>
                 </div>
 
-                {/* Post-admission documents - only available after admission */}
-                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Letter of Acceptance</span>
-                    {profile.admission_letter ? (
-                      <a href={profile.admission_letter.letter_url} target="_blank" className="text-xs px-3 py-1 bg-green-600 text-cream rounded-full hover:bg-green-700 transition">Download PDF</a>
-                    ) : (
-                      <span className="text-xs px-3 py-1 bg-stone/20 text-stone rounded-full">Pending Admission</span>
-                    )}
-                  </div>
-                </div>
+                {/* Student ID Card */}
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-brand-dark text-sm">Student ID Card</span>
@@ -407,15 +449,13 @@ export default function StudentDashboard() {
                         disabled={downloadingIDCard}
                         className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
                       >
-                        {downloadingIDCard ? 'Downloading...' : 'Download PNG'}
+                        {downloadingIDCard ? 'Downloading...' : 'Download'}
                       </button>
                     ) : (
-                      <span className="text-xs px-3 py-1 bg-stone/20 text-stone rounded-full">Upload Profile Photo</span>
+                      <span className="text-xs px-3 py-1 bg-stone/20 text-stone rounded-full">Upload Photo First</span>
                     )}
                   </div>
-                  {!profile.profile_picture_url && (
-                    <p className="text-xs text-stone mt-1">Upload a passport-style photo with white background to enable ID card download</p>
-                  )}
+                  <p className="text-xs text-stone">Your student ID card - requires profile photo.</p>
                 </div>
               </div>
             </div>
