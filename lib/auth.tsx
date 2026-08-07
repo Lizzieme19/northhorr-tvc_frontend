@@ -13,6 +13,7 @@ export interface AuthUser {
   student?: {
     id: string;
     admission_no: string;
+    profile_picture_url?: string;
   };
 }
 
@@ -40,7 +41,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('ntvc_access_token');
     if (token) {
       api.get('/auth/me')
-        .then(({ data }) => setUser(data))
+        .then(async ({ data }) => {
+          // If user is a student, fetch their profile data including photo
+          if (data.role === 'STUDENT') {
+            try {
+              const profileResponse = await api.get('/students/me');
+              data.student = {
+                id: profileResponse.data.id,
+                admission_no: profileResponse.data.admission_no,
+                profile_picture_url: profileResponse.data.profile_picture_url,
+              };
+            } catch (error) {
+              console.error('Failed to fetch student profile:', error);
+            }
+          }
+          setUser(data);
+        })
         .catch(() => {
           localStorage.removeItem('ntvc_access_token');
           localStorage.removeItem('ntvc_refresh_token');

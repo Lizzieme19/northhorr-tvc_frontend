@@ -204,7 +204,15 @@ export default function StudentDashboard() {
     <div className="min-h-screen bg-cream-deep">
       <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
+          {profile.profile_picture_url ? (
+            <img
+              src={profile.profile_picture_url}
+              alt="Profile"
+              className="h-9 w-9 rounded-xl object-cover border-2 border-gold/50"
+            />
+          ) : (
+            <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
+          )}
           <span className="font-display font-semibold">Student Portal</span>
         </div>
         <div className="flex items-center gap-4">

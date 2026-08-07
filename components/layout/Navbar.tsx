@@ -57,7 +57,9 @@ export function Navbar() {
               +254 717 977 218
             </a>
             <span>|</span>
-            <PortalLinkButton />
+            <Link href="/login" className="hover:text-gold transition">
+              Student Portal
+            </Link>
           </div>
         </div>
       </div>
@@ -200,13 +202,30 @@ function PortalLinkButton({ mobile = false, onClose }: { mobile?: boolean; onClo
 
   if (isAuthenticated && user) {
     return (
-      <Link
-        href={portalRoute(user.role)}
-        onClick={handleClick}
-        className={`hover:text-gold transition ${mobile ? 'block px-4 py-3 rounded-lg text-cream/90 hover:bg-brand text-base font-medium' : ''}`}
-      >
-        Student Portal
-      </Link>
+      <div className="flex items-center gap-3">
+        {user.role === 'STUDENT' && user.student?.profile_picture_url ? (
+          <Link
+            href={portalRoute(user.role)}
+            onClick={handleClick}
+            className="relative group"
+          >
+            <img
+              src={user.student.profile_picture_url}
+              alt="Profile"
+              className="h-10 w-10 rounded-full object-cover border-2 border-gold/50 group-hover:border-gold transition"
+            />
+            <div className="absolute inset-0 rounded-full ring-2 ring-white/20 group-hover:ring-gold/30 transition" />
+          </Link>
+        ) : (
+          <Link
+            href={portalRoute(user.role)}
+            onClick={handleClick}
+            className={`hover:text-gold transition ${mobile ? 'block px-4 py-3 rounded-lg text-cream/90 hover:bg-brand text-base font-medium' : ''}`}
+          >
+            Student Portal
+          </Link>
+        )}
+      </div>
     );
   }
 
