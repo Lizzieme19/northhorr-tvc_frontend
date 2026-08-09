@@ -52,20 +52,31 @@ export default function ProcurementDashboard() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string, api: any) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-    try {
-      await api.delete(id);
-      // Refresh data
-      if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
-      if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
-      if (tab === 'rfqs') rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
-      if (tab === 'lpos') lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
-      if (tab === 'grns') grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
-      if (tab === 'inventory') inventoryApi.getAll().then(r => setInventory(r.data?.items || []));
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Failed to delete');
-    }
+  const handleDelete = (id: string, api: any, itemName: string = 'item') => {
+    toast(`Delete this ${itemName}? This action cannot be undone.`, {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await api.delete(id);
+            // Refresh data
+            if (tab === 'suppliers') suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
+            if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
+            if (tab === 'rfqs') rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
+            if (tab === 'lpos') lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
+            if (tab === 'grns') grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
+            if (tab === 'inventory') inventoryApi.getAll().then(r => setInventory(r.data?.items || []));
+            toast.success(`${itemName.charAt(0).toUpperCase() + itemName.slice(1)} deleted successfully`);
+          } catch (err: any) {
+            toast.error(err?.response?.data?.error || 'Failed to delete');
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -311,7 +322,7 @@ export default function ProcurementDashboard() {
                       <button onClick={() => handleEdit(s)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
                         Edit
                       </button>
-                      <button onClick={() => handleDelete(s.id, suppliersApi)} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
+                      <button onClick={() => handleDelete(s.id, suppliersApi, 'supplier')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
                         Delete
                       </button>
                     </div>
@@ -350,7 +361,7 @@ export default function ProcurementDashboard() {
                           <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
                             Edit
                           </button>
-                          <button onClick={() => handleDelete(r.id, requisitionsApi)} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
+                          <button onClick={() => handleDelete(r.id, requisitionsApi, 'requisition')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
                             Delete
                           </button>
                         </>
@@ -489,7 +500,7 @@ export default function ProcurementDashboard() {
                       <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
                         Edit
                       </button>
-                      <button onClick={() => handleDelete(i.id, inventoryApi)} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
+                      <button onClick={() => handleDelete(i.id, inventoryApi, 'inventory item')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
                         Delete
                       </button>
                     </div>

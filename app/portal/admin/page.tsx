@@ -177,15 +177,25 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleResourceDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this resource?')) return;
-    try {
-      await resourcesApi.delete(id);
-      setResources(prev => prev.filter(r => r.id !== id));
-      toast.success('Resource deleted successfully');
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to delete resource');
-    }
+  const handleResourceDelete = (id: string) => {
+    toast('Delete this resource? This action cannot be undone.', {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await resourcesApi.delete(id);
+            setResources(prev => prev.filter(r => r.id !== id));
+            toast.success('Resource deleted successfully');
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Failed to delete resource');
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleNewsUpload = async (e: React.FormEvent) => {
@@ -220,15 +230,25 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleNewsDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this news item?')) return;
-    try {
-      await newsApi.delete(id);
-      setNews(prev => prev.filter(n => n.id !== id));
-      toast.success('News deleted successfully');
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to delete news');
-    }
+  const handleNewsDelete = (id: string) => {
+    toast('Delete this news item? This action cannot be undone.', {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await newsApi.delete(id);
+            setNews(prev => prev.filter(n => n.id !== id));
+            toast.success('News deleted successfully');
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Failed to delete news');
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleAppDocUpload = async (e: React.FormEvent) => {
@@ -314,15 +334,25 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleFeeTypeDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this fee type?')) return;
-    try {
-      await feeTypesApi.delete(id);
-      setFeeTypes(prev => prev.filter(ft => ft.id !== id));
-      toast.success('Fee type deleted successfully');
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to delete fee type');
-    }
+  const handleFeeTypeDelete = (id: string) => {
+    toast('Delete this fee type? This action cannot be undone.', {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await feeTypesApi.delete(id);
+            setFeeTypes(prev => prev.filter(ft => ft.id !== id));
+            toast.success('Fee type deleted successfully');
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Failed to delete fee type');
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleTermSave = async (e: React.FormEvent) => {
@@ -366,15 +396,25 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleTermDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this term?')) return;
-    try {
-      await termsApi.delete(id);
-      setTerms(prev => prev.filter(t => t.id !== id));
-      toast.success('Term deleted successfully');
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to delete term');
-    }
+  const handleTermDelete = (id: string) => {
+    toast('Delete this term? This action cannot be undone.', {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await termsApi.delete(id);
+            setTerms(prev => prev.filter(t => t.id !== id));
+            toast.success('Term deleted successfully');
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Failed to delete term');
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleTermToggleActive = async (id: string, currentStatus: boolean) => {
@@ -3332,14 +3372,24 @@ function CoursesTab() {
     }
   };
 
-  const handleDeptDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this department?')) return;
-    try {
-      await departmentsApi.delete(id);
-      fetchDepts();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Failed to delete department');
-    }
+  const handleDeptDelete = (id: string) => {
+    toast('Delete this department? This action cannot be undone.', {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await departmentsApi.delete(id);
+            fetchDepts();
+          } catch (err: any) {
+            toast.error(err?.response?.data?.error || 'Failed to delete department');
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const handleCourseSubmit = async (e: any) => {
@@ -3361,14 +3411,24 @@ function CoursesTab() {
     }
   };
 
-  const handleCourseDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this course?')) return;
-    try {
-      await coursesApi.delete(id);
-      fetchCourses();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Failed to delete course');
-    }
+  const handleCourseDelete = (id: string) => {
+    toast('Delete this course? This action cannot be undone.', {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await coursesApi.delete(id);
+            fetchCourses();
+          } catch (err: any) {
+            toast.error(err?.response?.data?.error || 'Failed to delete course');
+          }
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   const filteredDepts = depts.filter(d => 
