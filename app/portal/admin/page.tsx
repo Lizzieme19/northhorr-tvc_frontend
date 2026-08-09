@@ -2942,20 +2942,32 @@ function UsersTab() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
-    setUpdating(userId);
-    try {
-      await api.delete(`/auth/users/${userId}`);
-      setUsers(users.filter(u => u.id !== userId));
-      setTotal(total - 1);
-      toast.success('User deleted successfully');
-    } catch (err) {
-      toast.error('Failed to delete user');
-    } finally {
-      setUpdating(null);
-    }
-  };
+  const handleDeleteUser = (userId: string) => {
+  toast('Delete this user? This action cannot be undone.', {
+    action: {
+      label: 'Delete',
+      onClick: () => confirmDeleteUser(userId),
+    },
+    cancel: {
+      label: 'Cancel',
+      onClick: () => {},
+    },
+  });
+};
+
+const confirmDeleteUser = async (userId: string) => {
+  setUpdating(userId);
+  try {
+    await api.delete(`/auth/users/${userId}`);
+    setUsers(users.filter(u => u.id !== userId));
+    setTotal(total - 1);
+    toast.success('User deleted successfully');
+  } catch (err) {
+    toast.error('Failed to delete user');
+  } finally {
+    setUpdating(null);
+  }
+};
 
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
