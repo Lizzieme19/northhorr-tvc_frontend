@@ -422,19 +422,6 @@ export default function StudentDashboard() {
                 </div>
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Fee Structure</span>
-                    <button
-                      onClick={() => handleDownloadDocument('fee_structure')}
-                      disabled={downloadingDoc === 'fee_structure'}
-                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
-                    >
-                      {downloadingDoc === 'fee_structure' ? 'Downloading...' : 'Download'}
-                    </button>
-                  </div>
-                  <p className="text-xs text-stone">Fee structure document - prefilled with your data.</p>
-                </div>
-                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                  <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-brand-dark text-sm">Student Personal Information</span>
                     <button
                       onClick={() => handleDownloadDocument('personal_information')}
