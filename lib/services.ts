@@ -141,6 +141,7 @@ export const inventoryApi = {
   create: (data: any) => api.post('/inventory', data),
   update: (id: string, data: any) => api.patch(`/inventory/${id}`, data),
   adjustStock: (id: string, data: any) => api.post(`/inventory/${id}/adjust`, data),
+  delete: (id: string) => api.delete(`/inventory/${id}`),
 };
 
 export const assetsApi = {
