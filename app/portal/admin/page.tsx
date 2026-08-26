@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi } from '@/lib/services';
+import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'fee-types' | 'terms' | 'billing' | 'requisitions'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -50,6 +50,10 @@ export default function AdminDashboard() {
   const [newsForm, setNewsForm] = useState({ title: '', excerpt: '', content: '', category: 'News', is_featured: false, is_published: false });
   const [newsImage, setNewsImage] = useState<File | null>(null);
   const [uploadingNews, setUploadingNews] = useState(false);
+  const [gallery, setGallery] = useState<any[]>([]);
+  const [galleryForm, setGalleryForm] = useState({ title: '', description: '', category: 'GENERAL', is_featured: false, display_order: 0 });
+  const [galleryImage, setGalleryImage] = useState<File | null>(null);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
   const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
@@ -75,6 +79,9 @@ export default function AdminDashboard() {
     }
     if (tab === 'news') {
       newsApi.getAll().then(r => setNews(r.data.news || [])).catch(() => setNews([]));
+    }
+    if (tab === 'gallery') {
+      galleryApi.getAll().then(r => setGallery(r.data?.items || [])).catch(() => setGallery([]));
     }
     if (tab === 'fee-types') {
       feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
@@ -455,13 +462,19 @@ export default function AdminDashboard() {
           { key: 'courses', label: '📚 Dept & Courses' },
           { key: 'resources', label: '📁 Resources' },
           { key: 'news', label: '📰 News' },
+          { key: 'gallery', label: '🖼️ Gallery' },
           { key: 'fee-types', label: '💰 Fee Types' },
           { key: 'terms', label: '📅 Terms' },
-          { key: 'billing', label: '📊 Billing' },
-          { key: 'requisitions', label: '📝 Requisitions' },
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as any)}
-            className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
+          { key: 'billing', label: '💳 Billing' },
+          { key: 'requisitions', label: '🛒 Requisitions' },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key as any)}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${
+              tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'
+            }`}
+          >
             {t.label}
           </button>
         ))}
@@ -1138,6 +1151,161 @@ export default function AdminDashboard() {
                         )}
                         <button
                           onClick={() => handleNewsDelete(n.id)}
+                          className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── GALLERY ── */}
+        {tab === 'gallery' && (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Upload Gallery Item */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Upload Gallery Item</h2>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setUploadingGallery(true);
+                try {
+                  const formData = new FormData();
+                  formData.append('title', galleryForm.title);
+                  formData.append('description', galleryForm.description);
+                  formData.append('category', galleryForm.category);
+                  formData.append('is_featured', galleryForm.is_featured.toString());
+                  formData.append('display_order', galleryForm.display_order.toString());
+                  if (galleryImage) formData.append('image', galleryImage);
+                  
+                  await galleryApi.create(formData);
+                  toast.success('Gallery item uploaded successfully!');
+                  setGalleryImage(null);
+                  setGalleryForm({ title: '', description: '', category: 'GENERAL', is_featured: false, display_order: 0 });
+                  galleryApi.getAll().then(r => setGallery(r.data?.items || []));
+                } catch (e: any) {
+                  toast.error(e?.response?.data?.error || 'Failed to upload gallery item');
+                } finally {
+                  setUploadingGallery(false);
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={galleryForm.title}
+                    onChange={e => setGalleryForm({...galleryForm, title: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
+                  <textarea
+                    value={galleryForm.description}
+                    onChange={e => setGalleryForm({...galleryForm, description: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Category *</label>
+                  <select
+                    required
+                    value={galleryForm.category}
+                    onChange={e => setGalleryForm({...galleryForm, category: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  >
+                    <option value="GENERAL">General</option>
+                    <option value="EVENTS">Events</option>
+                    <option value="FACILITIES">Facilities</option>
+                    <option value="STUDENTS">Students</option>
+                    <option value="STAFF">Staff</option>
+                  </select>
+                </div>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={galleryForm.is_featured}
+                      onChange={e => setGalleryForm({...galleryForm, is_featured: e.target.checked})}
+                      className="w-4 h-4 rounded border-stone/25"
+                    />
+                    <span className="text-sm text-brand-dark">Featured</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Display Order</label>
+                  <input
+                    type="number"
+                    value={galleryForm.display_order}
+                    onChange={e => setGalleryForm({...galleryForm, display_order: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Image *</label>
+                  <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
+                    <input type="file" accept="image/*" className="hidden" onChange={e => setGalleryImage(e.target.files?.[0] || null)} />
+                    <div className="text-3xl mb-2">🖼️</div>
+                    <div className="text-sm font-medium text-brand-dark">{galleryImage ? galleryImage.name : 'Click to upload image'}</div>
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={uploadingGallery}
+                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                >
+                  {uploadingGallery ? 'Uploading…' : 'Upload Gallery Item'}
+                </button>
+              </form>
+            </div>
+
+            {/* Gallery List */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Gallery Items</h2>
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {gallery.length === 0 ? (
+                  <p className="text-stone text-center py-8">No gallery items yet</p>
+                ) : (
+                  gallery.map(g => (
+                    <div key={g.id} className="flex items-center justify-between p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <img src={g.image_url} alt={g.title} className="w-16 h-16 object-cover rounded-lg" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-brand-dark truncate">{g.title}</div>
+                          <div className="text-sm text-stone">{g.category} {g.is_featured && '• Featured'}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => galleryApi.toggleFeatured(g.id).then(() => galleryApi.getAll().then(r => setGallery(r.data?.items || [])))}
+                          className="px-3 py-1 rounded-lg bg-yellow-100 text-yellow-800 text-sm hover:bg-yellow-200 transition"
+                        >
+                          {g.is_featured ? 'Unfeature' : 'Feature'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            toast('Delete this gallery item?', {
+                              action: {
+                                label: 'Delete',
+                                onClick: async () => {
+                                  try {
+                                    await galleryApi.delete(g.id);
+                                    setGallery(prev => prev.filter(item => item.id !== g.id));
+                                    toast.success('Gallery item deleted successfully');
+                                  } catch (e: any) {
+                                    toast.error(e?.response?.data?.error || 'Failed to delete');
+                                  }
+                                },
+                              },
+                              cancel: { label: 'Cancel', onClick: () => {} },
+                            });
+                          }}
                           className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
                         >
                           Delete

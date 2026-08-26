@@ -172,6 +172,20 @@ export const resourcesApi = {
   delete: (id: string) => api.delete(`/resources/${id}`),
 };
 
+// Gallery
+export const galleryApi = {
+  getAll: (params?: any) => api.get('/gallery', { params }),
+  getById: (id: string) => api.get(`/gallery/${id}`),
+  create: (data: FormData) => api.post('/gallery', data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  update: (id: string, data: FormData) => api.patch(`/gallery/${id}`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  delete: (id: string) => api.delete(`/gallery/${id}`),
+  toggleFeatured: (id: string) => api.patch(`/gallery/${id}/toggle-featured`),
+};
+
 // News
 export const newsApi = {
   getAll: (params?: any) => api.get('/news', { params }),
