@@ -218,3 +218,11 @@ export const termsApi = {
   enrollStudent: (termId: string, studentId: string) => api.post(`/terms/${termId}/enroll/${studentId}`),
   unenrollStudent: (termId: string, studentId: string) => api.delete(`/terms/${termId}/enroll/${studentId}`),
 };
+
+// Term Progression
+export const termProgressionApi = {
+  admitToTerm: (data: any) => api.post('/term-progression/admit', data),
+  getProgression: (studentId: string) => api.get(`/term-progression/${studentId}`),
+  getBalances: (studentId: string) => api.get(`/term-progression/${studentId}/balances`),
+  updateNotes: (id: string, data: any) => api.patch(`/term-progression/${id}/notes`),
+};

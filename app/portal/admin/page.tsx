@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi } from '@/lib/services';
+import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi, termProgressionApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -63,6 +63,9 @@ export default function AdminDashboard() {
   const [termForm, setTermForm] = useState({ name: '', start_date: '', end_date: '', academic_year: '', intake: '', term_cost: '', is_active: true });
   const [editingTerm, setEditingTerm] = useState<any>(null);
   const [savingTerm, setSavingTerm] = useState(false);
+  const [progressionForm, setProgressionForm] = useState({ student_id: '', new_term_id: '', new_level: '', notes: '' });
+  const [lookupStudentId, setLookupStudentId] = useState('');
+  const [studentBalances, setStudentBalances] = useState<any[]>([]);
 
   // Auth guard
   useEffect(() => {
@@ -467,6 +470,7 @@ export default function AdminDashboard() {
           { key: 'terms', label: '📅 Terms' },
           { key: 'billing', label: '💳 Billing' },
           { key: 'requisitions', label: '🛒 Requisitions' },
+          { key: 'term-progression', label: '📈 Term Progression' },
         ].map((t) => (
           <button
             key={t.key}
@@ -1324,6 +1328,137 @@ export default function AdminDashboard() {
 
         {/* ── REQUISITIONS ── */}
         {tab === 'requisitions' && <RequisitionsTab />}
+
+        {/* ── TERM PROGRESSION ── */}
+        {tab === 'term-progression' && (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Admit Student to Term */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">Admit Student to New Term</h2>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const response = await termProgressionApi.admitToTerm({
+                    student_id: progressionForm.student_id,
+                    new_term_id: progressionForm.new_term_id,
+                    new_level: progressionForm.new_level || undefined,
+                    notes: progressionForm.notes,
+                  });
+                  toast.success('Student admitted to new term successfully!');
+                  setProgressionForm({ student_id: '', new_term_id: '', new_level: '', notes: '' });
+                } catch (e: any) {
+                  toast.error(e?.response?.data?.error || 'Failed to admit student');
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student ID *</label>
+                  <input
+                    type="text"
+                    required
+                    value={progressionForm.student_id}
+                    onChange={e => setProgressionForm({...progressionForm, student_id: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="Enter student ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Term ID *</label>
+                  <input
+                    type="text"
+                    required
+                    value={progressionForm.new_term_id}
+                    onChange={e => setProgressionForm({...progressionForm, new_term_id: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="Enter new term ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Level (Optional)</label>
+                  <input
+                    type="text"
+                    value={progressionForm.new_level}
+                    onChange={e => setProgressionForm({...progressionForm, new_level: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="e.g., L4, L5, L6"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes</label>
+                  <textarea
+                    value={progressionForm.notes}
+                    onChange={e => setProgressionForm({...progressionForm, notes: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    rows={2}
+                    placeholder="Optional notes about this progression"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
+                >
+                  Admit Student
+                </button>
+              </form>
+            </div>
+
+            {/* Student Balances Lookup */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <h2 className="font-display text-lg text-brand-dark mb-5">View Student Balances</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student ID</label>
+                  <input
+                    type="text"
+                    value={lookupStudentId}
+                    onChange={e => setLookupStudentId(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    placeholder="Enter student ID to view balances"
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!lookupStudentId) {
+                      toast.error('Please enter a student ID');
+                      return;
+                    }
+                    try {
+                      const response = await termProgressionApi.getBalances(lookupStudentId);
+                      setStudentBalances(response.data || []);
+                    } catch (e: any) {
+                      toast.error(e?.response?.data?.error || 'Failed to fetch balances');
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
+                >
+                  View Balances
+                </button>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {studentBalances.length === 0 ? (
+                    <p className="text-stone text-center py-8">No balances found</p>
+                  ) : (
+                    studentBalances.map((balance: any) => (
+                      <div key={balance.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                        <div className="font-semibold text-brand-dark">{balance.term?.name} ({balance.term?.academic_year})</div>
+                        <div className="text-sm text-stone mt-1">Level: {balance.level}</div>
+                        <div className="text-sm text-stone">Total Fees: KES {balance.total_fees.toLocaleString()}</div>
+                        <div className="text-sm text-stone">Amount Paid: KES {balance.amount_paid.toLocaleString()}</div>
+                        <div className={`text-sm font-semibold ${balance.balance > 0 ? 'text-red-600' : balance.balance < 0 ? 'text-green-600' : 'text-brand-dark'}`}>
+                          Balance: KES {balance.balance.toLocaleString()}
+                        </div>
+                        {balance.previous_balance_carryover !== 0 && (
+                          <div className="text-xs text-stone mt-2">
+                            Carry-over: KES {balance.previous_balance_carryover.toLocaleString()}
+                            {balance.carryover_notes && ` (${balance.carryover_notes})`}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Student Credentials Modal */}
