@@ -66,6 +66,8 @@ export default function AdminDashboard() {
   const [progressionForm, setProgressionForm] = useState({ student_id: '', new_term_id: '', new_level: '', notes: '' });
   const [lookupStudentId, setLookupStudentId] = useState('');
   const [studentBalances, setStudentBalances] = useState<any[]>([]);
+  const [availableStudents, setAvailableStudents] = useState<any[]>([]);
+  const [availableTerms, setAvailableTerms] = useState<any[]>([]);
 
   // Auth guard
   useEffect(() => {
@@ -91,6 +93,10 @@ export default function AdminDashboard() {
     }
     if (tab === 'terms') {
       termsApi.getAll().then(r => setTerms(r.data.terms || [])).catch(() => setTerms([]));
+    }
+    if (tab === 'term-progression') {
+      studentsApi.getAll({ page: 1, limit: 1000 }).then(r => setAvailableStudents(r.data?.students || [])).catch(() => setAvailableStudents([]));
+      termsApi.getAll().then(r => setAvailableTerms(r.data.terms || [])).catch(() => setAvailableTerms([]));
     }
     // Load fee types for payment recording
     feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
@@ -1351,26 +1357,36 @@ export default function AdminDashboard() {
                 }
               }} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student ID *</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student *</label>
+                  <select
                     required
                     value={progressionForm.student_id}
                     onChange={e => setProgressionForm({...progressionForm, student_id: e.target.value})}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    placeholder="Enter student ID"
-                  />
+                  >
+                    <option value="">Select a student</option>
+                    {availableStudents.map((student: any) => (
+                      <option key={student.id} value={student.id}>
+                        {student.admission_no} - {student.user?.surname} {student.user?.other_names} ({student.level})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Term ID *</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Term *</label>
+                  <select
                     required
                     value={progressionForm.new_term_id}
                     onChange={e => setProgressionForm({...progressionForm, new_term_id: e.target.value})}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    placeholder="Enter new term ID"
-                  />
+                  >
+                    <option value="">Select a term</option>
+                    {availableTerms.map((term: any) => (
+                      <option key={term.id} value={term.id}>
+                        {term.name} - {term.academic_year} ({term.is_active ? 'Active' : 'Inactive'})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Level (Optional)</label>
