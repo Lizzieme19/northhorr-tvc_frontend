@@ -68,6 +68,7 @@ export default function AdminDashboard() {
   const [studentBalances, setStudentBalances] = useState<any[]>([]);
   const [availableStudents, setAvailableStudents] = useState<any[]>([]);
   const [availableTerms, setAvailableTerms] = useState<any[]>([]);
+  const [studentSearch, setStudentSearch] = useState('');
 
   // Auth guard
   useEffect(() => {
@@ -1358,6 +1359,13 @@ export default function AdminDashboard() {
               }} className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student *</label>
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={e => setStudentSearch(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm mb-2"
+                    placeholder="Search by admission no or name..."
+                  />
                   <select
                     required
                     value={progressionForm.student_id}
@@ -1365,11 +1373,20 @@ export default function AdminDashboard() {
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="">Select a student</option>
-                    {availableStudents.map((student: any) => (
-                      <option key={student.id} value={student.id}>
-                        {student.admission_no} - {student.user?.surname} {student.user?.other_names} ({student.level})
-                      </option>
-                    ))}
+                    {availableStudents
+                      .filter((student: any) => {
+                        const searchLower = studentSearch.toLowerCase();
+                        return (
+                          student.admission_no?.toLowerCase().includes(searchLower) ||
+                          student.user?.surname?.toLowerCase().includes(searchLower) ||
+                          student.user?.other_names?.toLowerCase().includes(searchLower)
+                        );
+                      })
+                      .map((student: any) => (
+                        <option key={student.id} value={student.id}>
+                          {student.admission_no} - {student.user?.surname} {student.user?.other_names} ({student.level})
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>
