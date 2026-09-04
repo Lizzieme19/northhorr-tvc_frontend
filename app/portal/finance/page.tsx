@@ -26,10 +26,6 @@ export default function FinanceDashboard() {
   const [loadingBilling, setLoadingBilling] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
 
-  // Edit fee settings state
-  const [editingStudentFees, setEditingStudentFees] = useState<any>(null);
-  const [studentFeeForm, setStudentFeeForm] = useState({ full_year_paid: false, fee_adjustment: '' });
-
   // Record Payment modal state
   const [recordPaymentStudent, setRecordPaymentStudent] = useState<any>(null);
   const [recordPaymentTermId, setRecordPaymentTermId] = useState('');
@@ -75,29 +71,6 @@ export default function FinanceDashboard() {
     const r = await financeApi.getFeeRecords(params);
     setStudents(r.data.students);
     financeApi.getReports().then(r => setSummary(r.data));
-  };
-
-  // ── Edit Fee Settings ──
-  const editStudentFees = (student: any) => {
-    setEditingStudentFees(student);
-    setStudentFeeForm({
-      full_year_paid: student.full_year_paid || false,
-      fee_adjustment: student.fee_adjustment?.toString() || '',
-    });
-  };
-
-  const saveStudentFees = async () => {
-    try {
-      await api.patch(`/finance/students/${editingStudentFees.id}/fees`, {
-        full_year_paid: studentFeeForm.full_year_paid,
-        fee_adjustment: parseFloat(studentFeeForm.fee_adjustment) || 0,
-      });
-      toast.success('Student fee settings updated');
-      setEditingStudentFees(null);
-      await refreshStudents();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to update student fees');
-    }
   };
 
   // ── Record Payment modal ──
@@ -362,9 +335,6 @@ export default function FinanceDashboard() {
                           >
                             🏷️ Allocate Funds
                           </button>
-                          <button onClick={() => editStudentFees(s)} className="text-xs px-3 py-1.5 rounded-lg border border-stone/25 hover:bg-stone/5 transition">
-                            ✏️ Edit Fees
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -594,58 +564,6 @@ export default function FinanceDashboard() {
                   className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
                 >
                   Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Edit Student Fees Modal ── */}
-        {editingStudentFees && (
-          <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
-            <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
-              <h2 className="font-display text-xl text-brand-dark mb-4">Edit Student Fee Settings</h2>
-              <div className="space-y-4 text-sm">
-                <div className="border-b border-stone/10 pb-2">
-                  <span className="text-stone">Admission No:</span>
-                  <span className="font-medium text-brand-dark ml-2">{editingStudentFees.admission_no}</span>
-                </div>
-                <div className="border-b border-stone/10 pb-2">
-                  <span className="text-stone">Student:</span>
-                  <span className="font-medium text-brand-dark ml-2">{editingStudentFees.application?.surname} {editingStudentFees.application?.other_names}</span>
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={studentFeeForm.full_year_paid}
-                      onChange={e => setStudentFeeForm({...studentFeeForm, full_year_paid: e.target.checked})}
-                      className="w-4 h-4 rounded border-stone/25"
-                    />
-                    <span className="text-brand-dark">Full Year Paid</span>
-                  </label>
-                  <p className="text-xs text-stone mt-1">Mark if student has paid for the full academic year</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Fee Adjustment (KES)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={studentFeeForm.fee_adjustment}
-                    onChange={e => setStudentFeeForm({...studentFeeForm, fee_adjustment: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    placeholder="e.g. 5000"
-                  />
-                  <p className="text-xs text-stone mt-1">Discount or waiver amount to apply</p>
-                </div>
-              </div>
-              <div className="mt-6 flex gap-3">
-                <button onClick={saveStudentFees} className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">
-                  Save Changes
-                </button>
-                <button onClick={() => setEditingStudentFees(null)} className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
-                  Cancel
                 </button>
               </div>
             </div>
