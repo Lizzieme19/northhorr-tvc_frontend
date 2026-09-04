@@ -1866,10 +1866,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       toast.warning('Please enter a valid payment amount');
       return;
     }
-    if (!selectedFeeTypeId) {
-      toast.warning('Please select a fee type');
-      return;
-    }
     if (!selectedPaymentTermId) {
       toast.warning('Please select a term to pay');
       return;
@@ -1878,7 +1874,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     try {
       await api.post(`/fees/students/${studentId}/terms/${selectedPaymentTermId}/payment`, {
         amount: parseFloat(paymentAmount),
-        fee_type_id: selectedFeeTypeId,
         notes: paymentNotes,
       });
       toast.success('Payment recorded successfully');
@@ -2586,30 +2581,20 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               {feeSummary.termBreakdown.length > 0 && feeSummary.termBreakdown.some((b: any) => b.balance > 0) && (
                 <div className="space-y-3">
                   <select
-                    value={selectedFeeTypeId}
-                    onChange={e => setSelectedFeeTypeId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                  >
-                    <option value="">Select fee type</option>
-                    {feeTypes.map((ft: any) => (
-                      <option key={ft.id} value={ft.id}>{ft.name} ({ft.code}) - KES {ft.amount}</option>
-                    ))}
-                  </select>
-                  <select
                     value={selectedPaymentTermId}
                     onChange={e => { setSelectedPaymentTermId(e.target.value); }}
                     className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
                   >
-                    <option value="">Select term to pay</option>
+                    <option value="">Select term to record payment</option>
                     {feeSummary.termBreakdown.filter((b: any) => b.balance > 0).map((b: any) => (
-                      <option key={b.term.id} value={b.term.id}>{b.term.name} - Full Payment ({b.balance.toLocaleString()})</option>
+                      <option key={b.term.id} value={b.term.id}>{b.term.name} — Balance: KES {b.balance.toLocaleString()}</option>
                     ))}
                   </select>
                   <input
                     type="number"
                     value={paymentAmount}
                     onChange={e => setPaymentAmount(e.target.value)}
-                    placeholder="Or enter custom amount"
+                    placeholder="Amount received (KES)"
                     className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
                   />
                   <input
@@ -2619,6 +2604,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     placeholder="Payment notes (optional)"
                     className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
                   />
+                  <p className="text-xs text-stone">💡 Tip: The Finance Officer can allocate this payment to specific fee types from the Finance Portal.</p>
                   <button
                     onClick={() => handleRecordPayment(feeSummary.student.id, feeSummary.termBreakdown[0].term.id)}
                     disabled={recordingPayment}

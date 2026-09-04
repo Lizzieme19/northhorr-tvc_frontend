@@ -19,15 +19,34 @@ export default function FinanceDashboard() {
   const [feeCleared, setFeeCleared] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
-  const [selectedStudentBalance, setSelectedStudentBalance] = useState<any>(null);
-  const [editingStudentFees, setEditingStudentFees] = useState<any>(null);
-  const [studentFeeForm, setStudentFeeForm] = useState({ full_year_paid: false, fee_adjustment: '' });
   const [showBillingDashboard, setShowBillingDashboard] = useState(false);
   const [billingData, setBillingData] = useState<any>(null);
   const [billingTermId, setBillingTermId] = useState('');
   const [billingStatus, setBillingStatus] = useState('');
   const [loadingBilling, setLoadingBilling] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
+
+  // Edit fee settings state
+  const [editingStudentFees, setEditingStudentFees] = useState<any>(null);
+  const [studentFeeForm, setStudentFeeForm] = useState({ full_year_paid: false, fee_adjustment: '' });
+
+  // Record Payment modal state
+  const [recordPaymentStudent, setRecordPaymentStudent] = useState<any>(null);
+  const [recordPaymentTermId, setRecordPaymentTermId] = useState('');
+  const [recordPaymentAmount, setRecordPaymentAmount] = useState('');
+  const [recordPaymentNotes, setRecordPaymentNotes] = useState('');
+  const [recordingPayment, setRecordingPayment] = useState(false);
+  const [studentTerms, setStudentTerms] = useState<any[]>([]);
+  const [loadingStudentTerms, setLoadingStudentTerms] = useState(false);
+
+  // Allocate Funds modal state
+  const [allocatingStudent, setAllocatingStudent] = useState<any>(null);
+  const [allocatingTermId, setAllocatingTermId] = useState('');
+  const [allocationBreakdown, setAllocationBreakdown] = useState<any>(null);
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false);
+  const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>({});
+  const [submittingAllocation, setSubmittingAllocation] = useState(false);
+  const [allocationNotes, setAllocationNotes] = useState('');
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'FINANCE')) router.replace('/login');
@@ -49,35 +68,16 @@ export default function FinanceDashboard() {
     }).catch(() => {});
   }, [page, search, feeCleared]);
 
-  const markPaid = async (studentId: string, feeTypeId: string, amount?: number) => {
-    setProcessing(`${studentId}-${feeTypeId}`);
-    try {
-      console.log('Marking paid:', { studentId, feeTypeId, amount });
-      const response = await api.patch(`/finance/students/${studentId}/fees`, { fee_type_id: feeTypeId, amount });
-      console.log('Mark paid response:', response.data);
-      // Refresh student list
-      const params: any = { page, limit: 15 };
-      if (search) params.search = search;
-      if (feeCleared !== '') params.fee_cleared = feeCleared;
-      const r = await financeApi.getFeeRecords(params);
-      setStudents(r.data.students);
-      // Update summary
-      financeApi.getReports().then(r => setSummary(r.data));
-    } catch (e: any) {
-      console.error('Mark paid error:', e);
-      toast.error(e?.response?.data?.error || 'Failed to update fee');
-    } finally { setProcessing(null); }
+  const refreshStudents = async () => {
+    const params: any = { page, limit: 15 };
+    if (search) params.search = search;
+    if (feeCleared !== '') params.fee_cleared = feeCleared;
+    const r = await financeApi.getFeeRecords(params);
+    setStudents(r.data.students);
+    financeApi.getReports().then(r => setSummary(r.data));
   };
 
-  const viewStudentBalance = async (studentId: string) => {
-    try {
-      const r = await api.get(`/finance/students/${studentId}/balance`);
-      setSelectedStudentBalance(r.data);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to fetch balance');
-    }
-  };
-
+  // ── Edit Fee Settings ──
   const editStudentFees = (student: any) => {
     setEditingStudentFees(student);
     setStudentFeeForm({
@@ -94,14 +94,133 @@ export default function FinanceDashboard() {
       });
       toast.success('Student fee settings updated');
       setEditingStudentFees(null);
-      // Refresh student list
-      const params: any = { page, limit: 15 };
-      if (search) params.search = search;
-      if (feeCleared !== '') params.fee_cleared = feeCleared;
-      const r = await financeApi.getFeeRecords(params);
-      setStudents(r.data.students);
+      await refreshStudents();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to update student fees');
+    }
+  };
+
+  // ── Record Payment modal ──
+  const openRecordPayment = async (student: any) => {
+    setRecordPaymentStudent(student);
+    setRecordPaymentTermId('');
+    setRecordPaymentAmount('');
+    setRecordPaymentNotes('');
+    setLoadingStudentTerms(true);
+    try {
+      const r = await api.get(`/fees/students/${student.id}/summary`);
+      const termBalances = r.data.termBreakdown || [];
+      setStudentTerms(termBalances);
+    } catch {
+      toast.error('Failed to load student terms');
+    } finally {
+      setLoadingStudentTerms(false);
+    }
+  };
+
+  const handleRecordPayment = async () => {
+    if (!recordPaymentAmount || parseFloat(recordPaymentAmount) <= 0) {
+      toast.warning('Please enter a valid amount');
+      return;
+    }
+    if (!recordPaymentTermId) {
+      toast.warning('Please select a term');
+      return;
+    }
+    setRecordingPayment(true);
+    try {
+      await api.post(`/fees/students/${recordPaymentStudent.id}/terms/${recordPaymentTermId}/payment`, {
+        amount: parseFloat(recordPaymentAmount),
+        notes: recordPaymentNotes || undefined,
+      });
+      toast.success('Payment recorded! You can now allocate it to specific fee types.');
+      setRecordPaymentStudent(null);
+      await refreshStudents();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to record payment');
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
+
+  // ── Allocate Funds modal ──
+  const openAllocateFunds = async (student: any, termId?: string) => {
+    setAllocatingStudent(student);
+    setAllocationInputs({});
+    setAllocationNotes('');
+
+    // Determine the term to allocate for
+    let resolvedTermId = termId;
+    if (!resolvedTermId && student.current_term_id) resolvedTermId = student.current_term_id;
+
+    if (!resolvedTermId) {
+      // try to pick first term that has unallocated funds by fetching summary
+      try {
+        const r = await api.get(`/fees/students/${student.id}/summary`);
+        const termsWithBalance = (r.data.termBreakdown || []).filter((b: any) => b.amount_paid > 0);
+        if (termsWithBalance.length > 0) resolvedTermId = termsWithBalance[0].term.id;
+      } catch {}
+    }
+
+    if (resolvedTermId) {
+      setAllocatingTermId(resolvedTermId);
+      await loadAllocationBreakdown(student.id, resolvedTermId);
+    } else {
+      setAllocatingTermId('');
+      setAllocationBreakdown(null);
+    }
+  };
+
+  const loadAllocationBreakdown = async (studentId: string, termId: string) => {
+    setLoadingBreakdown(true);
+    try {
+      const r = await api.get(`/fees/students/${studentId}/terms/${termId}/allocations`);
+      setAllocationBreakdown(r.data);
+      // Pre-fill zero values for all fee types
+      const inputs: Record<string, string> = {};
+      (r.data.feeTypeBreakdown || []).forEach((ft: any) => {
+        inputs[ft.fee_type.id] = '';
+      });
+      setAllocationInputs(inputs);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to load allocation breakdown');
+      setAllocationBreakdown(null);
+    } finally {
+      setLoadingBreakdown(false);
+    }
+  };
+
+  const handleSubmitAllocation = async () => {
+    const allocations = Object.entries(allocationInputs)
+      .filter(([, v]) => v && parseFloat(v) > 0)
+      .map(([fee_type_id, amount]) => ({ fee_type_id, amount: parseFloat(amount) }));
+
+    if (allocations.length === 0) {
+      toast.warning('Please enter at least one allocation amount');
+      return;
+    }
+
+    const totalAllocating = allocations.reduce((sum, a) => sum + a.amount, 0);
+    const available = allocationBreakdown?.totalUnallocated || 0;
+
+    if (totalAllocating > available + 0.01) {
+      toast.error(`Cannot allocate KES ${totalAllocating.toLocaleString()}. Only KES ${available.toLocaleString()} available.`);
+      return;
+    }
+
+    setSubmittingAllocation(true);
+    try {
+      await api.post(`/fees/students/${allocatingStudent.id}/terms/${allocatingTermId}/allocate`, {
+        allocations,
+        notes: allocationNotes || undefined,
+      });
+      toast.success('Funds allocated successfully!');
+      await loadAllocationBreakdown(allocatingStudent.id, allocatingTermId);
+      await refreshStudents();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to allocate funds');
+    } finally {
+      setSubmittingAllocation(false);
     }
   };
 
@@ -122,6 +241,15 @@ export default function FinanceDashboard() {
   };
 
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
+
+  const statusBadge = (s: string) => {
+    const cls: Record<string, string> = {
+      PAID: 'bg-green-100 text-green-800',
+      PARTIAL: 'bg-yellow-100 text-yellow-800',
+      PENDING: 'bg-red-100 text-red-800',
+    };
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls[s] || 'bg-gray-100 text-gray-700'}`}>{s}</span>;
+  };
 
   return (
     <div className="min-h-screen bg-cream-deep">
@@ -155,7 +283,7 @@ export default function FinanceDashboard() {
             { label: 'Admission Paid', value: summary?.admissionPaid ?? '—', icon: '✅' },
             { label: 'Student IDs Paid', value: summary?.studentIdPaid ?? '—', icon: '🪪' },
             { label: 'Tuition Paid', value: summary?.tuitionPaid ?? '—', icon: '💰' },
-            { label: 'Total Collected', value: `KES ${summary?.totalCollected ?? 0}`, icon: '�' },
+            { label: 'Total Collected', value: `KES ${(summary?.totalCollected ?? 0).toLocaleString()}`, icon: '🏦' },
           ].map(card => (
             <div key={card.label} className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
               <div className="flex justify-between items-start mb-2">
@@ -194,90 +322,59 @@ export default function FinanceDashboard() {
               <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
                 <tr>
                   <th className="px-4 py-3 text-left">Admission No.</th>
-                  <th className="px-4 py-3 text-left">Student Details</th>
-                  <th className="px-4 py-3 text-left">Admission</th>
-                  <th className="px-4 py-3 text-left">Student ID</th>
-                  <th className="px-4 py-3 text-left">KUCCPS</th>
-                  <th className="px-4 py-3 text-left">Tuition</th>
-                  <th className="px-4 py-3 text-left">Balance</th>
+                  <th className="px-4 py-3 text-left">Student</th>
+                  <th className="px-4 py-3 text-left">Course</th>
+                  <th className="px-4 py-3 text-right">Total Fees</th>
+                  <th className="px-4 py-3 text-right">Paid</th>
+                  <th className="px-4 py-3 text-right">Balance</th>
+                  <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Actions</th>
-                  <th className="px-4 py-3 text-left">Print ID</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone/10">
-                {students.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-stone">No records found</td></tr>}
-                {students.map(s => (
-                  <tr key={s.id} className="hover:bg-cream-deep/50 transition">
-                    <td className="px-4 py-3 font-mono text-xs text-brand">{s.admission_no}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-brand-dark">{s.application.surname} {s.application.other_names}</div>
-                      <div className="text-xs text-stone">{s.course.name}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {s.admission_fee_paid ? <span className="text-green-600 font-medium">Paid</span> : (
-                        <button onClick={() => {
-                          const admissionFeeType = feeTypes.find(ft => ft.code === 'ADMISSION');
-                          if (admissionFeeType) markPaid(s.id, admissionFeeType.id, admissionFeeType.amount);
-                        }} disabled={!!processing}
-                          className="text-xs px-3 py-1 rounded-full bg-brand/10 text-brand hover:bg-brand hover:text-white transition disabled:opacity-50">
-                          {processing === `${s.id}-ADMISSION` ? '...' : 'Mark Paid'}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {s.student_id_fee_paid ? <span className="text-green-600 font-medium">Paid</span> : (
-                        <button onClick={() => {
-                          const idFeeType = feeTypes.find(ft => ft.code === 'STUDENT_ID');
-                          if (idFeeType) markPaid(s.id, idFeeType.id, idFeeType.amount);
-                        }} disabled={!!processing}
-                          className="text-xs px-3 py-1 rounded-full bg-brand/10 text-brand hover:bg-brand hover:text-white transition disabled:opacity-50">
-                          {processing === `${s.id}-STUDENT_ID` ? '...' : 'Mark Paid'}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {s.application.type === 'KUCCPS' ? <span className="text-stone text-xs border border-stone/20 px-2 py-0.5 rounded-full">N/A</span> : 
-                        s.kuccps_fee_paid ? <span className="text-green-600 font-medium">Paid</span> : (
-                          <button onClick={() => {
-                            const kuccpsFeeType = feeTypes.find(ft => ft.code === 'KUCCPS');
-                            if (kuccpsFeeType) markPaid(s.id, kuccpsFeeType.id, kuccpsFeeType.amount);
-                          }} disabled={!!processing}
-                            className="text-xs px-3 py-1 rounded-full bg-brand/10 text-brand hover:bg-brand hover:text-white transition disabled:opacity-50">
-                            {processing === `${s.id}-KUCCPS` ? '...' : 'Mark Paid'}
+                {students.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-stone">No records found</td></tr>}
+                {students.map(s => {
+                  // Use current term balance if available
+                  const currentBalance = s.student_balances?.find((b: any) => b.term_id === s.current_term_id) || s.student_balances?.[0];
+                  return (
+                    <tr key={s.id} className="hover:bg-cream-deep/50 transition">
+                      <td className="px-4 py-3 font-mono text-xs text-brand">{s.admission_no}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-brand-dark">{s.application?.surname} {s.application?.other_names}</div>
+                        <div className="text-xs text-stone">{s.level}</div>
+                      </td>
+                      <td className="px-4 py-3 text-stone text-xs">{s.course?.name}</td>
+                      <td className="px-4 py-3 text-right font-medium">KES {currentBalance?.total_fees?.toLocaleString() ?? '—'}</td>
+                      <td className="px-4 py-3 text-right text-green-600 font-medium">KES {currentBalance?.amount_paid?.toLocaleString() ?? '—'}</td>
+                      <td className="px-4 py-3 text-right text-red-600 font-medium">KES {currentBalance?.balance?.toLocaleString() ?? '—'}</td>
+                      <td className="px-4 py-3">{currentBalance ? statusBadge(currentBalance.status) : <span className="text-xs text-stone">No term</span>}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => openRecordPayment(s)}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-brand text-cream hover:bg-brand-dark transition font-medium"
+                          >
+                            💵 Record Payment
                           </button>
-                        )
-                      }
-                    </td>
-                    <td className="px-4 py-3">
-                      {s.tuition_fee_paid ? <span className="text-green-600 font-medium">Paid</span> : (
-                        <button onClick={() => {
-                          const tuitionFeeType = feeTypes.find(ft => ft.code === 'TUITION');
-                          if (tuitionFeeType) markPaid(s.id, tuitionFeeType.id, tuitionFeeType.amount);
-                        }} disabled={!!processing}
-                          className="text-xs px-3 py-1 rounded-full bg-brand/10 text-brand hover:bg-brand hover:text-white transition disabled:opacity-50">
-                          {processing === `${s.id}-TUITION` ? '...' : 'Mark Paid'}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => viewStudentBalance(s.id)} className="text-xs text-brand hover:underline">View Balance</button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => editStudentFees(s)} className="text-xs text-brand hover:underline">Edit Fees</button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button disabled={!s.student_id_fee_paid} onClick={() => toast.info('Student ID printing queue triggered.')}
-                        className="text-xs px-3 py-1.5 rounded bg-stone-100 border border-stone-200 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1">
-                        🖨️ Print ID
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                          <button
+                            onClick={() => openAllocateFunds(s)}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition font-medium"
+                          >
+                            🏷️ Allocate Funds
+                          </button>
+                          <button onClick={() => editStudentFees(s)} className="text-xs px-3 py-1.5 rounded-lg border border-stone/25 hover:bg-stone/5 transition">
+                            ✏️ Edit Fees
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
-            <span>Page {page} of {Math.ceil(total / 15)}</span>
+            <span>Page {page} of {Math.max(1, Math.ceil(total / 15))}</span>
             <div className="flex gap-2">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
               <button disabled={page >= Math.ceil(total / 15)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
@@ -285,65 +382,225 @@ export default function FinanceDashboard() {
           </div>
         </div>
 
-        {/* Student Balance Modal */}
-        {selectedStudentBalance && (
-          <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
+        {/* ── Record Payment Modal ── */}
+        {recordPaymentStudent && (
+          <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
-              <h2 className="font-display text-xl text-brand-dark mb-4">Student Balance</h2>
-              <div className="space-y-4 text-sm">
-                <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <span className="text-stone">Admission No:</span>
-                  <span className="font-medium text-brand-dark">{selectedStudentBalance.student.admission_no}</span>
-                </div>
-                <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <span className="text-stone">Course:</span>
-                  <span className="font-medium text-brand-dark">{selectedStudentBalance.student.course}</span>
-                </div>
-                <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <span className="text-stone">Total Fees:</span>
-                  <span className="font-medium text-brand-dark">KES {selectedStudentBalance.total_fees}</span>
-                </div>
-                <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <span className="text-stone">Amount Paid:</span>
-                  <span className="font-medium text-green-600">KES {selectedStudentBalance.amount_paid}</span>
-                </div>
-                <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <span className="text-stone">Balance:</span>
-                  <span className={`font-bold ${selectedStudentBalance.balance <= 0 ? 'text-green-600' : 'text-red-600'}`}>KES {selectedStudentBalance.balance}</span>
-                </div>
-                <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <span className="text-stone">Status:</span>
-                  <span className={`font-medium px-2 py-0.5 rounded-full text-xs ${
-                    selectedStudentBalance.status === 'PAID' ? 'bg-green-100 text-green-800' :
-                    selectedStudentBalance.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>{selectedStudentBalance.status}</span>
-                </div>
-                {selectedStudentBalance.fee_records && selectedStudentBalance.fee_records.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-brand-dark mb-2">Recent Payments</h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {selectedStudentBalance.fee_records.map((record: any) => (
-                        <div key={record.id} className="text-xs bg-stone/5 p-2 rounded">
-                          <div className="flex justify-between items-center">
-                            <div className="font-medium">{record.feeType?.name || record.fee_type}</div>
-                            <div className="text-stone font-mono text-[10px]">{record.reference_code || ''}</div>
-                          </div>
-                          <div className="text-stone">KES {record.amount} • {new Date(record.paid_at).toLocaleDateString()}</div>
-                        </div>
-                      ))}
+              <h2 className="font-display text-xl text-brand-dark mb-1">Record Payment</h2>
+              <p className="text-sm text-stone mb-5">
+                {recordPaymentStudent.admission_no} — {recordPaymentStudent.application?.surname} {recordPaymentStudent.application?.other_names}
+              </p>
+              <div className="space-y-4">
+                {loadingStudentTerms ? (
+                  <div className="text-center py-4 text-stone text-sm">Loading terms…</div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Term *</label>
+                      <select
+                        value={recordPaymentTermId}
+                        onChange={e => setRecordPaymentTermId(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                      >
+                        <option value="">Select term</option>
+                        {studentTerms.map((b: any) => (
+                          <option key={b.term.id} value={b.term.id}>
+                            {b.term.name} ({b.term.academic_year}) — Balance: KES {b.balance.toLocaleString()}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Amount Received (KES) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={recordPaymentAmount}
+                        onChange={e => setRecordPaymentAmount(e.target.value)}
+                        placeholder="e.g. 5000"
+                        className="w-full px-4 py-3 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes (optional)</label>
+                      <input
+                        type="text"
+                        value={recordPaymentNotes}
+                        onChange={e => setRecordPaymentNotes(e.target.value)}
+                        placeholder="e.g. Cash payment, Receipt #1234"
+                        className="w-full px-4 py-3 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                      />
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
+                      💡 After recording, use <strong>Allocate Funds</strong> to specify how this payment is distributed across fee types (Admission, Tuition, etc.)
+                    </div>
+                  </>
                 )}
               </div>
-              <button onClick={() => setSelectedStudentBalance(null)} className="mt-6 w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">
-                Close
-              </button>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleRecordPayment}
+                  disabled={recordingPayment || loadingStudentTerms}
+                  className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                >
+                  {recordingPayment ? 'Recording…' : 'Record Payment'}
+                </button>
+                <button onClick={() => setRecordPaymentStudent(null)} className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Edit Student Fees Modal */}
+        {/* ── Allocate Funds Modal ── */}
+        {allocatingStudent && (
+          <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-6 overflow-y-auto">
+            <div className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl my-auto">
+              <h2 className="font-display text-xl text-brand-dark mb-1">Allocate Funds</h2>
+              <p className="text-sm text-stone mb-5">
+                {allocatingStudent.admission_no} — {allocatingStudent.application?.surname} {allocatingStudent.application?.other_names}
+              </p>
+
+              {/* Term selector */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Term</label>
+                <select
+                  value={allocatingTermId}
+                  onChange={async e => {
+                    setAllocatingTermId(e.target.value);
+                    if (e.target.value) await loadAllocationBreakdown(allocatingStudent.id, e.target.value);
+                    else setAllocationBreakdown(null);
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                >
+                  <option value="">Select a term</option>
+                  {terms.map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.academic_year})</option>
+                  ))}
+                </select>
+              </div>
+
+              {loadingBreakdown && <div className="text-center py-6 text-stone text-sm">Loading breakdown…</div>}
+
+              {allocationBreakdown && !loadingBreakdown && (
+                <>
+                  {/* Summary bar */}
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    <div className="bg-cream-deep rounded-xl p-3 text-center">
+                      <div className="text-xs text-stone mb-1">Total Paid</div>
+                      <div className="font-bold text-brand-dark text-sm">KES {allocationBreakdown.totalPaid.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-3 text-center">
+                      <div className="text-xs text-stone mb-1">Allocated</div>
+                      <div className="font-bold text-green-700 text-sm">KES {allocationBreakdown.totalAllocated.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-3 text-center">
+                      <div className="text-xs text-stone mb-1">Unallocated</div>
+                      <div className="font-bold text-amber-700 text-sm">KES {allocationBreakdown.totalUnallocated.toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  {/* Fee type breakdown */}
+                  <h3 className="font-semibold text-brand-dark mb-3 text-sm">Fee Type Allocation</h3>
+                  {allocationBreakdown.feeTypeBreakdown.length === 0 ? (
+                    <p className="text-stone text-sm text-center py-4">No applicable fee types configured</p>
+                  ) : (
+                    <div className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-1">
+                      {allocationBreakdown.feeTypeBreakdown.map((ft: any) => (
+                        <div key={ft.fee_type.id} className="border border-stone/15 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <div>
+                              <span className="font-medium text-sm text-brand-dark">{ft.fee_type.name}</span>
+                              <span className="text-xs text-stone ml-2">({ft.fee_type.code})</span>
+                            </div>
+                            {statusBadge(ft.status)}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-stone mb-2">
+                            <span>Required: KES {ft.required_amount.toLocaleString()}</span>
+                            <span>•</span>
+                            <span className="text-green-700">Paid: KES {ft.amount_paid.toLocaleString()}</span>
+                            <span>•</span>
+                            <span className="text-red-600">Balance: KES {ft.balance.toLocaleString()}</span>
+                          </div>
+                          {ft.balance > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-stone whitespace-nowrap">Allocate KES:</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                max={Math.min(ft.balance, allocationBreakdown.totalUnallocated)}
+                                value={allocationInputs[ft.fee_type.id] || ''}
+                                onChange={e => setAllocationInputs(prev => ({ ...prev, [ft.fee_type.id]: e.target.value }))}
+                                placeholder={`Max ${Math.min(ft.balance, allocationBreakdown.totalUnallocated).toLocaleString()}`}
+                                className="flex-1 px-3 py-1.5 rounded-lg border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                              />
+                              <button
+                                onClick={() => setAllocationInputs(prev => ({
+                                  ...prev,
+                                  [ft.fee_type.id]: String(Math.min(ft.balance, allocationBreakdown.totalUnallocated))
+                                }))}
+                                className="text-xs px-2 py-1.5 rounded-lg bg-brand/10 text-brand hover:bg-brand hover:text-white transition"
+                              >
+                                Max
+                              </button>
+                            </div>
+                          )}
+                          {ft.balance <= 0 && <p className="text-xs text-green-600 mt-1">✓ Fully paid</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Total being allocated preview */}
+                  <div className="flex items-center justify-between text-sm mb-3 bg-stone/5 rounded-xl px-4 py-2">
+                    <span className="text-stone">Total allocating:</span>
+                    <span className="font-bold text-brand-dark">
+                      KES {Object.values(allocationInputs).reduce((s, v) => s + (parseFloat(v as string) || 0), 0).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {allocationBreakdown.totalUnallocated === 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-xs text-green-800 mb-3">
+                      ✅ All received payments have been fully allocated.
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Allocation Notes (optional)</label>
+                    <input
+                      type="text"
+                      value={allocationNotes}
+                      onChange={e => setAllocationNotes(e.target.value)}
+                      placeholder="e.g. September term allocation"
+                      className="w-full px-4 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleSubmitAllocation}
+                  disabled={submittingAllocation || !allocationBreakdown || allocationBreakdown.totalUnallocated === 0}
+                  className="flex-1 py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 transition disabled:opacity-50"
+                >
+                  {submittingAllocation ? 'Saving…' : 'Save Allocation'}
+                </button>
+                <button
+                  onClick={() => { setAllocatingStudent(null); setAllocationBreakdown(null); }}
+                  className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Edit Student Fees Modal ── */}
         {editingStudentFees && (
           <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
             <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
@@ -355,7 +612,7 @@ export default function FinanceDashboard() {
                 </div>
                 <div className="border-b border-stone/10 pb-2">
                   <span className="text-stone">Student:</span>
-                  <span className="font-medium text-brand-dark ml-2">{editingStudentFees.application.surname} {editingStudentFees.application.other_names}</span>
+                  <span className="font-medium text-brand-dark ml-2">{editingStudentFees.application?.surname} {editingStudentFees.application?.other_names}</span>
                 </div>
                 <div>
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -395,18 +652,13 @@ export default function FinanceDashboard() {
           </div>
         )}
 
-        {/* Billing Dashboard Modal */}
+        {/* ── Billing Dashboard Modal ── */}
         {showBillingDashboard && (
           <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
             <div className="bg-white rounded-3xl p-8 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-display text-2xl text-brand-dark">Billing Dashboard</h2>
-                <button
-                  onClick={() => setShowBillingDashboard(false)}
-                  className="text-stone hover:text-brand transition"
-                >
-                  ✕
-                </button>
+                <button onClick={() => setShowBillingDashboard(false)} className="text-stone hover:text-brand transition">✕</button>
               </div>
 
               <div className="space-y-6">
@@ -486,6 +738,7 @@ export default function FinanceDashboard() {
                             <th className="px-4 py-3 text-left">Paid</th>
                             <th className="px-4 py-3 text-left">Balance</th>
                             <th className="px-4 py-3 text-left">Status</th>
+                            <th className="px-4 py-3 text-left">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone/10">
@@ -499,14 +752,19 @@ export default function FinanceDashboard() {
                               <td className="px-4 py-3">KES {balance.total_fees?.toLocaleString()}</td>
                               <td className="px-4 py-3 text-green-600">KES {balance.amount_paid?.toLocaleString()}</td>
                               <td className="px-4 py-3 text-red-500">KES {balance.balance?.toLocaleString()}</td>
+                              <td className="px-4 py-3">{statusBadge(balance.status)}</td>
                               <td className="px-4 py-3">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  balance.balance <= 0 ? 'bg-green-100 text-green-800' :
-                                  balance.amount_paid > 0 ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
-                                  {balance.balance <= 0 ? 'PAID' : balance.amount_paid > 0 ? 'PARTIAL' : 'PENDING'}
-                                </span>
+                                {balance.student && (
+                                  <button
+                                    onClick={() => {
+                                      setShowBillingDashboard(false);
+                                      openAllocateFunds(balance.student, balance.term_id);
+                                    }}
+                                    className="text-xs px-2 py-1 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white transition"
+                                  >
+                                    🏷️ Allocate
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
