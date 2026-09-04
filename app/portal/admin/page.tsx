@@ -1378,13 +1378,13 @@ export default function AdminDashboard() {
                         const searchLower = studentSearch.toLowerCase();
                         return (
                           student.admission_no?.toLowerCase().includes(searchLower) ||
-                          student.user?.surname?.toLowerCase().includes(searchLower) ||
-                          student.user?.other_names?.toLowerCase().includes(searchLower)
+                          student.application?.surname?.toLowerCase().includes(searchLower) ||
+                          student.application?.other_names?.toLowerCase().includes(searchLower)
                         );
                       })
                       .map((student: any) => (
                         <option key={student.id} value={student.id}>
-                          {student.admission_no} - {student.user?.surname} {student.user?.other_names} ({student.level})
+                          {student.admission_no} - {student.application?.surname} {student.application?.other_names} ({student.level})
                         </option>
                       ))}
                   </select>
