@@ -55,7 +55,7 @@ export default function FinanceDashboard() {
   useEffect(() => {
     financeApi.getReports().then(r => setSummary(r.data)).catch(() => {});
     feeTypesApi.getAll({ is_active: 'true' }).then(r => setFeeTypes(r.data.fee_types || [])).catch(() => {});
-    api.get('/terms').then(r => setTerms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => {});
   }, []);
 
   useEffect(() => {

@@ -1813,7 +1813,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   }, [page, search]);
 
   useEffect(() => {
-    api.get('/terms').then(r => setTerms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => {});
   }, []);
 
   const handleDownloadIDCard = async (studentId: string) => {
@@ -2846,7 +2846,7 @@ function BillingTab() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get('/terms').then(r => setTerms(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+    api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
