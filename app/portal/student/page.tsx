@@ -26,6 +26,16 @@ export default function StudentDashboard() {
   const [showFeeSummary, setShowFeeSummary] = useState(false);
   const [userNeedsPasswordChange, setUserNeedsPasswordChange] = useState(false);
 
+  // Document upload state
+  const [docFiles, setDocFiles] = useState<Record<string, File | null>>({
+    medical_report: null,
+    kcse_certificate: null,
+    birth_certificate: null,
+    other_documents: null,
+  });
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [showDocUpload, setShowDocUpload] = useState(false);
+
   const handleDownloadDocument = async (docType: string) => {
     setDownloadingDoc(docType);
     try {
@@ -137,7 +147,8 @@ export default function StudentDashboard() {
       
       // Fetch active terms
       api.get('/terms').then(r => {
-        setTerms(Array.isArray(r.data) ? r.data.filter((t: any) => t.is_active) : []);
+        const list = r.data.terms || r.data;
+        setTerms(Array.isArray(list) ? list.filter((t: any) => t.is_active) : []);
       }).catch(console.error);
       
       // Fetch current enrollments
@@ -201,6 +212,34 @@ export default function StudentDashboard() {
       toast.error(err?.response?.data?.error || 'Failed to fetch fee summary');
     } finally {
       setLoadingFeeSummary(false);
+    }
+  };
+
+  const handleUploadDocuments = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const hasFiles = Object.values(docFiles).some(f => f !== null);
+    if (!hasFiles) {
+      toast.warning('Please select at least one document to upload');
+      return;
+    }
+    setUploadingDocs(true);
+    try {
+      const formData = new FormData();
+      Object.entries(docFiles).forEach(([key, file]) => {
+        if (file) formData.append(key, file);
+      });
+      await api.patch('/students/me/documents', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const updated = await api.get('/students/me');
+      setProfile(updated.data);
+      setDocFiles({ medical_report: null, kcse_certificate: null, birth_certificate: null, other_documents: null });
+      setShowDocUpload(false);
+      toast.success('Documents uploaded successfully!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to upload documents');
+    } finally {
+      setUploadingDocs(false);
     }
   };
 
@@ -452,6 +491,84 @@ export default function StudentDashboard() {
                   </div>
                   <p className="text-xs text-stone">Your student ID card - requires profile photo.</p>
                 </div>
+              </div>
+            </div>
+
+            {/* ── Uploaded Supporting Documents ── */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">My Uploaded Documents</h2>
+                <button
+                  onClick={() => setShowDocUpload(!showDocUpload)}
+                  className="text-xs px-4 py-1.5 rounded-full bg-brand text-cream font-semibold hover:bg-brand-dark transition"
+                >
+                  {showDocUpload ? 'Cancel' : '+ Upload Documents'}
+                </button>
+              </div>
+
+              {/* Upload Form */}
+              {showDocUpload && (
+                <form onSubmit={handleUploadDocuments} className="bg-cream-deep rounded-2xl p-5 border border-stone/10 mb-4 space-y-4">
+                  <p className="text-sm text-stone">Upload your required supporting documents below. Accepted formats: PDF, JPG, PNG (max 10MB each).</p>
+                  {[
+                    { key: 'medical_report', label: '🏥 Medical Report', hint: 'Medical clearance or health form' },
+                    { key: 'kcse_certificate', label: '📜 KCSE Certificate / Result Slip', hint: 'Your KCSE or equivalent qualification document' },
+                    { key: 'birth_certificate', label: '📋 Birth Certificate', hint: 'Official birth certificate' },
+                    { key: 'other_documents', label: '📎 Other Documents', hint: 'Any other supporting documents' },
+                  ].map(({ key, label, hint }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1">{label}</label>
+                      <p className="text-xs text-stone mb-1.5">{hint}</p>
+                      <input
+                        type="file"
+                        accept=".pdf,image/jpeg,image/jpg,image/png"
+                        onChange={e => setDocFiles(prev => ({ ...prev, [key]: e.target.files?.[0] || null }))}
+                        className="w-full text-sm text-stone file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:bg-brand/10 file:text-brand file:font-semibold hover:file:bg-brand hover:file:text-cream transition"
+                      />
+                      {docFiles[key as keyof typeof docFiles] && (
+                        <p className="text-xs text-green-600 mt-1">✓ {(docFiles[key as keyof typeof docFiles] as File).name}</p>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="submit"
+                    disabled={uploadingDocs}
+                    className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                  >
+                    {uploadingDocs ? 'Uploading...' : 'Upload Selected Documents'}
+                  </button>
+                </form>
+              )}
+
+              {/* Uploaded Document Status */}
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[
+                  { key: 'medical_report_url', label: '🏥 Medical Report', url: profile.medical_report_url },
+                  { key: 'kcse_certificate_url', label: '📜 KCSE Certificate', url: profile.kcse_certificate_url },
+                  { key: 'birth_certificate_url', label: '📋 Birth Certificate', url: profile.birth_certificate_url },
+                  { key: 'other_documents_url', label: '📎 Other Documents', url: profile.other_documents_url },
+                ].map(({ key, label, url }) => (
+                  <div key={key} className={`rounded-xl p-4 border flex items-center justify-between ${
+                    url ? 'bg-green-50 border-green-200' : 'bg-cream-deep border-stone/10'
+                  }`}>
+                    <div>
+                      <div className="text-sm font-medium text-brand-dark">{label}</div>
+                      <div className={`text-xs mt-0.5 ${url ? 'text-green-600' : 'text-stone'}`}>
+                        {url ? '✅ Uploaded' : 'Not yet uploaded'}
+                      </div>
+                    </div>
+                    {url && (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs px-3 py-1 bg-green-600 text-white rounded-full hover:bg-green-700 transition"
+                      >
+                        View
+                      </a>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
