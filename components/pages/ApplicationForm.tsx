@@ -109,7 +109,7 @@ export default function ApplicationForm() {
     <div>
       {/* Stepper Header */}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4, 5].map(i => (
           <div key={i} className={`flex-1 h-2 rounded-full min-w-[40px] transition-colors ${step >= i ? 'bg-brand' : 'bg-stone/20'}`} />
         ))}
       </div>
@@ -117,10 +117,11 @@ export default function ApplicationForm() {
         {step === 1 && 'Step 1: Course Selection'}
         {step === 2 && 'Step 2: Personal Details'}
         {step === 3 && 'Step 3: Academic Background'}
-        {step === 4 && 'Step 4: Parent & Emergency Details'}
+        {step === 4 && 'Step 4: Supporting Documents'}
+        {step === 5 && 'Step 5: Parent & Emergency Details'}
       </h2>
 
-      <form onSubmit={step === 4 ? handleSubmit : nextStep} className="space-y-8 animate-fade-in">
+      <form onSubmit={step === 5 ? handleSubmit : nextStep} className="space-y-8 animate-fade-in">
         
         {step === 1 && (
           <div className="grid sm:grid-cols-2 gap-5">
@@ -185,6 +186,32 @@ export default function ApplicationForm() {
         )}
 
         {step === 4 && (
+          <div className="space-y-6">
+            <p className="text-sm text-stone mb-4">Please upload the required supporting documents. Allowed formats: PDF, JPG, PNG (Max 5MB each).</p>
+            {[
+              { name: 'doc_id_copy', label: 'National ID / Passport Copy', hint: 'Front and back if applicable' },
+              { name: 'doc_kcse', label: 'KCSE Certificate / Result Slip', hint: 'Must be clearly legible' },
+              { name: 'doc_birth_cert', label: 'Birth Certificate', hint: 'Required for all applicants' },
+              { name: 'doc_medical', label: 'Medical Report', hint: 'Any relevant medical history (Optional)' },
+              { name: 'doc_kcpe', label: 'KCPE Certificate', hint: 'If applicable' },
+            ].map((doc) => (
+              <div key={doc.name}>
+                <label className="block text-sm font-semibold text-brand-dark mb-1">{doc.label}</label>
+                <p className="text-xs text-stone mb-1.5">{doc.hint}</p>
+                <input
+                  type="file"
+                  name={doc.name}
+                  accept=".pdf,image/jpeg,image/jpg,image/png"
+                  onChange={handleFileChange}
+                  className="w-full text-sm text-stone file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:bg-brand/10 file:text-brand file:font-semibold hover:file:bg-brand hover:file:text-cream transition"
+                />
+                {files[doc.name] && <p className="text-xs text-green-600 mt-1">✓ {files[doc.name].name}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {step === 5 && (
           <div className="space-y-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -244,7 +271,7 @@ export default function ApplicationForm() {
           ) : <div />}
 
           <button type="submit" disabled={submitting} className="px-8 py-3 rounded-full bg-brand text-cream font-semibold hover:bg-brand-dark transition shadow-lg disabled:opacity-50">
-            {step === 4 ? (submitting ? 'Submitting...' : 'Submit Application ✅') : 'Next Step →'}
+            {step === 5 ? (submitting ? 'Submitting...' : 'Submit Application ✅') : 'Next Step →'}
           </button>
         </div>
       </form>

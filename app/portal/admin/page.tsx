@@ -2446,6 +2446,11 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                         📄 Birth Certificate
                       </a>
                     )}
+                    {selectedStudent.medical_report_url && (
+                      <a href={selectedStudent.medical_report_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
+                        📄 Medical Report
+                      </a>
+                    )}
                     {selectedStudent.other_documents_url && (
                       <a href={selectedStudent.other_documents_url} target="_blank" rel="noreferrer" className="text-brand hover:underline flex items-center gap-2">
                         📄 Other Documents
@@ -2453,7 +2458,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     )}
                     {!selectedStudent.id_copy_front_url && !selectedStudent.id_copy_back_url && 
                      !selectedStudent.parent_id_copy_front_url && !selectedStudent.parent_id_copy_back_url &&
-                     !selectedStudent.kcse_certificate_url &&
+                     !selectedStudent.kcse_certificate_url && !selectedStudent.medical_report_url &&
                      !selectedStudent.birth_certificate_url && !selectedStudent.other_documents_url && (
                       <p className="text-stone col-span-2">No documents uploaded yet</p>
                     )}
