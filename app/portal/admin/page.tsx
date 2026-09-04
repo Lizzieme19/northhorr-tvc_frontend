@@ -1781,6 +1781,9 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const [currentCsvFile, setCurrentCsvFile] = useState<File | null>(null);
+  const [importingCurrent, setImportingCurrent] = useState(false);
+  const [importCurrentResult, setImportCurrentResult] = useState<any>(null);
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [feeSummary, setFeeSummary] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -1849,6 +1852,24 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Import failed');
     } finally { setImporting(false); }
+  };
+
+  const handleCurrentStudentsImport = async () => {
+    if (!currentCsvFile) return;
+    setImportingCurrent(true);
+    try {
+      const formData = new FormData();
+      formData.append('csv_file', currentCsvFile);
+      const r = await api.post('/students/import/csv', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setImportCurrentResult(r.data);
+      const updated = await studentsApi.getAll({ page, limit: 15, search });
+      setStudents(updated.data.students);
+      setTotal(updated.data.pagination.total);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Current students import failed');
+    } finally { setImportingCurrent(false); }
   };
 
   const handleViewFeeSummary = async (studentId: string) => {
@@ -2112,25 +2133,60 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         </div>
       </div>
 
-      {/* KUCCPS Import */}
-      <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm mb-6">
-        <h2 className="font-display text-lg text-brand-dark mb-2">KUCCPS CSV Import</h2>
-        <p className="text-sm text-stone mb-4">Upload a CSV with columns: surname, other_names, gender, dob, email, phone, kcse_index, kcse_grade</p>
-        <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
-          <input type="file" accept=".csv" className="hidden" onChange={e => setCsvFile(e.target.files?.[0] || null)} />
-          <div className="text-3xl mb-2">📄</div>
-          <div className="text-sm font-medium text-brand-dark">{csvFile ? csvFile.name : 'Click to upload CSV'}</div>
-        </label>
-        <button onClick={handleKuccpsImport} disabled={!csvFile || importing}
-          className="mt-4 w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
-          {importing ? 'Importing…' : 'Import KUCCPS Students'}
-        </button>
-        {importResult && (
-          <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200 text-sm">
-            <div className="font-semibold text-green-800">Import complete!</div>
-            <div className="text-green-700">Imported: {importResult.imported} | Errors: {importResult.errors}</div>
-          </div>
-        )}
+      {/* CSV Imports */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* KUCCPS Import */}
+        <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+          <h2 className="font-display text-lg text-brand-dark mb-2">KUCCPS CSV Import</h2>
+          <p className="text-sm text-stone mb-4">Upload a CSV with columns: surname, other_names, gender, dob, email, phone, kcse_index, kcse_grade</p>
+          <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
+            <input type="file" accept=".csv" className="hidden" onChange={e => setCsvFile(e.target.files?.[0] || null)} />
+            <div className="text-3xl mb-2">📄</div>
+            <div className="text-sm font-medium text-brand-dark">{csvFile ? csvFile.name : 'Click to upload CSV'}</div>
+          </label>
+          <button onClick={handleKuccpsImport} disabled={!csvFile || importing}
+            className="mt-4 w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
+            {importing ? 'Importing…' : 'Import KUCCPS Students'}
+          </button>
+          {importResult && (
+            <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200 text-sm">
+              <div className="font-semibold text-green-800">Import complete!</div>
+              <div className="text-green-700">Imported: {importResult.imported} | Errors: {importResult.errors}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Current Students Import */}
+        <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+          <h2 className="font-display text-lg text-brand-dark mb-2">Current Students Import</h2>
+          <p className="text-sm text-stone mb-4">Upload a CSV with columns: admission_no, surname, other_names, course, level</p>
+          <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
+            <input type="file" accept=".csv" className="hidden" onChange={e => setCurrentCsvFile(e.target.files?.[0] || null)} />
+            <div className="text-3xl mb-2">📄</div>
+            <div className="text-sm font-medium text-brand-dark">{currentCsvFile ? currentCsvFile.name : 'Click to upload CSV'}</div>
+          </label>
+          <button onClick={handleCurrentStudentsImport} disabled={!currentCsvFile || importingCurrent}
+            className="mt-4 w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50">
+            {importingCurrent ? 'Importing…' : 'Import Current Students'}
+          </button>
+          {importCurrentResult && (
+            <div className="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-sm max-h-48 overflow-y-auto">
+              <div className="font-semibold text-blue-800">Processed: {importCurrentResult.summary?.total}</div>
+              <div className="text-green-700">Successful: {importCurrentResult.summary?.successful}</div>
+              <div className="text-red-600">Failed: {importCurrentResult.summary?.failed}</div>
+              {importCurrentResult.errors && importCurrentResult.errors.length > 0 && (
+                <div className="mt-2 text-xs text-red-700">
+                  <div className="font-semibold mb-1">Errors:</div>
+                  <ul className="list-disc pl-4">
+                    {importCurrentResult.errors.map((err: any, i: number) => (
+                      <li key={i}>Row {err.rowNumber}: {err.error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
