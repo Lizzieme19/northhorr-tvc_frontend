@@ -23,7 +23,7 @@ export default function AboutPage() {
             <Image
               src="https://northhorr.s3.ap-south-1.amazonaws.com/WhatsApp Image 2026-06-10 at 21.46.48.jpeg"
               alt="Graduation"
-              fill
+              fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover"
             />
           </div>

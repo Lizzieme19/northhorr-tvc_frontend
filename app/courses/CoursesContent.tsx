@@ -132,7 +132,7 @@ export function CoursesContent() {
               <div className="grid lg:grid-cols-12 gap-10">
                 <header className="lg:col-span-4 lg:sticky lg:top-44 lg:self-start">
                   <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
-                    <Image src={d.image} alt={d.name} fill className="object-cover" />
+                    <Image src={d.image} alt={d.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/70 to-transparent" />
                     <div className="absolute top-4 left-4 h-14 w-14 rounded-xl bg-cream grid place-items-center text-3xl shadow-lg">
                       {d.icon}

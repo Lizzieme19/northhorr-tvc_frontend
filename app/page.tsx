@@ -201,7 +201,7 @@ export default function Home() {
                   <Image
                     src={d.image}
                     alt={d.name}
-                    fill
+                    fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover group-hover:scale-110 transition duration-700"
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-brand-dark/80 via-brand-dark/10 to-transparent" />
@@ -289,7 +289,7 @@ export default function Home() {
                 <Image
                   src={displayNews[0].image}
                   alt={displayNews[0].title}
-                  fill
+                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover group-hover:scale-105 transition duration-700"
                 />
               </div>
@@ -313,7 +313,7 @@ export default function Home() {
             {displayNews.slice(1, 4).map((n) => (
               <article key={n.id} className="bg-white rounded-2xl overflow-hidden flex shadow-sm hover:shadow-xl transition group">
                 <div className="relative w-28 sm:w-32 md:w-40 shrink-0">
-                  <Image src={n.image} alt={n.title} fill className="object-cover" />
+                  <Image src={n.image} alt={n.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                 </div>
                 <div className="p-4 sm:p-5 flex-1">
                   <div className="flex items-center gap-2 text-xs">
@@ -361,7 +361,7 @@ export default function Home() {
                 </blockquote>
                 <figcaption className="mt-4 sm:mt-6 flex items-center gap-3">
                   <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-full overflow-hidden border-2 border-gold shrink-0">
-                    <Image src={t.avatar} alt={t.name} fill className="object-cover" />
+                    <Image src={t.avatar} alt={t.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                   </div>
                   <div className="min-w-0">
                     <div className={`font-display font-semibold text-sm sm:text-base ${i === 1 ? "text-cream" : "text-brand-dark"}`}>
@@ -384,7 +384,7 @@ export default function Home() {
           <Image
             src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=2000&q=80"
             alt=""
-            fill
+            fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover"
           />
           <div className="absolute inset-0 bg-brand-dark/90" />

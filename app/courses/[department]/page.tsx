@@ -28,7 +28,7 @@ export default async function DepartmentPage(
     <>
       <section className="relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-10">
-          <Image src={dep.image} alt="" fill priority className="object-cover" />
+          <Image src={dep.image} alt="" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" priority className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-br from-brand-dark/95 via-brand/85 to-brand-dark/70" />
         </div>
         <div className="mx-auto max-w-7xl px-6 py-20 lg:py-28 text-cream">

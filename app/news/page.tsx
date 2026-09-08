@@ -101,7 +101,7 @@ export default function NewsPage() {
                 <Image 
                   src={featured.image_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80"} 
                   alt={featured.title} 
-                  fill 
+                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
                   className="object-cover" 
                 />
               </div>
@@ -139,7 +139,7 @@ export default function NewsPage() {
                   <Image
                     src={n.image_url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"}
                     alt={n.title}
-                    fill
+                    fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover group-hover:scale-110 transition duration-700"
                   />
                   <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-cream/95 text-brand text-xs font-semibold">
