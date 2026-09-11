@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -478,6 +478,7 @@ export default function AdminDashboard() {
           { key: 'billing', label: '💳 Billing' },
           { key: 'requisitions', label: '🛒 Requisitions' },
           { key: 'term-progression', label: '📈 Term Progression' },
+          { key: 'doc-templates', label: '📝 Doc Templates' },
         ].map((t) => (
           <button
             key={t.key}
@@ -1754,6 +1755,10 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {tab === 'doc-templates' && (
+        <DocTemplatesTab />
       )}
     </div>
   );
@@ -4048,6 +4053,243 @@ function CoursesTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Inline Document Templates Tab ───────────────────────────────────────────
+function DocTemplatesTab() {
+  const documentTypes = [
+    { id: 'ADMISSION_LETTER', name: 'Admission Letter', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]'] },
+    { id: 'ACCEPTANCE_LETTER', name: 'Acceptance Letter', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]'] },
+    { id: 'TRAINING_ADMISSION', name: 'Training Admission', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]'] },
+    { id: 'FEE_STRUCTURE', name: 'Fee Structure', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[ACADEMIC_YEAR]'] },
+    { id: 'PERSONAL_INFO', name: 'Personal Info Sheet', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]'] },
+    { id: 'LPO', name: 'Local Purchase Order (LPO)', vars: ['[SUPPLIER_NAME]', '[LPO_NO]', '[TOTAL_AMOUNT]', '[DATE]'] },
+    { id: 'RFQ', name: 'Request for Quotation (RFQ)', vars: ['[RFQ_NO]', '[DATE]', '[CLOSING_DATE]'] },
+    { id: 'GRN', name: 'Goods Received Note (GRN)', vars: ['[GRN_NO]', '[DATE]', '[SUPPLIER_NAME]'] },
+    { id: 'SUPPLIER_INVOICE', name: 'Supplier Invoice', vars: ['[INVOICE_NO]', '[DATE]', '[SUPPLIER_NAME]', '[TOTAL_AMOUNT]'] },
+  ];
+
+  const textBlockKeys: Record<string, { key: string; label: string; hint: string }[]> = {
+    ADMISSION_LETTER: [
+      { key: 'intro', label: 'Introductory Paragraph', hint: 'Paragraph shown before the admission details table.' },
+      { key: 'reporting', label: 'Reporting Requirements', hint: 'Instructions for when and how to report to college.' },
+      { key: 'footer_note', label: 'Footer Note', hint: 'Any final note below the signature area.' },
+    ],
+    ACCEPTANCE_LETTER: [
+      { key: 'intro', label: 'Introductory Paragraph', hint: 'Opening paragraph of the acceptance letter.' },
+      { key: 'conditions', label: 'Conditions of Acceptance', hint: 'Conditions the student must fulfill.' },
+    ],
+    TRAINING_ADMISSION: [
+      { key: 'intro', label: 'Introductory Paragraph', hint: 'Opening paragraph for the training admission form.' },
+    ],
+    LPO: [
+      { key: 'terms', label: 'Payment Terms Note', hint: 'Payment and delivery terms shown on the LPO.' },
+    ],
+    RFQ: [
+      { key: 'instructions', label: 'Quotation Instructions', hint: 'Instructions for suppliers on how to submit a quotation.' },
+    ],
+  };
+
+  const [selectedType, setSelectedType] = useState('ADMISSION_LETTER');
+  const [template, setTemplate] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [ministryLogo, setMinistryLogo] = useState<File | null>(null);
+  const [collegeLogo, setCollegeLogo] = useState<File | null>(null);
+  const [textBlocks, setTextBlocks] = useState<any>({});
+  const [copiedVar, setCopiedVar] = useState<string | null>(null);
+
+  const selectedDoc = documentTypes.find(d => d.id === selectedType)!;
+  const blocks = textBlockKeys[selectedType] || [];
+
+  useEffect(() => {
+    fetchTemplate(selectedType);
+  }, [selectedType]);
+
+  const fetchTemplate = async (type: string) => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/document-templates/${type}`);
+      setTemplate(res.data);
+      setTextBlocks(res.data.text_blocks || {});
+      setMinistryLogo(null);
+      setCollegeLogo(null);
+    } catch {
+      setTemplate(null);
+      setTextBlocks({});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append('text_blocks', JSON.stringify(textBlocks));
+      if (ministryLogo) formData.append('ministry_logo', ministryLogo);
+      if (collegeLogo) formData.append('college_logo', collegeLogo);
+      await api.patch(`/document-templates/${selectedType}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast.success('Template saved successfully!');
+      fetchTemplate(selectedType);
+    } catch {
+      toast.error('Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyVar = (v: string) => {
+    navigator.clipboard.writeText(v);
+    setCopiedVar(v);
+    setTimeout(() => setCopiedVar(null), 1500);
+  };
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="font-display text-xl text-brand-dark">Document Templates</h2>
+          <p className="text-sm text-stone mt-1">Customise the text content and logos used when generating official PDF documents.</p>
+        </div>
+        <select
+          value={selectedType}
+          onChange={e => setSelectedType(e.target.value)}
+          className="px-4 py-2.5 rounded-xl border border-stone/25 text-sm text-brand-dark bg-white focus:outline-none focus:border-brand shadow-sm"
+        >
+          {documentTypes.map(d => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Left: Editor */}
+        <div className="lg:col-span-2">
+          <form onSubmit={handleSave} className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
+            {/* Logos section */}
+            <div className="p-6 border-b border-stone/10">
+              <h3 className="font-semibold text-brand-dark mb-4">Institution Logos</h3>
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-brand-dark">Ministry Logo</label>
+                  {template?.ministry_logo_url && (
+                    <img src={template.ministry_logo_url} alt="Ministry" className="h-14 object-contain rounded border border-stone/10 p-1 bg-stone/5" />
+                  )}
+                  {!template?.ministry_logo_url && (
+                    <p className="text-xs text-stone italic">Using default logo from server</p>
+                  )}
+                  <input
+                    type="file" accept="image/png,image/jpeg"
+                    onChange={e => setMinistryLogo(e.target.files?.[0] || null)}
+                    className="block w-full text-xs text-stone file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand/10 file:text-brand hover:file:bg-brand/20 cursor-pointer"
+                  />
+                  {ministryLogo && <p className="text-xs text-green-600">✓ {ministryLogo.name} selected</p>}
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-brand-dark">College Logo</label>
+                  {template?.college_logo_url && (
+                    <img src={template.college_logo_url} alt="College" className="h-14 object-contain rounded border border-stone/10 p-1 bg-stone/5" />
+                  )}
+                  {!template?.college_logo_url && (
+                    <p className="text-xs text-stone italic">Using default logo from server</p>
+                  )}
+                  <input
+                    type="file" accept="image/png,image/jpeg"
+                    onChange={e => setCollegeLogo(e.target.files?.[0] || null)}
+                    className="block w-full text-xs text-stone file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand/10 file:text-brand hover:file:bg-brand/20 cursor-pointer"
+                  />
+                  {collegeLogo && <p className="text-xs text-green-600">✓ {collegeLogo.name} selected</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Text blocks section */}
+            <div className="p-6 space-y-5">
+              {loading ? (
+                <div className="space-y-4 animate-pulse">
+                  <div className="h-4 bg-stone/10 rounded w-1/3" />
+                  <div className="h-24 bg-stone/10 rounded" />
+                  <div className="h-24 bg-stone/10 rounded" />
+                </div>
+              ) : blocks.length > 0 ? (
+                <>
+                  <h3 className="font-semibold text-brand-dark">Editable Text Sections</h3>
+                  {blocks.map(block => (
+                    <div key={block.key}>
+                      <label className="block text-sm font-medium text-brand-dark mb-1">{block.label}</label>
+                      <p className="text-xs text-stone mb-2">{block.hint}</p>
+                      <textarea
+                        rows={4}
+                        value={textBlocks[block.key] || ''}
+                        onChange={e => setTextBlocks({ ...textBlocks, [block.key]: e.target.value })}
+                        placeholder={`Enter custom text for ${block.label.toLowerCase()}…`}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm text-brand-dark bg-white resize-none"
+                      />
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="text-center py-8 text-stone">
+                  <div className="text-4xl mb-3">📄</div>
+                  <p className="text-sm">The <strong>{selectedDoc.name}</strong> uses fully dynamic data from the database.</p>
+                  <p className="text-xs mt-1">You can still upload custom logos above for this document type.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Save button */}
+            <div className="px-6 pb-6">
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full py-3 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50 text-sm"
+              >
+                {saving ? 'Saving…' : `Save ${selectedDoc.name} Template`}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Right: Variables guide */}
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-stone/10 shadow-sm p-5">
+            <h3 className="font-semibold text-brand-dark mb-1">Available Variables</h3>
+            <p className="text-xs text-stone mb-4">Click any variable to copy it. Paste it into the text areas and it will be replaced with real data when the PDF is generated.</p>
+            <ul className="space-y-2">
+              {selectedDoc.vars.map(v => (
+                <li key={v}>
+                  <button
+                    type="button"
+                    onClick={() => copyVar(v)}
+                    className="w-full text-left px-3 py-2 rounded-lg bg-brand/5 hover:bg-brand/10 border border-brand/20 transition flex items-center justify-between group"
+                  >
+                    <code className="text-xs font-mono text-brand">{v}</code>
+                    <span className="text-xs text-stone group-hover:text-brand transition">
+                      {copiedVar === v ? '✓ Copied!' : 'Copy'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <h3 className="font-semibold text-amber-800 mb-2">💡 How It Works</h3>
+            <ul className="text-xs text-amber-700 space-y-1.5 list-disc list-inside">
+              <li>Leave a field blank to use the default text</li>
+              <li>Use variables in square brackets to insert dynamic data</li>
+              <li>Logo changes apply to all future PDFs immediately</li>
+              <li>Financial data (fees, items) is always pulled live from the database</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
