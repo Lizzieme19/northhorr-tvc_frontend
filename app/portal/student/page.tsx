@@ -45,23 +45,23 @@ export default function StudentDashboard() {
       switch (docType) {
         case 'letter_of_acceptance':
           endpoint = `/students/${profile.id}/documents/letter-of-acceptance`;
-          filename = `Letter_of_Acceptance_${profile.admission_no}.docx`;
+          filename = `Letter_of_Acceptance_${profile.admission_no}.pdf`;
           break;
         case 'admission_for_training':
           endpoint = `/students/${profile.id}/documents/admission-for-training`;
-          filename = `Admission_for_Training_${profile.admission_no}.docx`;
+          filename = `Admission_for_Training_${profile.admission_no}.pdf`;
           break;
         case 'fee_structure':
           endpoint = `/students/${profile.id}/documents/fee-structure`;
-          filename = `Fee_Structure_${profile.admission_no}.docx`;
+          filename = `Fee_Structure_${profile.admission_no}.pdf`;
           break;
         case 'personal_information':
           endpoint = `/students/${profile.id}/documents/personal-information`;
-          filename = `Student_Personal_Information_${profile.admission_no}.docx`;
+          filename = `Student_Personal_Information_${profile.admission_no}.pdf`;
           break;
         default:
           endpoint = `/students/documents/${docType}`;
-          filename = `${docType.replace('_', ' ').toUpperCase()}.docx`;
+          filename = `${docType.replace('_', ' ').toUpperCase()}.pdf`;
       }
       
       const response = await api.get(endpoint, {
