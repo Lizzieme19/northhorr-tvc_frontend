@@ -4060,35 +4060,220 @@ function CoursesTab() {
 // ─── Inline Document Templates Tab ───────────────────────────────────────────
 function DocTemplatesTab() {
   const documentTypes = [
-    { id: 'ADMISSION_LETTER', name: 'Admission Letter', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]'] },
-    { id: 'ACCEPTANCE_LETTER', name: 'Acceptance Letter', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]'] },
-    { id: 'TRAINING_ADMISSION', name: 'Training Admission', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]'] },
-    { id: 'FEE_STRUCTURE', name: 'Fee Structure', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[ACADEMIC_YEAR]'] },
-    { id: 'PERSONAL_INFO', name: 'Personal Info Sheet', vars: ['[STUDENT_NAME]', '[ADMISSION_NO]'] },
-    { id: 'LPO', name: 'Local Purchase Order (LPO)', vars: ['[SUPPLIER_NAME]', '[LPO_NO]', '[TOTAL_AMOUNT]', '[DATE]'] },
-    { id: 'RFQ', name: 'Request for Quotation (RFQ)', vars: ['[RFQ_NO]', '[DATE]', '[CLOSING_DATE]'] },
-    { id: 'GRN', name: 'Goods Received Note (GRN)', vars: ['[GRN_NO]', '[DATE]', '[SUPPLIER_NAME]'] },
-    { id: 'SUPPLIER_INVOICE', name: 'Supplier Invoice', vars: ['[INVOICE_NO]', '[DATE]', '[SUPPLIER_NAME]', '[TOTAL_AMOUNT]'] },
+    {
+      id: 'ADMISSION_LETTER',
+      name: 'Admission Letter (Training)',
+      vars: [
+        '[STUDENT_NAME]', '[ADMISSION_NO]', '[REF_NO]', '[PROGRAMME]',
+        '[REPORTING_DATE]', '[REPORTING_DEADLINE]', '[COURSE_DURATION]', '[DATE]',
+      ],
+    },
+    {
+      id: 'ACCEPTANCE_LETTER',
+      name: 'Acceptance Letter',
+      vars: [
+        '[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]',
+        '[REPORTING_DATE]', '[REPORTING_DEADLINE]',
+      ],
+    },
+    {
+      id: 'TRAINING_ADMISSION',
+      name: 'Training Admission Form',
+      vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]', '[ACADEMIC_YEAR]'],
+    },
+    {
+      id: 'FEE_STRUCTURE',
+      name: 'Fee Structure',
+      vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[ACADEMIC_YEAR]', '[DATE]'],
+    },
+    {
+      id: 'PERSONAL_INFO',
+      name: 'Personal Info Sheet',
+      vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]'],
+    },
+    {
+      id: 'LPO',
+      name: 'Local Purchase Order (LPO)',
+      vars: ['[SUPPLIER_NAME]', '[SUPPLIER_ADDRESS]', '[LPO_NO]', '[DATE]', '[DELIVERY_DATE]', '[TOTAL_AMOUNT]'],
+    },
+    {
+      id: 'RFQ',
+      name: 'Request for Quotation (RFQ)',
+      vars: ['[RFQ_NO]', '[DATE]', '[CLOSING_DATE]', '[CONTACT_PERSON]', '[CONTACT_EMAIL]'],
+    },
+    {
+      id: 'GRN',
+      name: 'Goods Received Note (GRN)',
+      vars: ['[GRN_NO]', '[DATE]', '[SUPPLIER_NAME]', '[LPO_NO]', '[RECEIVED_BY]'],
+    },
+    {
+      id: 'SUPPLIER_INVOICE',
+      name: 'Supplier Invoice',
+      vars: ['[INVOICE_NO]', '[DATE]', '[SUPPLIER_NAME]', '[SUPPLIER_ADDRESS]', '[TOTAL_AMOUNT]', '[LPO_NO]'],
+    },
   ];
+
+  const defaultTextBlocks: Record<string, Record<string, string>> = {
+    ADMISSION_LETTER: {
+      intro: 'Following your application, I am pleased to inform you that you have been offered a chance to study [PROGRAMME] at North Horr Technical and Vocational College.',
+      duration_note: 'The course will take [COURSE_DURATION] academic years. Continuance of your registration for the subsequent years will depend on evidence of your satisfactory class progress and payment of fees.',
+      qualification_note: 'This offer is on the basis of your qualifications presented in your application forms which are subject to satisfactory verification by college authorities. Any information found to be false will automatically lead to your disqualification.',
+      conditions_intro: 'The offer is also subject to the following conditions;',
+      condition_a: 'Your acceptance to pay the required fees as per the fee structure on or before admission.',
+      condition_b: 'Your agreement to adhere to the rules and regulations governing the conduct and discipline of trainees of North Horr TVC.',
+      condition_c: 'Production of Original certificates on the day of registration for verification purposes.',
+      condition_d: 'Please note that fee is payable at the beginning of every year or term. You are advised to apply for government scholarship, loan and bursary through www.hef.co.ke to cater for fees and other personal expenses.',
+      banking_details: "You are required to pay fees in Banker's Draft or cash deposit into the college's bank account with the following details; Name: Kenya Commercial Bank, A/C No.: 127956824, A/C Name: North Horr Technical and Vocational College. The college does not accept personal cheques, money orders, postal orders or cash payments.",
+      accommodation_note: 'You will arrange for your own accommodation, living expenses, transport and stationery.',
+      forms_note: 'If you accept admission under these conditions, you are requested to fill and sign the following forms, which are attached to this letter, NHTVC/ADM/1, NHTVC/ADM/2 and NHTVC/ADM/3 and returned to the college on reporting.',
+      closing: 'I take this opportunity to congratulate you on your admission to the college. I wish you success in your academic pursuit at North Horr TVC.',
+      signatory_name: 'JOHN KIPKEMBOI CHUMBA',
+      signatory_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    ACCEPTANCE_LETTER: {
+      intro: 'We are pleased to confirm your acceptance of the offer of admission to North Horr Technical and Vocational College for the [PROGRAMME] programme commencing [DATE].',
+      reporting_instruction: 'You are required to report to the college on [REPORTING_DATE] and not later than [REPORTING_DEADLINE]. Failure to report by the deadline without prior written communication may result in forfeiture of your admission.',
+      conditions_intro: 'By accepting this offer, you confirm that you agree to the following;',
+      condition_1: 'You will abide by all rules, regulations, and policies of North Horr Technical and Vocational College.',
+      condition_2: 'You will pay all applicable fees by the stipulated deadlines as per the college fee structure.',
+      condition_3: 'You understand that continued enrolment is subject to satisfactory academic progress and conduct.',
+      closing: 'We look forward to welcoming you to North Horr TVC. Should you have any queries, please contact the Admissions Office.',
+      signatory_name: 'JOHN KIPKEMBOI CHUMBA',
+      signatory_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    TRAINING_ADMISSION: {
+      header_note: 'NORTH HORR TECHNICAL AND VOCATIONAL COLLEGE',
+      subheader: 'STUDENT TRAINING ADMISSION FORM',
+      instruction: 'Please complete all sections of this form in BLOCK LETTERS. Attach certified copies of all supporting documents. Incomplete forms will not be processed.',
+      declaration: 'I, the undersigned, declare that all information provided in this form is true, complete, and correct to the best of my knowledge. I understand that providing false information will lead to automatic disqualification and any admission offered will be withdrawn.',
+      signatory_name: 'JOHN KIPKEMBOI CHUMBA',
+      signatory_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    FEE_STRUCTURE: {
+      intro: 'The following is the official fee structure for the [ACADEMIC_YEAR] academic year for [PROGRAMME] at North Horr Technical and Vocational College.',
+      payment_note: "Fees are payable at the beginning of each year or term via Banker's Draft or cash deposit into the college bank account: Kenya Commercial Bank, A/C No.: 127956824, A/C Name: North Horr Technical and Vocational College.",
+      scholarship_note: 'Students are encouraged to apply for government scholarships, loans, and bursaries through www.hef.co.ke to assist with fees and other personal expenses.',
+      footer_note: 'The college reserves the right to revise the fee structure. Any changes will be communicated in advance.',
+      signatory_name: 'JOHN KIPKEMBOI CHUMBA',
+      signatory_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    PERSONAL_INFO: {
+      intro: 'Please complete this Personal Information Sheet accurately. This information will be used for official college records and communication.',
+      instruction: 'Fill in all fields in BLOCK LETTERS. Fields marked with (*) are mandatory. Submit this form to the Admissions Office together with all required supporting documents.',
+      privacy_note: 'The information provided on this form is collected for the purpose of student registration and college administration only. It will be kept confidential and will not be shared with third parties without your consent, except as required by law.',
+      signatory_name: 'JOHN KIPKEMBOI CHUMBA',
+      signatory_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    LPO: {
+      intro: 'North Horr Technical and Vocational College hereby issues this Local Purchase Order to the supplier named above. Please supply the items listed below as per the specifications and quantities indicated.',
+      terms: 'Payment Terms: Payment will be made within 30 days of delivery and receipt of a valid tax invoice. Delivery must be made to the college stores by [DELIVERY_DATE]. All goods must conform to the specifications and quantities stated herein. The college reserves the right to reject any goods that do not meet the required standards.',
+      footer_note: 'This LPO is issued subject to the Public Procurement and Asset Disposal Act, 2015 and the regulations thereunder. Any variation to this order must be authorised in writing by the Principal.',
+      authorized_by: 'JOHN KIPKEMBOI CHUMBA',
+      authorized_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    RFQ: {
+      intro: 'North Horr Technical and Vocational College invites sealed quotations from eligible suppliers for the supply of goods/services as described below.',
+      instructions: 'Suppliers are requested to submit their quotations in plain sealed envelopes clearly marked with the RFQ reference number to the college by [CLOSING_DATE] at 5:00 PM. Quotations received after the closing date and time will not be considered. The college is not bound to accept the lowest or any quotation.',
+      requirements: 'Quotations must include: (1) Company name, PIN and VAT registration numbers; (2) Unit prices and total amounts inclusive of all taxes; (3) Delivery timeline; (4) Validity period of at least 30 days from closing date.',
+      footer_note: 'For enquiries, contact the Procurement Office. The college reserves the right to accept or reject any quotation without assigning reasons.',
+      authorized_by: 'JOHN KIPKEMBOI CHUMBA',
+      authorized_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    GRN: {
+      intro: 'This Goods Received Note confirms receipt of the goods/services listed below from the supplier as specified in the Local Purchase Order referenced herein.',
+      condition_note: 'The goods received have been inspected and are confirmed to be in good condition and conform to the specifications stated in the LPO, unless noted otherwise in the remarks column.',
+      footer_note: 'Any discrepancies in quantity or quality must be reported to the supplier and the Procurement Officer within 48 hours of delivery. This document must be presented when submitting payment invoices.',
+      received_by_title: 'STORES OFFICER - NORTH HORR TVC',
+      verified_by_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+    SUPPLIER_INVOICE: {
+      intro: 'This invoice is issued by the supplier named above to North Horr Technical and Vocational College for goods/services rendered as per the Local Purchase Order referenced herein.',
+      payment_instruction: "Payment should be made within 30 days of receipt of this invoice via bank transfer to the account details provided by the supplier. Please quote the invoice number in all correspondence and payments.",
+      footer_note: 'Certified correct and approved for payment. This invoice is subject to deduction of withholding tax as applicable under the Income Tax Act.',
+      certified_by: 'JOHN KIPKEMBOI CHUMBA',
+      certified_title: 'PRINCIPAL - NORTH HORR TVC',
+    },
+  };
 
   const textBlockKeys: Record<string, { key: string; label: string; hint: string }[]> = {
     ADMISSION_LETTER: [
-      { key: 'intro', label: 'Introductory Paragraph', hint: 'Paragraph shown before the admission details table.' },
-      { key: 'reporting', label: 'Reporting Requirements', hint: 'Instructions for when and how to report to college.' },
-      { key: 'footer_note', label: 'Footer Note', hint: 'Any final note below the signature area.' },
+      { key: 'intro', label: 'Opening Paragraph', hint: 'The first paragraph after "RE: ADMISSION FOR TRAINING". Use [PROGRAMME] for the course name.' },
+      { key: 'duration_note', label: 'Course Duration Note', hint: 'Paragraph about how long the course takes. Use [COURSE_DURATION] e.g. "1/2/3".' },
+      { key: 'qualification_note', label: 'Qualification Verification Notice', hint: 'Paragraph about qualifications being subject to verification.' },
+      { key: 'conditions_intro', label: 'Conditions Introduction', hint: 'Short line introducing the list of conditions.' },
+      { key: 'condition_a', label: 'Condition A – Fee Payment', hint: 'Condition about paying required fees before admission.' },
+      { key: 'condition_b', label: 'Condition B – Rules & Regulations', hint: 'Condition about adhering to college rules and discipline.' },
+      { key: 'condition_c', label: 'Condition C – Original Certificates', hint: 'Condition about producing original certificates on registration day.' },
+      { key: 'condition_d', label: 'Condition D – Scholarships & Bursaries', hint: 'Advice about government scholarships, loans, and bursaries (HEF).' },
+      { key: 'banking_details', label: 'Bank Payment Details', hint: 'Full paragraph with bank name, account number, and payment instructions.' },
+      { key: 'accommodation_note', label: 'Accommodation Note', hint: 'Short paragraph advising students to arrange own accommodation and living expenses.' },
+      { key: 'forms_note', label: 'Attached Forms Note', hint: 'Paragraph listing the forms (NHTVC/ADM/1, ADM/2, ADM/3) to be filled and returned.' },
+      { key: 'closing', label: 'Closing / Congratulations', hint: 'Congratulatory closing paragraph.' },
+      { key: 'signatory_name', label: 'Signatory Name', hint: 'Full name of the person signing (e.g. JOHN KIPKEMBOI CHUMBA).' },
+      { key: 'signatory_title', label: 'Signatory Title', hint: 'Official title (e.g. PRINCIPAL - NORTH HORR TVC).' },
     ],
     ACCEPTANCE_LETTER: [
-      { key: 'intro', label: 'Introductory Paragraph', hint: 'Opening paragraph of the acceptance letter.' },
-      { key: 'conditions', label: 'Conditions of Acceptance', hint: 'Conditions the student must fulfill.' },
+      { key: 'intro', label: 'Opening Paragraph', hint: 'Confirms the student has accepted the offer. Use [PROGRAMME] and [DATE].' },
+      { key: 'reporting_instruction', label: 'Reporting Instructions', hint: 'When and where to report. Use [REPORTING_DATE] and [REPORTING_DEADLINE].' },
+      { key: 'conditions_intro', label: 'Conditions Introduction', hint: 'Short intro line before the acceptance conditions list.' },
+      { key: 'condition_1', label: 'Condition 1 – Rules & Regulations', hint: 'Agreement to abide by college rules.' },
+      { key: 'condition_2', label: 'Condition 2 – Fee Payment', hint: 'Agreement to pay fees by stipulated deadlines.' },
+      { key: 'condition_3', label: 'Condition 3 – Academic Progress', hint: 'Enrolment subject to satisfactory academic progress.' },
+      { key: 'closing', label: 'Closing Paragraph', hint: 'Welcoming statement and contact info.' },
+      { key: 'signatory_name', label: 'Signatory Name', hint: 'Full name of the person signing.' },
+      { key: 'signatory_title', label: 'Signatory Title', hint: 'Official title of the signatory.' },
     ],
     TRAINING_ADMISSION: [
-      { key: 'intro', label: 'Introductory Paragraph', hint: 'Opening paragraph for the training admission form.' },
+      { key: 'header_note', label: 'Institution Name Header', hint: 'Full institution name shown at top of the form.' },
+      { key: 'subheader', label: 'Form Sub-heading', hint: 'Form title shown below the institution header.' },
+      { key: 'instruction', label: 'Filling Instructions', hint: 'Instructions on how to complete the form (block letters, attach documents, etc.).' },
+      { key: 'declaration', label: 'Student Declaration', hint: 'Declaration statement the student signs at the bottom.' },
+      { key: 'signatory_name', label: 'Authorized Signatory Name', hint: 'Name of the authorizing official.' },
+      { key: 'signatory_title', label: 'Authorized Signatory Title', hint: 'Title of the authorizing official.' },
+    ],
+    FEE_STRUCTURE: [
+      { key: 'intro', label: 'Opening Paragraph', hint: 'Introduction to the fee structure. Use [ACADEMIC_YEAR] and [PROGRAMME].' },
+      { key: 'payment_note', label: 'Payment Instructions', hint: 'How and where fees should be paid (bank details included).' },
+      { key: 'scholarship_note', label: 'Scholarship & Bursary Note', hint: 'Information about HEF and government scholarship options.' },
+      { key: 'footer_note', label: 'Footer Disclaimer', hint: 'Disclaimer about fee revision rights.' },
+      { key: 'signatory_name', label: 'Signatory Name', hint: 'Name of the person approving the fee structure.' },
+      { key: 'signatory_title', label: 'Signatory Title', hint: 'Title of the approving official.' },
+    ],
+    PERSONAL_INFO: [
+      { key: 'intro', label: 'Opening / Purpose Statement', hint: 'Brief description of why this form is being collected.' },
+      { key: 'instruction', label: 'Filling Instructions', hint: 'How the student should fill the form (block letters, mandatory fields, etc.).' },
+      { key: 'privacy_note', label: 'Privacy / Data Notice', hint: 'Statement about how the data will be used and kept confidential.' },
+      { key: 'signatory_name', label: 'Authorized Signatory Name', hint: 'Name of the official accepting the form.' },
+      { key: 'signatory_title', label: 'Authorized Signatory Title', hint: 'Title of the official.' },
     ],
     LPO: [
-      { key: 'terms', label: 'Payment Terms Note', hint: 'Payment and delivery terms shown on the LPO.' },
+      { key: 'intro', label: 'Opening Statement', hint: 'Opening paragraph addressing the supplier and describing the purpose of the LPO.' },
+      { key: 'terms', label: 'Payment & Delivery Terms', hint: 'Full payment terms, delivery deadline, and quality requirements. Use [DELIVERY_DATE].' },
+      { key: 'footer_note', label: 'Legal / Procurement Notice', hint: 'Statutory notice referencing the Public Procurement Act or other conditions.' },
+      { key: 'authorized_by', label: 'Authorized By (Name)', hint: 'Name of the authorizing official.' },
+      { key: 'authorized_title', label: 'Authorized By (Title)', hint: 'Title of the authorizing official.' },
     ],
     RFQ: [
-      { key: 'instructions', label: 'Quotation Instructions', hint: 'Instructions for suppliers on how to submit a quotation.' },
+      { key: 'intro', label: 'Invitation Statement', hint: 'Opening paragraph inviting suppliers to submit quotations.' },
+      { key: 'instructions', label: 'Submission Instructions', hint: 'How, where, and by when to submit quotations. Use [CLOSING_DATE].' },
+      { key: 'requirements', label: 'Quotation Requirements', hint: 'What must be included in the quotation (PIN, VAT, prices, timeline, etc.).' },
+      { key: 'footer_note', label: 'Footer / Contact Note', hint: 'Contact information and rights reserved statement.' },
+      { key: 'authorized_by', label: 'Authorized By (Name)', hint: 'Name of the authorizing official.' },
+      { key: 'authorized_title', label: 'Authorized By (Title)', hint: 'Title of the authorizing official.' },
+    ],
+    GRN: [
+      { key: 'intro', label: 'Opening Statement', hint: 'Confirmation that goods have been received from the supplier.' },
+      { key: 'condition_note', label: 'Goods Condition Statement', hint: 'Confirmation that goods are in good condition and conform to LPO specifications.' },
+      { key: 'footer_note', label: 'Discrepancy & Invoice Note', hint: 'Instructions on reporting discrepancies and using GRN with invoices.' },
+      { key: 'received_by_title', label: 'Received By (Title)', hint: 'Title of the stores/receiving officer.' },
+      { key: 'verified_by_title', label: 'Verified By (Title)', hint: 'Title of the verifying official (e.g. Principal).' },
+    ],
+    SUPPLIER_INVOICE: [
+      { key: 'intro', label: 'Invoice Opening Statement', hint: 'Statement explaining what the invoice is for, referencing the LPO.' },
+      { key: 'payment_instruction', label: 'Payment Instructions', hint: 'How and when the college should pay. Reference invoice number in correspondence.' },
+      { key: 'footer_note', label: 'Certification & Tax Note', hint: 'Approval statement and withholding tax notice.' },
+      { key: 'certified_by', label: 'Certified By (Name)', hint: 'Name of the certifying/approving official.' },
+      { key: 'certified_title', label: 'Certified By (Title)', hint: 'Title of the certifying official.' },
     ],
   };
 
@@ -4113,12 +4298,16 @@ function DocTemplatesTab() {
     try {
       const res = await api.get(`/document-templates/${type}`);
       setTemplate(res.data);
-      setTextBlocks(res.data.text_blocks || {});
+      // Merge saved blocks over defaults so empty DB rows still show useful placeholder text
+      const saved = res.data.text_blocks || {};
+      const merged = { ...(defaultTextBlocks[type] || {}), ...saved };
+      setTextBlocks(merged);
       setMinistryLogo(null);
       setCollegeLogo(null);
     } catch {
       setTemplate(null);
-      setTextBlocks({});
+      // Fall back to defaults so the admin sees pre-filled content to edit
+      setTextBlocks(defaultTextBlocks[type] || {});
     } finally {
       setLoading(false);
     }
