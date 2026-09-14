@@ -104,7 +104,7 @@ export const requisitionsApi = {
   create: (data: any) => api.post('/requisitions', data),
   update: (id: string, data: any) => api.patch(`/requisitions/${id}`, data),
   submit: (id: string) => api.patch(`/requisitions/${id}/submit`),
-  approve: (id: string) => api.patch(`/requisitions/${id}/approve`),
+  approve: (id: string, data?: any) => api.patch(`/requisitions/${id}/approve`, data),
   delete: (id: string) => api.delete(`/requisitions/${id}`),
 };
 

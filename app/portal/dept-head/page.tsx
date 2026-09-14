@@ -15,6 +15,7 @@ export default function DeptHeadDashboard() {
   const [students, setStudents] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
+  const [myDepartment, setMyDepartment] = useState<any>(null);
   const [appTotal, setAppTotal] = useState(0);
   const [studentTotal, setStudentTotal] = useState(0);
   const [reqTotal, setReqTotal] = useState(0);
@@ -45,7 +46,13 @@ export default function DeptHeadDashboard() {
         .then(r => { setRequisitions(r.data?.requisitions || []); setReqTotal(r.data?.requisitions?.length || 0); })
         .catch(() => {});
       departmentsApi.getAll()
-        .then(r => setDepartments(Array.isArray(r.data) ? r.data : []))
+        .then(r => {
+          const depts = Array.isArray(r.data) ? r.data : [];
+          setDepartments(depts);
+          // Auto-detect this user's department (they are the head)
+          const mine = depts.find((d: any) => d.head_user_id === user?.id);
+          if (mine) setMyDepartment(mine);
+        })
         .catch(() => setDepartments([]));
     }
   }, [page, tab]);
@@ -89,7 +96,7 @@ export default function DeptHeadDashboard() {
   };
 
   const handleCreateRequisition = () => {
-    setReqForm({ department_id: '', priority: 'MEDIUM', justification: '', items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }] });
+    setReqForm({ department_id: myDepartment?.id || '', priority: 'MEDIUM', justification: '', items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }] });
     setShowReqModal(true);
   };
 
@@ -254,22 +261,50 @@ export default function DeptHeadDashboard() {
                 <div className="space-y-3">
                   {requisitions.length === 0 && <p className="text-stone text-center py-10">No requisitions found.</p>}
                   {requisitions.map(r => (
-                    <div key={r.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-brand-dark">{r.requisition_no}</div>
-                        <div className="text-sm text-stone">{r.department?.name} • {r.items?.length || 0} items • KES {r.total_amount?.toLocaleString()}</div>
-                        <div className="text-xs mt-1">
-                          <span className={`px-2 py-0.5 rounded-full ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' : r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' : r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 'bg-stone/20 text-stone'}`}>
-                            {r.status}
-                          </span>
+                    <div key={r.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-brand-dark">{r.requisition_no}</div>
+                          <div className="text-sm text-stone mt-0.5">{r.department?.name} • {r.items?.length || 0} item{r.items?.length !== 1 ? 's' : ''} • KES {r.total_amount?.toLocaleString()}</div>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' : r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' : r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : r.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-stone/20 text-stone'}`}>
+                              {r.status}
+                            </span>
+                            {r.priority && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.priority === 'URGENT' || r.priority === 'HIGH' ? 'bg-red-100 text-red-800' : r.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                {r.priority}
+                              </span>
+                            )}
+                          </div>
+                          {r.status === 'REJECTED' && r.rejection_reason && (
+                            <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                              <span className="text-red-500 text-sm mt-0.5">⚠</span>
+                              <div>
+                                <div className="text-xs font-semibold text-red-700">Rejection Reason</div>
+                                <div className="text-xs text-red-600 mt-0.5">{r.rejection_reason}</div>
+                              </div>
+                            </div>
+                          )}
+                          {/* Show items summary */}
+                          {r.items && r.items.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {r.items.map((item: any) => (
+                                <div key={item.id} className="text-xs text-stone flex gap-2">
+                                  <span className="font-medium text-brand-dark">{item.item_name}</span>
+                                  <span>×{item.quantity}</span>
+                                  {item.unit_price > 0 && <span>@ KES {item.unit_price?.toLocaleString()}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {r.status === 'DRAFT' && (
-                          <button onClick={() => handleSubmitRequisition(r.id)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
-                            Submit
-                          </button>
-                        )}
+                        <div className="flex gap-2 flex-shrink-0">
+                          {r.status === 'DRAFT' && (
+                            <button onClick={() => handleSubmitRequisition(r.id)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
+                              Submit for Approval
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -460,11 +495,19 @@ export default function DeptHeadDashboard() {
             <h2 className="font-display text-xl text-brand-dark mb-4">Create Purchase Requisition</h2>
             <form onSubmit={handleReqSubmit} className="flex-1 overflow-y-auto space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department *</label>
-                <select name="department_id" required value={reqForm.department_id || ''} onChange={(e) => setReqForm({...reqForm, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                  <option value="">Select Department</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department</label>
+                {myDepartment ? (
+                  <div className="w-full px-4 py-3 rounded-xl border border-stone/20 bg-stone/5 text-sm text-brand-dark flex items-center gap-2">
+                    <span className="text-green-600">✓</span>
+                    <span className="font-medium">{myDepartment.name}</span>
+                    <span className="text-xs text-stone ml-auto">(Your department)</span>
+                  </div>
+                ) : (
+                  <select name="department_id" required value={reqForm.department_id || ''} onChange={(e) => setReqForm({...reqForm, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                    <option value="">Select Department</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Priority</label>

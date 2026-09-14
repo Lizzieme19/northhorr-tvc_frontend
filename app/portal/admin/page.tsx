@@ -8,7 +8,7 @@ import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
-interface Application { id: string; application_no: string; surname: string; other_names: string; email: string; status: string; type: string; created_at: string; course?: { name: string }; department?: { name: string }; [key: string]: any; }
+interface Application { id: string; application_no: string; surname: string; other_names: string; email: string; status: string; type: string; created_at: string; course?: { name: string }; department?: { name: string };[key: string]: any; }
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800',
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    studentsApi.getStats().then(r => setStats(r.data)).catch(() => {});
+    studentsApi.getStats().then(r => setStats(r.data)).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
     applicationsApi.getAll(params).then(r => {
       setApplications(r.data.applications);
       setAppTotal(r.data.pagination.total);
-    }).catch(() => {});
+    }).catch(() => { });
   }, [page, statusFilter, search, tab]);
 
   useEffect(() => {
@@ -146,7 +146,7 @@ export default function AdminDashboard() {
       const response = await applicationsApi.updateStatus(id, { status, review_notes: reviewNotes, intake, year: new Date().getFullYear() });
       setSelectedApp(null);
       setApplications(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-      
+
       // Display student credentials if application was approved
       if (status === 'APPROVED' && response.data.student_credentials) {
         setStudentCredentials(response.data.student_credentials);
@@ -178,11 +178,11 @@ export default function AdminDashboard() {
       formData.append('title', resourceForm.title);
       formData.append('description', resourceForm.description);
       formData.append('category', resourceForm.category);
-      
+
       await api.post('/resources', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       toast.success('Resource uploaded successfully!');
       setResourceFile(null);
       setResourceForm({ title: '', description: '', category: 'Prospectus' });
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
       },
       cancel: {
         label: 'Cancel',
-        onClick: () => {},
+        onClick: () => { },
       },
     });
   };
@@ -233,9 +233,9 @@ export default function AdminDashboard() {
       if (newsImage) {
         formData.append('image', newsImage);
       }
-      
+
       await newsApi.create(formData);
-      
+
       toast.success('News created successfully!');
       setNewsForm({ title: '', excerpt: '', content: '', category: 'News', is_featured: false, is_published: false });
       setNewsImage(null);
@@ -263,7 +263,7 @@ export default function AdminDashboard() {
       },
       cancel: {
         label: 'Cancel',
-        onClick: () => {},
+        onClick: () => { },
       },
     });
   };
@@ -274,21 +274,21 @@ export default function AdminDashboard() {
     setUploadingAppDocs(true);
     try {
       const formData = new FormData();
-      
+
       // Add document files
       Object.entries(appDocFiles).forEach(([key, file]) => {
         if (file) formData.append(key, file);
       });
-      
+
       // Add editable form data
       Object.entries(editableAppData).forEach(([key, value]) => {
         if (value) formData.append(key, value.toString());
       });
-      
+
       await api.patch(`/applications/${selectedApp.id}/documents`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       toast.success('Application updated successfully!');
       setAppDocFiles({
         doc_kcpe: null,
@@ -297,7 +297,7 @@ export default function AdminDashboard() {
         doc_birth_cert: null,
         doc_medical: null,
       });
-      
+
       const updated = await applicationsApi.getAll({ page, limit: 15, search, status: statusFilter });
       setApplications(updated.data.applications);
       setSelectedApp(updated.data.applications.find((a: Application) => a.id === selectedApp.id) || null);
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
       },
       cancel: {
         label: 'Cancel',
-        onClick: () => {},
+        onClick: () => { },
       },
     });
   };
@@ -429,7 +429,7 @@ export default function AdminDashboard() {
       },
       cancel: {
         label: 'Cancel',
-        onClick: () => {},
+        onClick: () => { },
       },
     });
   };
@@ -483,9 +483,8 @@ export default function AdminDashboard() {
           <button
             key={t.key}
             onClick={() => setTab(t.key as any)}
-            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${
-              tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'
-            }`}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'
+              }`}
           >
             {t.label}
           </button>
@@ -634,7 +633,7 @@ export default function AdminDashboard() {
                     type="text"
                     required
                     value={resourceForm.title}
-                    onChange={e => setResourceForm({...resourceForm, title: e.target.value})}
+                    onChange={e => setResourceForm({ ...resourceForm, title: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   />
                 </div>
@@ -643,7 +642,7 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={resourceForm.category}
-                    onChange={e => setResourceForm({...resourceForm, category: e.target.value})}
+                    onChange={e => setResourceForm({ ...resourceForm, category: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="Prospectus">Prospectus</option>
@@ -656,7 +655,7 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
                   <textarea
                     value={resourceForm.description}
-                    onChange={e => setResourceForm({...resourceForm, description: e.target.value})}
+                    onChange={e => setResourceForm({ ...resourceForm, description: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     rows={3}
                   />
@@ -729,7 +728,7 @@ export default function AdminDashboard() {
                     type="text"
                     required
                     value={feeTypeForm.name}
-                    onChange={e => setFeeTypeForm({...feeTypeForm, name: e.target.value})}
+                    onChange={e => setFeeTypeForm({ ...feeTypeForm, name: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     placeholder="e.g. Tuition Fee"
                   />
@@ -740,7 +739,7 @@ export default function AdminDashboard() {
                     type="text"
                     required
                     value={feeTypeForm.code}
-                    onChange={e => setFeeTypeForm({...feeTypeForm, code: e.target.value.toUpperCase()})}
+                    onChange={e => setFeeTypeForm({ ...feeTypeForm, code: e.target.value.toUpperCase() })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm font-mono"
                     placeholder="e.g. TUITION"
                   />
@@ -749,7 +748,7 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
                   <textarea
                     value={feeTypeForm.description}
-                    onChange={e => setFeeTypeForm({...feeTypeForm, description: e.target.value})}
+                    onChange={e => setFeeTypeForm({ ...feeTypeForm, description: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     rows={2}
                     placeholder="Optional description..."
@@ -763,7 +762,7 @@ export default function AdminDashboard() {
                     min="0"
                     step="0.01"
                     value={feeTypeForm.amount}
-                    onChange={e => setFeeTypeForm({...feeTypeForm, amount: e.target.value})}
+                    onChange={e => setFeeTypeForm({ ...feeTypeForm, amount: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     placeholder="e.g. 15000"
                   />
@@ -773,7 +772,7 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={feeTypeForm.applies_to}
-                    onChange={e => setFeeTypeForm({...feeTypeForm, applies_to: e.target.value})}
+                    onChange={e => setFeeTypeForm({ ...feeTypeForm, applies_to: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="ALL">All Students</option>
@@ -786,7 +785,7 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Course</label>
                     <select
                       value={feeTypeForm.course_id}
-                      onChange={e => setFeeTypeForm({...feeTypeForm, course_id: e.target.value})}
+                      onChange={e => setFeeTypeForm({ ...feeTypeForm, course_id: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     >
                       <option value="">Select course...</option>
@@ -799,7 +798,7 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Level</label>
                     <select
                       value={feeTypeForm.level}
-                      onChange={e => setFeeTypeForm({...feeTypeForm, level: e.target.value})}
+                      onChange={e => setFeeTypeForm({ ...feeTypeForm, level: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     >
                       <option value="">Select level...</option>
@@ -814,7 +813,7 @@ export default function AdminDashboard() {
                     <input
                       type="checkbox"
                       checked={feeTypeForm.is_required}
-                      onChange={e => setFeeTypeForm({...feeTypeForm, is_required: e.target.checked})}
+                      onChange={e => setFeeTypeForm({ ...feeTypeForm, is_required: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
                     <span className="text-sm text-brand-dark">Required</span>
@@ -823,7 +822,7 @@ export default function AdminDashboard() {
                     <input
                       type="checkbox"
                       checked={feeTypeForm.term_based}
-                      onChange={e => setFeeTypeForm({...feeTypeForm, term_based: e.target.checked})}
+                      onChange={e => setFeeTypeForm({ ...feeTypeForm, term_based: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
                     <span className="text-sm text-brand-dark">Term-based</span>
@@ -832,7 +831,7 @@ export default function AdminDashboard() {
                     <input
                       type="checkbox"
                       checked={feeTypeForm.is_disabled}
-                      onChange={e => setFeeTypeForm({...feeTypeForm, is_disabled: e.target.checked})}
+                      onChange={e => setFeeTypeForm({ ...feeTypeForm, is_disabled: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
                     <span className="text-sm text-brand-dark">Disabled</span>
@@ -909,7 +908,7 @@ export default function AdminDashboard() {
                     type="text"
                     required
                     value={termForm.name}
-                    onChange={e => setTermForm({...termForm, name: e.target.value})}
+                    onChange={e => setTermForm({ ...termForm, name: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     placeholder="e.g. Term 1 2024"
                   />
@@ -920,7 +919,7 @@ export default function AdminDashboard() {
                     type="text"
                     required
                     value={termForm.academic_year}
-                    onChange={e => setTermForm({...termForm, academic_year: e.target.value})}
+                    onChange={e => setTermForm({ ...termForm, academic_year: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     placeholder="e.g. 2024/2025"
                   />
@@ -930,7 +929,7 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={termForm.intake}
-                    onChange={e => setTermForm({...termForm, intake: e.target.value})}
+                    onChange={e => setTermForm({ ...termForm, intake: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="">Select Intake</option>
@@ -946,7 +945,7 @@ export default function AdminDashboard() {
                     min="0"
                     step="0.01"
                     value={termForm.term_cost}
-                    onChange={e => setTermForm({...termForm, term_cost: e.target.value})}
+                    onChange={e => setTermForm({ ...termForm, term_cost: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     placeholder="e.g. 45000"
                   />
@@ -958,7 +957,7 @@ export default function AdminDashboard() {
                       type="date"
                       required
                       value={termForm.start_date}
-                      onChange={e => setTermForm({...termForm, start_date: e.target.value})}
+                      onChange={e => setTermForm({ ...termForm, start_date: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     />
                   </div>
@@ -968,7 +967,7 @@ export default function AdminDashboard() {
                       type="date"
                       required
                       value={termForm.end_date}
-                      onChange={e => setTermForm({...termForm, end_date: e.target.value})}
+                      onChange={e => setTermForm({ ...termForm, end_date: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     />
                   </div>
@@ -978,7 +977,7 @@ export default function AdminDashboard() {
                     <input
                       type="checkbox"
                       checked={termForm.is_active}
-                      onChange={e => setTermForm({...termForm, is_active: e.target.checked})}
+                      onChange={e => setTermForm({ ...termForm, is_active: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
                     <span className="text-sm text-brand-dark">Active Term</span>
@@ -1063,7 +1062,7 @@ export default function AdminDashboard() {
                     type="text"
                     required
                     value={newsForm.title}
-                    onChange={e => setNewsForm({...newsForm, title: e.target.value})}
+                    onChange={e => setNewsForm({ ...newsForm, title: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   />
                 </div>
@@ -1072,7 +1071,7 @@ export default function AdminDashboard() {
                   <textarea
                     required
                     value={newsForm.excerpt}
-                    onChange={e => setNewsForm({...newsForm, excerpt: e.target.value})}
+                    onChange={e => setNewsForm({ ...newsForm, excerpt: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     rows={2}
                   />
@@ -1081,7 +1080,7 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Content</label>
                   <textarea
                     value={newsForm.content}
-                    onChange={e => setNewsForm({...newsForm, content: e.target.value})}
+                    onChange={e => setNewsForm({ ...newsForm, content: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     rows={4}
                   />
@@ -1091,7 +1090,7 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={newsForm.category}
-                    onChange={e => setNewsForm({...newsForm, category: e.target.value})}
+                    onChange={e => setNewsForm({ ...newsForm, category: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="News">News</option>
@@ -1104,7 +1103,7 @@ export default function AdminDashboard() {
                     <input
                       type="checkbox"
                       checked={newsForm.is_featured}
-                      onChange={e => setNewsForm({...newsForm, is_featured: e.target.checked})}
+                      onChange={e => setNewsForm({ ...newsForm, is_featured: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
                     <span className="text-sm text-brand-dark">Featured</span>
@@ -1113,7 +1112,7 @@ export default function AdminDashboard() {
                     <input
                       type="checkbox"
                       checked={newsForm.is_published}
-                      onChange={e => setNewsForm({...newsForm, is_published: e.target.checked})}
+                      onChange={e => setNewsForm({ ...newsForm, is_published: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
                     <span className="text-sm text-brand-dark">Published</span>
@@ -1193,7 +1192,7 @@ export default function AdminDashboard() {
                   formData.append('is_featured', galleryForm.is_featured.toString());
                   formData.append('display_order', galleryForm.display_order.toString());
                   if (galleryImage) formData.append('image', galleryImage);
-                  
+
                   await galleryApi.create(formData);
                   toast.success('Gallery item uploaded successfully!');
                   setGalleryImage(null);
@@ -1211,7 +1210,7 @@ export default function AdminDashboard() {
                     type="text"
                     required
                     value={galleryForm.title}
-                    onChange={e => setGalleryForm({...galleryForm, title: e.target.value})}
+                    onChange={e => setGalleryForm({ ...galleryForm, title: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   />
                 </div>
@@ -1219,7 +1218,7 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
                   <textarea
                     value={galleryForm.description}
-                    onChange={e => setGalleryForm({...galleryForm, description: e.target.value})}
+                    onChange={e => setGalleryForm({ ...galleryForm, description: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     rows={2}
                   />
@@ -1229,7 +1228,7 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={galleryForm.category}
-                    onChange={e => setGalleryForm({...galleryForm, category: e.target.value})}
+                    onChange={e => setGalleryForm({ ...galleryForm, category: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="GENERAL">General</option>
@@ -1244,7 +1243,7 @@ export default function AdminDashboard() {
                     <input
                       type="checkbox"
                       checked={galleryForm.is_featured}
-                      onChange={e => setGalleryForm({...galleryForm, is_featured: e.target.checked})}
+                      onChange={e => setGalleryForm({ ...galleryForm, is_featured: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
                     <span className="text-sm text-brand-dark">Featured</span>
@@ -1255,7 +1254,7 @@ export default function AdminDashboard() {
                   <input
                     type="number"
                     value={galleryForm.display_order}
-                    onChange={e => setGalleryForm({...galleryForm, display_order: parseInt(e.target.value) || 0})}
+                    onChange={e => setGalleryForm({ ...galleryForm, display_order: parseInt(e.target.value) || 0 })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   />
                 </div>
@@ -1315,7 +1314,7 @@ export default function AdminDashboard() {
                                   }
                                 },
                               },
-                              cancel: { label: 'Cancel', onClick: () => {} },
+                              cancel: { label: 'Cancel', onClick: () => { } },
                             });
                           }}
                           className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
@@ -1370,7 +1369,7 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={progressionForm.student_id}
-                    onChange={e => setProgressionForm({...progressionForm, student_id: e.target.value})}
+                    onChange={e => setProgressionForm({ ...progressionForm, student_id: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="">Select a student</option>
@@ -1395,7 +1394,7 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={progressionForm.new_term_id}
-                    onChange={e => setProgressionForm({...progressionForm, new_term_id: e.target.value})}
+                    onChange={e => setProgressionForm({ ...progressionForm, new_term_id: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="">Select a term</option>
@@ -1411,7 +1410,7 @@ export default function AdminDashboard() {
                   <input
                     type="text"
                     value={progressionForm.new_level}
-                    onChange={e => setProgressionForm({...progressionForm, new_level: e.target.value})}
+                    onChange={e => setProgressionForm({ ...progressionForm, new_level: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     placeholder="e.g., L4, L5, L6"
                   />
@@ -1420,7 +1419,7 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes</label>
                   <textarea
                     value={progressionForm.notes}
-                    onChange={e => setProgressionForm({...progressionForm, notes: e.target.value})}
+                    onChange={e => setProgressionForm({ ...progressionForm, notes: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     rows={2}
                     placeholder="Optional notes about this progression"
@@ -1532,146 +1531,146 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
             <h2 className="font-display text-xl text-brand-dark mb-1">Review Application</h2>
             <p className="text-sm text-stone mb-4">{selectedApp.application_no} — {selectedApp.surname} {selectedApp.other_names}</p>
-            
+
             <div className="flex-1 overflow-y-auto mb-5 pr-2 space-y-4 text-sm bg-stone/5 p-4 rounded-xl">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div className="text-stone">Course:</div><div className="font-medium text-brand-dark">{selectedApp.course?.name || '—'}</div>
                 <div className="text-stone">Type:</div><div className="font-medium text-brand-dark">{selectedApp.type}</div>
                 <div className="text-stone">Gender:</div><div className="font-medium text-brand-dark">{selectedApp.gender || '—'}</div>
                 <div className="text-stone">DOB:</div><div className="font-medium text-brand-dark">{selectedApp.date_of_birth ? new Date(selectedApp.date_of_birth).toLocaleDateString() : '—'}</div>
-                
+
                 <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Personal Information (Editable)</div>
                 <div className="text-stone">Surname:</div>
                 <input
                   type="text"
                   value={editableAppData?.surname || ''}
-                  onChange={e => setEditableAppData({...editableAppData, surname: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, surname: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Other Names:</div>
                 <input
                   type="text"
                   value={editableAppData?.other_names || ''}
-                  onChange={e => setEditableAppData({...editableAppData, other_names: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, other_names: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Email:</div>
                 <input
                   type="email"
                   value={editableAppData?.email || ''}
-                  onChange={e => setEditableAppData({...editableAppData, email: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, email: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Phone:</div>
                 <input
                   type="text"
                   value={editableAppData?.phone || ''}
-                  onChange={e => setEditableAppData({...editableAppData, phone: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, phone: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Address:</div>
                 <input
                   type="text"
                   value={editableAppData?.address || ''}
-                  onChange={e => setEditableAppData({...editableAppData, address: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, address: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
-                
+
                 <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Academic Info (Editable)</div>
                 <div className="text-stone">Previous School:</div>
                 <input
                   type="text"
                   value={editableAppData?.previous_school || ''}
-                  onChange={e => setEditableAppData({...editableAppData, previous_school: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, previous_school: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">KCPE Index:</div>
                 <input
                   type="text"
                   value={editableAppData?.kcpe_index || ''}
-                  onChange={e => setEditableAppData({...editableAppData, kcpe_index: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, kcpe_index: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">KCPE Marks:</div>
                 <input
                   type="text"
                   value={editableAppData?.kcpe_marks || ''}
-                  onChange={e => setEditableAppData({...editableAppData, kcpe_marks: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, kcpe_marks: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">KCSE Index:</div>
                 <input
                   type="text"
                   value={editableAppData?.kcse_index || ''}
-                  onChange={e => setEditableAppData({...editableAppData, kcse_index: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, kcse_index: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">KCSE Grade:</div>
                 <input
                   type="text"
                   value={editableAppData?.kcse_grade || ''}
-                  onChange={e => setEditableAppData({...editableAppData, kcse_grade: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, kcse_grade: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
-                
+
                 <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Parent & Emergency Info (Editable)</div>
                 <div className="text-stone">Parent Name:</div>
                 <input
                   type="text"
                   value={editableAppData?.parent_names || ''}
-                  onChange={e => setEditableAppData({...editableAppData, parent_names: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, parent_names: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Parent Relationship:</div>
                 <input
                   type="text"
                   value={editableAppData?.parent_relationship || ''}
-                  onChange={e => setEditableAppData({...editableAppData, parent_relationship: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, parent_relationship: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Parent Phone:</div>
                 <input
                   type="text"
                   value={editableAppData?.parent_phone || ''}
-                  onChange={e => setEditableAppData({...editableAppData, parent_phone: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, parent_phone: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Parent Email:</div>
                 <input
                   type="email"
                   value={editableAppData?.parent_email || ''}
-                  onChange={e => setEditableAppData({...editableAppData, parent_email: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, parent_email: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Emergency Contact:</div>
                 <input
                   type="text"
                   value={editableAppData?.emergency_person || ''}
-                  onChange={e => setEditableAppData({...editableAppData, emergency_person: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, emergency_person: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Emergency Phone:</div>
                 <input
                   type="text"
                   value={editableAppData?.emergency_phone || ''}
-                  onChange={e => setEditableAppData({...editableAppData, emergency_phone: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, emergency_phone: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Medical Conditions:</div>
                 <input
                   type="text"
                   value={editableAppData?.medical_conditions || ''}
-                  onChange={e => setEditableAppData({...editableAppData, medical_conditions: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, medical_conditions: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
                 <div className="text-stone">Disability:</div>
                 <input
                   type="text"
                   value={editableAppData?.disability || ''}
-                  onChange={e => setEditableAppData({...editableAppData, disability: e.target.value})}
+                  onChange={e => setEditableAppData({ ...editableAppData, disability: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
-                
+
                 <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Uploaded Documents</div>
                 <div className="col-span-2 flex flex-wrap gap-2">
                   {selectedApp.doc_kcpe && <a href={selectedApp.doc_kcpe} target="_blank" className="px-3 py-1 bg-white border border-stone/20 rounded-full text-xs hover:bg-brand/10 hover:text-brand transition">📄 KCPE</a>}
@@ -1686,27 +1685,27 @@ export default function AdminDashboard() {
                 <div className="col-span-2 space-y-2">
                   <div className="grid grid-cols-2 gap-2">
                     <label className="flex items-center gap-2 text-xs">
-                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_kcpe: e.target.files?.[0] || null})} className="hidden" />
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({ ...appDocFiles, doc_kcpe: e.target.files?.[0] || null })} className="hidden" />
                       <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 KCPE</span>
                       {appDocFiles.doc_kcpe && <span className="text-xs text-green-600">✓</span>}
                     </label>
                     <label className="flex items-center gap-2 text-xs">
-                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_kcse: e.target.files?.[0] || null})} className="hidden" />
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({ ...appDocFiles, doc_kcse: e.target.files?.[0] || null })} className="hidden" />
                       <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 KCSE</span>
                       {appDocFiles.doc_kcse && <span className="text-xs text-green-600">✓</span>}
                     </label>
                     <label className="flex items-center gap-2 text-xs">
-                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_id_copy: e.target.files?.[0] || null})} className="hidden" />
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({ ...appDocFiles, doc_id_copy: e.target.files?.[0] || null })} className="hidden" />
                       <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 ID Copy</span>
                       {appDocFiles.doc_id_copy && <span className="text-xs text-green-600">✓</span>}
                     </label>
                     <label className="flex items-center gap-2 text-xs">
-                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_birth_cert: e.target.files?.[0] || null})} className="hidden" />
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({ ...appDocFiles, doc_birth_cert: e.target.files?.[0] || null })} className="hidden" />
                       <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 Birth Cert</span>
                       {appDocFiles.doc_birth_cert && <span className="text-xs text-green-600">✓</span>}
                     </label>
                     <label className="flex items-center gap-2 text-xs">
-                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({...appDocFiles, doc_medical: e.target.files?.[0] || null})} className="hidden" />
+                      <input type="file" accept=".pdf,image/*" onChange={e => setAppDocFiles({ ...appDocFiles, doc_medical: e.target.files?.[0] || null })} className="hidden" />
                       <span className="px-2 py-1 bg-brand/10 text-brand rounded cursor-pointer hover:bg-brand/20">📄 Medical</span>
                       {appDocFiles.doc_medical && <span className="text-xs text-green-600">✓</span>}
                     </label>
@@ -1817,11 +1816,11 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
       .then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); })
-      .catch(() => {});
+      .catch(() => { });
   }, [page, search]);
 
   useEffect(() => {
-    api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => {});
+    api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => { });
   }, []);
 
   const handleDownloadIDCard = async (studentId: string) => {
@@ -2068,7 +2067,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
 
       // Update the student profile data
       await studentsApi.update(selectedStudent.id, editForm);
-      
+
       // Upload documents if any files are selected
       const formData = new FormData();
       if (docFiles.id_copy_front) formData.append('id_copy_front', docFiles.id_copy_front);
@@ -2078,25 +2077,25 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       if (docFiles.kcse_certificate) formData.append('kcse_certificate', docFiles.kcse_certificate);
       if (docFiles.birth_certificate) formData.append('birth_certificate', docFiles.birth_certificate);
       if (docFiles.other_documents) formData.append('other_documents', docFiles.other_documents);
-      
-      if (formData.has('id_copy_front') || formData.has('id_copy_back') || 
-          formData.has('parent_id_copy_front') || formData.has('parent_id_copy_back') ||
-          formData.has('kcse_certificate') ||
-          formData.has('birth_certificate') || formData.has('other_documents')) {
+
+      if (formData.has('id_copy_front') || formData.has('id_copy_back') ||
+        formData.has('parent_id_copy_front') || formData.has('parent_id_copy_back') ||
+        formData.has('kcse_certificate') ||
+        formData.has('birth_certificate') || formData.has('other_documents')) {
         setUploadingDocs(true);
         await api.post(`/students/${selectedStudent.id}/documents`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
-      
+
       const updated = await studentsApi.getAll({ page, limit: 15, search });
       setStudents(updated.data.students);
       setSelectedStudent(null);
       setProfilePhoto(null);
-      setDocFiles({ 
-        id_copy_front: null, 
-        id_copy_back: null, 
-        parent_id_copy_front: null, 
+      setDocFiles({
+        id_copy_front: null,
+        id_copy_back: null,
+        parent_id_copy_front: null,
         parent_id_copy_back: null,
         kcse_certificate: null,
         birth_certificate: null,
@@ -2264,8 +2263,8 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                       <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                       <button onClick={() => { setShowProgressionModal(true); setProgressionForm({ ...progressionForm, toLevel: s.level }); setSelectedStudent(s); }} className="text-purple-600 hover:text-purple-800 font-medium text-xs transition">Promote</button>
-                      <button 
-                        onClick={() => handleDownloadIDCard(s.id)} 
+                      <button
+                        onClick={() => handleDownloadIDCard(s.id)}
                         disabled={downloadingIDCard === s.id || !s.profile_picture_url}
                         className="text-orange-600 hover:text-orange-800 font-medium text-xs transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
@@ -2293,7 +2292,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
           <div className="bg-white rounded-3xl p-8 w-full max-w-3xl shadow-2xl max-h-[90vh] flex flex-col">
             <h2 className="font-display text-xl text-brand-dark mb-1">Edit Student Profile</h2>
             <p className="text-sm text-stone mb-4">{selectedStudent.admission_no} — {selectedStudent.application?.surname} {selectedStudent.application?.other_names}</p>
-            
+
             <form onSubmit={handleUpdateStudent} className="flex-1 overflow-y-auto mb-5 pr-2 space-y-6">
               {/* Profile Photo */}
               <div>
@@ -2472,7 +2471,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               {/* Document Uploads */}
               <div>
                 <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Document Uploads</h3>
-                
+
                 {/* Existing Documents */}
                 <div className="mb-4 p-4 bg-cream-deep/30 rounded-xl">
                   <h4 className="text-sm font-semibold text-brand-dark mb-3">Uploaded Documents</h4>
@@ -2517,53 +2516,53 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                         📄 Other Documents
                       </a>
                     )}
-                    {!selectedStudent.id_copy_front_url && !selectedStudent.id_copy_back_url && 
-                     !selectedStudent.parent_id_copy_front_url && !selectedStudent.parent_id_copy_back_url &&
-                     !selectedStudent.kcse_certificate_url && !selectedStudent.medical_report_url &&
-                     !selectedStudent.birth_certificate_url && !selectedStudent.other_documents_url && (
-                      <p className="text-stone col-span-2">No documents uploaded yet</p>
-                    )}
+                    {!selectedStudent.id_copy_front_url && !selectedStudent.id_copy_back_url &&
+                      !selectedStudent.parent_id_copy_front_url && !selectedStudent.parent_id_copy_back_url &&
+                      !selectedStudent.kcse_certificate_url && !selectedStudent.medical_report_url &&
+                      !selectedStudent.birth_certificate_url && !selectedStudent.other_documents_url && (
+                        <p className="text-stone col-span-2">No documents uploaded yet</p>
+                      )}
                   </div>
                 </div>
 
                 <h4 className="text-sm font-semibold text-brand-dark mb-3">Upload New Documents</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Front)</label>
-                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, id_copy_front: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Back)</label>
-                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, id_copy_back: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Front)</label>
-                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, parent_id_copy_front: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Back)</label>
-                      <input type="file" accept="image/*" onChange={e => setDocFiles({...docFiles, parent_id_copy_back: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">KCSE Certificate</label>
-                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, kcse_certificate: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">Birth Certificate</label>
-                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, birth_certificate: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-brand-dark mb-1">Other Documents</label>
-                      <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({...docFiles, other_documents: e.target.files?.[0] || null})}
-                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Front)</label>
+                    <input type="file" accept="image/*" onChange={e => setDocFiles({ ...docFiles, id_copy_front: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Student ID Copy (Back)</label>
+                    <input type="file" accept="image/*" onChange={e => setDocFiles({ ...docFiles, id_copy_back: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Front)</label>
+                    <input type="file" accept="image/*" onChange={e => setDocFiles({ ...docFiles, parent_id_copy_front: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Parent ID Copy (Back)</label>
+                    <input type="file" accept="image/*" onChange={e => setDocFiles({ ...docFiles, parent_id_copy_back: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">KCSE Certificate</label>
+                    <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({ ...docFiles, kcse_certificate: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Birth Certificate</label>
+                    <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({ ...docFiles, birth_certificate: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Other Documents</label>
+                    <input type="file" accept=".pdf,image/*" onChange={e => setDocFiles({ ...docFiles, other_documents: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-stone/10">
@@ -2586,7 +2585,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
           <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
             <h2 className="font-display text-xl text-brand-dark mb-1">Fee Summary</h2>
             <p className="text-sm text-stone mb-4">{feeSummary.student.admission_no} — Level {feeSummary.student.level}</p>
-            
+
             <div className="flex-1 overflow-y-auto mb-5 pr-2 space-y-4">
               <div className="grid grid-cols-3 gap-4 p-4 bg-cream-deep rounded-xl">
                 <div className="text-center">
@@ -2612,11 +2611,10 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                         <div className="font-medium text-brand-dark">{b.term.name}</div>
                         <div className="text-xs text-stone">{b.term.academic_year} {b.term.intake ? `• ${b.term.intake}` : ''}</div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        b.status === 'PAID' ? 'bg-green-100 text-green-800' : 
-                        b.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-red-100 text-red-800'
-                      }`}>{b.status}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.status === 'PAID' ? 'bg-green-100 text-green-800' :
+                        b.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>{b.status}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs mb-2">
                       <div>
@@ -2695,7 +2693,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="font-display text-xl text-brand-dark mb-1">Promote Student</h2>
             <p className="text-sm text-stone mb-4">{selectedStudent.admission_no} — Current: {selectedStudent.level}</p>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">New Level</label>
@@ -2912,7 +2910,7 @@ function BillingTab() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => {});
+    api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -2925,7 +2923,7 @@ function BillingTab() {
       const params: any = { page, limit: 50 };
       if (selectedTermId) params.termId = selectedTermId;
       if (selectedStatus) params.status = selectedStatus;
-      
+
       const r = await api.get('/fees/billing/dashboard', { params });
       setBalances(r.data.balances);
       setTotal(r.data.pagination.total);
@@ -2950,7 +2948,7 @@ function BillingTab() {
   return (
     <div>
       <h1 className="font-display text-2xl text-brand-dark mb-6">Billing Dashboard</h1>
-      
+
       {/* Summary Cards */}
       {summary && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -3068,6 +3066,9 @@ function RequisitionsTab() {
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -3084,12 +3085,27 @@ function RequisitionsTab() {
   const handleApprove = async (id: string) => {
     setApproving(id);
     try {
-      await api.patch(`/requisitions/${id}/approve`);
+      await api.patch(`/requisitions/${id}/approve`, { status: 'APPROVED' });
       setRequisitions(requisitions.map(r => r.id === id ? { ...r, status: 'APPROVED' } : r));
+      toast.success('Requisition approved');
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Failed to approve requisition');
     } finally {
       setApproving(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectingId) return;
+    try {
+      await api.patch(`/requisitions/${rejectingId}/approve`, { status: 'REJECTED', rejection_reason: rejectionReason });
+      setRequisitions(requisitions.map(r => r.id === rejectingId ? { ...r, status: 'REJECTED', rejection_reason: rejectionReason } : r));
+      toast.success('Requisition rejected');
+      setShowRejectModal(false);
+      setRejectingId(null);
+      setRejectionReason('');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to reject requisition');
     }
   };
 
@@ -3099,9 +3115,9 @@ function RequisitionsTab() {
   };
 
   return (
-    <div>
+    <><div>
       <h1 className="font-display text-2xl text-brand-dark mb-6">Purchase Requisitions</h1>
-      
+
       <div className="bg-white rounded-2xl p-4 border border-stone/10 shadow-sm mb-6">
         <div className="flex gap-4">
           <div>
@@ -3149,23 +3165,19 @@ function RequisitionsTab() {
                     <td className="px-4 py-3">{r.items?.length || 0} items</td>
                     <td className="px-4 py-3 text-right">KES {r.total_amount?.toLocaleString() || 0}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        r.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${r.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
                         r.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                        r.priority === 'LOW' ? 'bg-green-100 text-green-800' :
-                        'bg-stone/20 text-stone'
-                      }`}>
+                          r.priority === 'LOW' ? 'bg-green-100 text-green-800' :
+                            'bg-stone/20 text-stone'}`}>
                         {r.priority}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        r.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
                         r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' :
-                        r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
-                        r.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                        'bg-stone/20 text-stone'
-                      }`}>
+                          r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
+                            r.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                              'bg-stone/20 text-stone'}`}>
                         {r.status}
                       </span>
                     </td>
@@ -3179,13 +3191,21 @@ function RequisitionsTab() {
                           View
                         </button>
                         {r.status === 'PENDING_APPROVAL' && (
-                          <button
-                            onClick={() => handleApprove(r.id)}
-                            disabled={approving === r.id}
-                            className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition disabled:opacity-50"
-                          >
-                            {approving === r.id ? 'Approving...' : 'Approve'}
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleApprove(r.id)}
+                              disabled={approving === r.id}
+                              className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition disabled:opacity-50"
+                            >
+                              {approving === r.id ? 'Approving...' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => { setRejectingId(r.id); setRejectionReason(''); setShowRejectModal(true); }}
+                              className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition"
+                            >
+                              Reject
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -3203,7 +3223,7 @@ function RequisitionsTab() {
           <div className="bg-white rounded-3xl p-8 w-full max-w-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display text-2xl text-brand-dark">Requisition Details</h2>
-              <button onClick={() => setShowDetailModal(false)} className="text-stone hover:text-brand-dark text-2xl">×</button>
+              <button onClick={() => setShowDetailModal(false)} className="text-stone hover:text-brand-dark text-2xl">&times;</button>
             </div>
 
             <div className="space-y-6">
@@ -3231,24 +3251,20 @@ function RequisitionsTab() {
               <div className="flex gap-4">
                 <div>
                   <div className="text-sm text-stone mb-1">Status</div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    selectedRequisition.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedRequisition.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
                     selectedRequisition.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' :
-                    selectedRequisition.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
-                    selectedRequisition.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                    'bg-stone/20 text-stone'
-                  }`}>
+                      selectedRequisition.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' :
+                        selectedRequisition.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                          'bg-stone/20 text-stone'}`}>
                     {selectedRequisition.status}
                   </span>
                 </div>
                 <div>
                   <div className="text-sm text-stone mb-1">Priority</div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    selectedRequisition.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedRequisition.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
                     selectedRequisition.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                    selectedRequisition.priority === 'LOW' ? 'bg-green-100 text-green-800' :
-                    'bg-stone/20 text-stone'
-                  }`}>
+                      selectedRequisition.priority === 'LOW' ? 'bg-green-100 text-green-800' :
+                        'bg-stone/20 text-stone'}`}>
                     {selectedRequisition.priority}
                   </span>
                 </div>
@@ -3313,14 +3329,64 @@ function RequisitionsTab() {
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800">{selectedRequisition.rejection_reason}</div>
                 </div>
               )}
+
+              {/* Action Buttons in Detail Modal */}
+              {selectedRequisition.status === 'PENDING_APPROVAL' && (
+                <div className="flex gap-3 pt-4 border-t border-stone/10">
+                  <button
+                    onClick={() => { handleApprove(selectedRequisition.id); setShowDetailModal(false); }}
+                    className="flex-1 py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => { setRejectingId(selectedRequisition.id); setRejectionReason(''); setShowDetailModal(false); setShowRejectModal(true); }}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-2">Reject Requisition</h2>
+            <p className="text-sm text-stone mb-4">Please provide a reason for rejection. This will be visible to the department head.</p>
+            <textarea
+              value={rejectionReason}
+              onChange={e => setRejectionReason(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-red-400 transition text-sm"
+              rows={4}
+              placeholder="e.g. Budget not available this quarter..." />
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => { setShowRejectModal(false); setRejectingId(null); setRejectionReason(''); }}
+                className="flex-1 py-2.5 rounded-xl border border-stone/25 text-stone font-semibold hover:bg-stone/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={!rejectionReason.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
+              >
+                Confirm Rejection
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
+    </>
   );
 }
-
 function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -3340,7 +3406,7 @@ function UsersTab() {
   const [editMsg, setEditMsg] = useState('');
 
   useEffect(() => {
-    departmentsApi.getAll().then(r => setDepartments(r.data)).catch(() => {});
+    departmentsApi.getAll().then(r => setDepartments(r.data)).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -3371,31 +3437,31 @@ function UsersTab() {
   };
 
   const handleDeleteUser = (userId: string) => {
-  toast('Delete this user? This action cannot be undone.', {
-    action: {
-      label: 'Delete',
-      onClick: () => confirmDeleteUser(userId),
-    },
-    cancel: {
-      label: 'Cancel',
-      onClick: () => {},
-    },
-  });
-};
+    toast('Delete this user? This action cannot be undone.', {
+      action: {
+        label: 'Delete',
+        onClick: () => confirmDeleteUser(userId),
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => { },
+      },
+    });
+  };
 
-const confirmDeleteUser = async (userId: string) => {
-  setUpdating(userId);
-  try {
-    await api.delete(`/auth/users/${userId}`);
-    setUsers(users.filter(u => u.id !== userId));
-    setTotal(total - 1);
-    toast.success('User deleted successfully');
-  } catch (err) {
-    toast.error('Failed to delete user');
-  } finally {
-    setUpdating(null);
-  }
-};
+  const confirmDeleteUser = async (userId: string) => {
+    setUpdating(userId);
+    try {
+      await api.delete(`/auth/users/${userId}`);
+      setUsers(users.filter(u => u.id !== userId));
+      setTotal(total - 1);
+      toast.success('User deleted successfully');
+    } catch (err) {
+      toast.error('Failed to delete user');
+    } finally {
+      setUpdating(null);
+    }
+  };
 
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3507,32 +3573,32 @@ const confirmDeleteUser = async (userId: string) => {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">First Name *</label>
-                <input type="text" required value={staffForm.first_name} onChange={e => setStaffForm({...staffForm, first_name: e.target.value})}
+                <input type="text" required value={staffForm.first_name} onChange={e => setStaffForm({ ...staffForm, first_name: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Last Name *</label>
-                <input type="text" required value={staffForm.last_name} onChange={e => setStaffForm({...staffForm, last_name: e.target.value})}
+                <input type="text" required value={staffForm.last_name} onChange={e => setStaffForm({ ...staffForm, last_name: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email *</label>
-                <input type="email" required value={staffForm.email} onChange={e => setStaffForm({...staffForm, email: e.target.value})}
+                <input type="email" required value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Password *</label>
-                <input type="password" required value={staffForm.password} onChange={e => setStaffForm({...staffForm, password: e.target.value})}
+                <input type="password" required value={staffForm.password} onChange={e => setStaffForm({ ...staffForm, password: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
-                <input type="tel" value={staffForm.phone} onChange={e => setStaffForm({...staffForm, phone: e.target.value})}
+                <input type="tel" value={staffForm.phone} onChange={e => setStaffForm({ ...staffForm, phone: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="07XXXXXXXX" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Role *</label>
-                <select required value={staffForm.role} onChange={e => setStaffForm({...staffForm, role: e.target.value})}
+                <select required value={staffForm.role} onChange={e => setStaffForm({ ...staffForm, role: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
                   <option value="ADMIN">Admin</option>
                   <option value="DEPT_HEAD">Dept Head</option>
@@ -3545,7 +3611,7 @@ const confirmDeleteUser = async (userId: string) => {
               {staffForm.role === 'DEPT_HEAD' && (
                 <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department</label>
-                  <select value={staffForm.department_id} onChange={e => setStaffForm({...staffForm, department_id: e.target.value})}
+                  <select value={staffForm.department_id} onChange={e => setStaffForm({ ...staffForm, department_id: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
                     <option value="">Select Department</option>
                     {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -3572,16 +3638,16 @@ const confirmDeleteUser = async (userId: string) => {
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="font-display text-xl text-brand-dark mb-1">Edit User</h2>
             <p className="text-sm text-stone mb-4">{editingUser.email}</p>
-            
+
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">Email *</label>
-                <input type="email" required value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})}
+                <input type="email" required value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                   className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">Role *</label>
-                <select required value={editForm.role} onChange={e => setEditForm({...editForm, role: e.target.value})}
+                <select required value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}
                   className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
                   <option value="ADMIN">Admin</option>
                   <option value="DEPT_HEAD">Dept Head</option>
@@ -3594,7 +3660,7 @@ const confirmDeleteUser = async (userId: string) => {
               {editForm.role === 'DEPT_HEAD' && (
                 <div>
                   <label className="block text-sm font-medium text-brand-dark mb-1">Department</label>
-                  <select value={editForm.department_id} onChange={e => setEditForm({...editForm, department_id: e.target.value})}
+                  <select value={editForm.department_id} onChange={e => setEditForm({ ...editForm, department_id: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
                     <option value="">Select Department</option>
                     {departments.map(d => (
@@ -3605,9 +3671,9 @@ const confirmDeleteUser = async (userId: string) => {
               )}
               <div className="border-t border-stone/10 pt-4">
                 <label className="block text-sm font-medium text-brand-dark mb-2">Change Password (optional)</label>
-                <input type="password" value={editForm.new_password} onChange={e => setEditForm({...editForm, new_password: e.target.value})}
+                <input type="password" value={editForm.new_password} onChange={e => setEditForm({ ...editForm, new_password: e.target.value })}
                   placeholder="New password" className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm mb-3" />
-                <input type="password" value={editForm.confirm_password} onChange={e => setEditForm({...editForm, confirm_password: e.target.value})}
+                <input type="password" value={editForm.confirm_password} onChange={e => setEditForm({ ...editForm, confirm_password: e.target.value })}
                   placeholder="Confirm new password" className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
               </div>
               {editMsg && (
@@ -3704,7 +3770,7 @@ const confirmDeleteUser = async (userId: string) => {
 function CoursesTab() {
   const [subTab, setSubTab] = useState<'courses' | 'departments'>('courses');
   const [depts, setDepts] = useState<any[]>([]);
-  
+
   // Department CRUD states
   const [deptForm, setDeptForm] = useState({ id: '', name: '', tagline: '', description: '', icon: '🏢', image_url: '' });
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -3717,12 +3783,39 @@ function CoursesTab() {
   const [coursePage, setCoursePage] = useState(1);
   const [courseSearch, setCourseSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
-  const [courseForm, setCourseForm] = useState({ id: '', name: '', levels: '', shortcode: '', department_id: '' });
+
+  // courseForm.levels is now a structured array of level objects
+  type LevelObj = { name: string; entry_requirement: 'KCPE' | 'KCSE' | 'NONE'; min_kcse_grade: string; min_kcpe_marks: string };
+  const DEFAULT_LEVEL_OBJ: LevelObj = { name: 'Level 5', entry_requirement: 'KCSE', min_kcse_grade: '', min_kcpe_marks: '' };
+  const [courseForm, setCourseForm] = useState({ id: '', name: '', shortcode: '', department_id: '' });
+  const [levelObjs, setLevelObjs] = useState<LevelObj[]>([{ ...DEFAULT_LEVEL_OBJ }]);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [savingCourse, setSavingCourse] = useState(false);
 
+  const KCSE_GRADES = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'E'];
+  const LEVEL_OPTIONS = ['Level 3', 'Level 4', 'Level 5', 'Level 6'];
+
+  const addLevel = () => setLevelObjs(prev => [...prev, { ...DEFAULT_LEVEL_OBJ }]);
+  const removeLevel = (idx: number) => setLevelObjs(prev => prev.filter((_, i) => i !== idx));
+  const updateLevel = (idx: number, patch: Partial<LevelObj>) =>
+    setLevelObjs(prev => prev.map((l, i) => i === idx ? { ...l, ...patch } : l));
+
+  /** Format level array into a short readable summary for the table */
+  const formatLevelsSummary = (levelsArr: any[]) => {
+    if (!Array.isArray(levelsArr) || levelsArr.length === 0) return '—';
+    return levelsArr.map(l => {
+      const name = typeof l === 'string' ? l : l.name;
+      const req = l.entry_requirement;
+      if (req === 'KCSE' && l.min_kcse_grade) return `${name} (KCSE ≥${l.min_kcse_grade})`;
+      if (req === 'KCPE' && l.min_kcpe_marks) return `${name} (KCPE ≥${l.min_kcpe_marks})`;
+      if (req === 'KCSE') return `${name} (KCSE)`;
+      if (req === 'KCPE') return `${name} (KCPE)`;
+      return name;
+    }).join(', ');
+  };
+
   const fetchDepts = () => {
-    departmentsApi.getAll().then(r => setDepts(r.data)).catch(() => {});
+    departmentsApi.getAll().then(r => setDepts(r.data)).catch(() => { });
   };
 
   const fetchCourses = () => {
@@ -3730,7 +3823,7 @@ function CoursesTab() {
       .then(r => {
         setCourses(r.data.courses);
         setCourseTotal(r.data.pagination.total);
-      }).catch(() => {});
+      }).catch(() => { });
   };
 
   useEffect(() => {
@@ -3775,23 +3868,37 @@ function CoursesTab() {
       },
       cancel: {
         label: 'Cancel',
-        onClick: () => {},
+        onClick: () => { },
       },
     });
   };
 
   const handleCourseSubmit = async (e: any) => {
     e.preventDefault();
+    if (levelObjs.length === 0) {
+      toast.error('Add at least one level for the course');
+      return;
+    }
     setSavingCourse(true);
     try {
+      const payload = {
+        ...courseForm,
+        levels: JSON.stringify(levelObjs.map(l => ({
+          name: l.name,
+          entry_requirement: l.entry_requirement,
+          min_kcse_grade: l.entry_requirement === 'KCSE' ? (l.min_kcse_grade || null) : null,
+          min_kcpe_marks: l.entry_requirement === 'KCPE' ? (l.min_kcpe_marks ? Number(l.min_kcpe_marks) : null) : null,
+        }))),
+      };
       if (courseForm.id) {
-        await coursesApi.update(courseForm.id, courseForm);
+        await coursesApi.update(courseForm.id, payload);
       } else {
-        await coursesApi.create(courseForm);
+        await coursesApi.create(payload);
       }
       fetchCourses();
       setIsCourseModalOpen(false);
-      setCourseForm({ id: '', name: '', levels: '', shortcode: '', department_id: '' });
+      setCourseForm({ id: '', name: '', shortcode: '', department_id: '' });
+      setLevelObjs([{ ...DEFAULT_LEVEL_OBJ }]);
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Failed to save course');
     } finally {
@@ -3814,12 +3921,12 @@ function CoursesTab() {
       },
       cancel: {
         label: 'Cancel',
-        onClick: () => {},
+        onClick: () => { },
       },
     });
   };
 
-  const filteredDepts = depts.filter(d => 
+  const filteredDepts = depts.filter(d =>
     d.name.toLowerCase().includes(deptSearch.toLowerCase()) ||
     (d.tagline && d.tagline.toLowerCase().includes(deptSearch.toLowerCase()))
   );
@@ -3845,7 +3952,8 @@ function CoursesTab() {
             <div className="flex items-center gap-3">
               <h2 className="font-display text-xl text-brand-dark">Courses ({courseTotal})</h2>
               <button onClick={() => {
-                setCourseForm({ id: '', name: '', levels: 'Level 3, Level 4, Level 5', shortcode: '', department_id: depts[0]?.id || '' });
+                setCourseForm({ id: '', name: '', shortcode: '', department_id: depts[0]?.id || '' });
+                setLevelObjs([{ ...DEFAULT_LEVEL_OBJ }]);
                 setIsCourseModalOpen(true);
               }} className="px-3 py-1.5 rounded-xl bg-brand text-cream text-xs font-semibold hover:bg-brand-dark transition shadow">
                 + Add Course
@@ -3870,7 +3978,7 @@ function CoursesTab() {
                   <tr>
                     <th className="px-4 py-3 text-left">Shortcode</th>
                     <th className="px-4 py-3 text-left">Course Name</th>
-                    <th className="px-4 py-3 text-left">Levels</th>
+                    <th className="px-4 py-3 text-left">Levels & Requirements</th>
                     <th className="px-4 py-3 text-left">Department</th>
                     <th className="px-4 py-3 text-left">Actions</th>
                   </tr>
@@ -3881,11 +3989,21 @@ function CoursesTab() {
                     <tr key={c.id} className="hover:bg-cream-deep/50 transition">
                       <td className="px-4 py-3 font-mono text-xs font-bold text-brand">{c.shortcode}</td>
                       <td className="px-4 py-3 font-medium text-brand-dark">{c.name}</td>
-                      <td className="px-4 py-3 text-stone">{c.levels}</td>
+                      <td className="px-4 py-3 text-stone text-xs max-w-xs">
+                        {formatLevelsSummary(Array.isArray(c.levels) ? c.levels : [])}
+                      </td>
                       <td className="px-4 py-3 text-stone text-xs">{c.department?.name}</td>
                       <td className="px-4 py-3 flex gap-2">
                         <button onClick={() => {
-                          setCourseForm({ id: c.id, name: c.name, levels: c.levels, shortcode: c.shortcode, department_id: c.department_id });
+                          setCourseForm({ id: c.id, name: c.name, shortcode: c.shortcode, department_id: c.department_id });
+                          // Load levels — already parsed to array by the API
+                          const existing: any[] = Array.isArray(c.levels) ? c.levels : [];
+                          setLevelObjs(existing.length > 0 ? existing.map((l: any) => ({
+                            name: l.name || 'Level 5',
+                            entry_requirement: l.entry_requirement || 'KCSE',
+                            min_kcse_grade: l.min_kcse_grade || '',
+                            min_kcpe_marks: l.min_kcpe_marks != null ? String(l.min_kcpe_marks) : '',
+                          })) : [{ ...DEFAULT_LEVEL_OBJ }]);
                           setIsCourseModalOpen(true);
                         }} className="text-brand hover:underline text-xs font-semibold">Edit</button>
                         <button onClick={() => handleCourseDelete(c.id)} className="text-red-600 hover:underline text-xs font-semibold">Delete</button>
@@ -3964,7 +4082,7 @@ function CoursesTab() {
       {/* ── COURSE MODAL ── */}
       {isCourseModalOpen && (
         <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="font-display text-lg text-brand-dark mb-4">{courseForm.id ? 'Edit Course' : 'Create Course'}</h3>
             <form onSubmit={handleCourseSubmit} className="space-y-4">
               <div>
@@ -3980,18 +4098,78 @@ function CoursesTab() {
                   className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand font-mono text-sm text-brand-dark bg-white" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-stone uppercase tracking-wider mb-1 text-[10px]">Levels (comma separated)</label>
-                <input required value={courseForm.levels} onChange={e => setCourseForm(f => ({ ...f, levels: e.target.value }))}
-                  placeholder="e.g. Level 3, Level 4, Level 5"
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm text-brand-dark bg-white" />
-              </div>
-              <div>
                 <label className="block text-xs font-semibold text-stone uppercase tracking-wider mb-1 text-[10px]">Department</label>
                 <select required value={courseForm.department_id} onChange={e => setCourseForm(f => ({ ...f, department_id: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm text-brand-dark bg-white">
                   {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
+
+              {/* ── Level Builder ── */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-stone uppercase tracking-wider text-[10px]">Levels & Entry Requirements</label>
+                  <button type="button" onClick={addLevel}
+                    className="text-xs text-brand font-semibold hover:underline">+ Add Level</button>
+                </div>
+                <div className="space-y-3">
+                  {levelObjs.map((lv, idx) => (
+                    <div key={idx} className="rounded-xl border border-stone/20 bg-cream-deep/30 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={lv.name}
+                          onChange={e => updateLevel(idx, { name: e.target.value })}
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-stone/25 text-xs text-brand-dark bg-white focus:outline-none focus:border-brand"
+                        >
+                          {LEVEL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        {levelObjs.length > 1 && (
+                          <button type="button" onClick={() => removeLevel(idx)}
+                            className="text-red-400 hover:text-red-600 text-lg leading-none px-1">×</button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-semibold text-stone uppercase tracking-wider w-28 shrink-0">Entry Req.</span>
+                        <select
+                          value={lv.entry_requirement}
+                          onChange={e => updateLevel(idx, { entry_requirement: e.target.value as any, min_kcse_grade: '', min_kcpe_marks: '' })}
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-stone/25 text-xs text-brand-dark bg-white focus:outline-none focus:border-brand"
+                        >
+                          <option value="NONE">None (Open entry)</option>
+                          <option value="KCPE">KCPE</option>
+                          <option value="KCSE">KCSE</option>
+                        </select>
+                      </div>
+                      {lv.entry_requirement === 'KCSE' && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-semibold text-stone uppercase tracking-wider w-28 shrink-0">Min. KCSE Grade</span>
+                          <select
+                            value={lv.min_kcse_grade}
+                            onChange={e => updateLevel(idx, { min_kcse_grade: e.target.value })}
+                            className="flex-1 px-2 py-1.5 rounded-lg border border-stone/25 text-xs text-brand-dark bg-white focus:outline-none focus:border-brand"
+                          >
+                            <option value="">No minimum</option>
+                            {KCSE_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {lv.entry_requirement === 'KCPE' && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-semibold text-stone uppercase tracking-wider w-28 shrink-0">Min. KCPE Marks</span>
+                          <input
+                            type="number" min={0} max={500}
+                            value={lv.min_kcpe_marks}
+                            onChange={e => updateLevel(idx, { min_kcpe_marks: e.target.value })}
+                            placeholder="e.g. 250"
+                            className="flex-1 px-2 py-1.5 rounded-lg border border-stone/25 text-xs text-brand-dark bg-white focus:outline-none focus:border-brand"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button type="submit" disabled={savingCourse} className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
                   {savingCourse ? 'Saving…' : 'Save Course'}

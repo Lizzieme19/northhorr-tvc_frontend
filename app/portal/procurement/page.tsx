@@ -25,6 +25,9 @@ export default function ProcurementDashboard() {
   const [showQuotationModal, setShowQuotationModal] = useState(false);
   const [selectedRfqForQuotation, setSelectedRfqForQuotation] = useState<any>(null);
   const [quotationData, setQuotationData] = useState<any>({});
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingReqId, setRejectingReqId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'PROCUREMENT')) router.replace('/login');
@@ -175,6 +178,7 @@ export default function ProcurementDashboard() {
     try {
       if (tab === 'requisitions') {
         await api.approve(id, { status: 'APPROVED' });
+        toast.success('Requisition approved');
       } else {
         await api.approve(id);
       }
@@ -183,6 +187,20 @@ export default function ProcurementDashboard() {
       if (tab === 'requisitions') requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Failed to approve');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectingReqId) return;
+    try {
+      await requisitionsApi.approve(rejectingReqId, { status: 'REJECTED', rejection_reason: rejectionReason });
+      requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
+      toast.success('Requisition rejected');
+      setShowRejectModal(false);
+      setRejectingReqId(null);
+      setRejectionReason('');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to reject requisition');
     }
   };
 
@@ -335,37 +353,83 @@ export default function ProcurementDashboard() {
             <div className="space-y-4">
               {requisitions.length === 0 ? <p className="text-stone">No requisitions found</p> :
                 requisitions.map(r => (
-                  <div key={r.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-brand-dark">{r.requisition_no}</div>
-                      <div className="text-sm text-stone">{r.department?.name} • {r.items?.length || 0} items • KES {r.total_amount?.toLocaleString()}</div>
-                      <div className="text-xs mt-1">
-                        <span className={`px-2 py-0.5 rounded-full ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' : r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' : r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 'bg-stone/20 text-stone'}`}>
-                          {r.status}
-                        </span>
+                  <div key={r.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-brand-dark">{r.requisition_no}</div>
+                        <div className="text-sm text-stone mt-0.5">{r.department?.name} &bull; {r.items?.length || 0} item{r.items?.length !== 1 ? 's' : ''} &bull; KES {r.total_amount?.toLocaleString()}</div>
+                        {r.requester?.email && <div className="text-xs text-stone">Requested by: {r.requester.email}</div>}
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' : r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' : r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : r.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-stone/20 text-stone'}`}>
+                            {r.status.replace('_', ' ')}
+                          </span>
+                          {r.priority && (
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.priority === 'URGENT' || r.priority === 'HIGH' ? 'bg-red-100 text-red-800' : r.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                              {r.priority}
+                            </span>
+                          )}
+                        </div>
+                        {/* Items List */}
+                        {r.items && r.items.length > 0 && (
+                          <div className="mt-3 bg-white rounded-lg border border-stone/10 overflow-hidden">
+                            <table className="w-full text-xs">
+                              <thead className="bg-stone/5">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-stone font-medium">Item</th>
+                                  <th className="px-3 py-2 text-right text-stone font-medium">Qty</th>
+                                  <th className="px-3 py-2 text-right text-stone font-medium">Unit Price</th>
+                                  <th className="px-3 py-2 text-right text-stone font-medium">Total</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-stone/5">
+                                {r.items.map((item: any) => (
+                                  <tr key={item.id}>
+                                    <td className="px-3 py-2 font-medium text-brand-dark">{item.item_name}{item.description && <span className="text-stone font-normal"> — {item.description}</span>}</td>
+                                    <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                    <td className="px-3 py-2 text-right">KES {item.unit_price?.toLocaleString() || '—'}</td>
+                                    <td className="px-3 py-2 text-right font-medium">KES {item.total_price?.toLocaleString() || '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        {r.justification && (
+                          <div className="mt-2 text-xs text-stone italic">&ldquo;{r.justification}&rdquo;</div>
+                        )}
+                        {r.status === 'REJECTED' && r.rejection_reason && (
+                          <div className="mt-2 flex items-start gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                            <span className="text-red-500 text-sm mt-0.5">⚠</span>
+                            <div>
+                              <div className="text-xs font-semibold text-red-700">Rejection Reason</div>
+                              <div className="text-xs text-red-600 mt-0.5">{r.rejection_reason}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {r.status === 'DRAFT' && (
-                        <button onClick={() => requisitionsApi.submit(r.id).then(() => requisitionsApi.getAll().then(res => setRequisitions(res.data?.requisitions || [])))} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
-                          Submit
-                        </button>
-                      )}
-                      {r.status === 'PENDING_APPROVAL' && (
-                        <button onClick={() => handleApprove(r.id, requisitionsApi)} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">
-                          Approve
-                        </button>
-                      )}
-                      {r.status === 'DRAFT' && (
-                        <>
-                          <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
-                            Edit
+                      <div className="flex flex-col gap-2 flex-shrink-0">
+                        {r.status === 'DRAFT' && (
+                          <button onClick={() => requisitionsApi.submit(r.id).then(() => requisitionsApi.getAll().then(res => setRequisitions(res.data?.requisitions || [])))} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">
+                            Submit
                           </button>
-                          <button onClick={() => handleDelete(r.id, requisitionsApi, 'requisition')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
-                            Delete
-                          </button>
-                        </>
-                      )}
+                        )}
+                        {r.status === 'PENDING_APPROVAL' && (
+                          <>
+                            <button onClick={() => handleApprove(r.id, requisitionsApi)} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">
+                              Approve
+                            </button>
+                            <button onClick={() => { setRejectingReqId(r.id); setRejectionReason(''); setShowRejectModal(true); }} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {r.status === 'DRAFT' && (
+                          <>
+                            <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">Edit</button>
+                            <button onClick={() => handleDelete(r.id, requisitionsApi, 'requisition')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">Delete</button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -536,13 +600,7 @@ export default function ProcurementDashboard() {
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Address</label>
                     <input name="address" value={formData.address || ''} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department</label>
-                    <select name="department_id" value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                      <option value="">Select Department</option>
-                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Category</label>
                     <input name="category" value={formData.category || ''} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
@@ -559,8 +617,11 @@ export default function ProcurementDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name *</label>
-                    <input name="item_name" required value={formData.item_name || ''} onChange={(e) => setFormData({...formData, item_name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name (from Inventory) *</label>
+                    <select name="item_name" required value={formData.item_name || ''} onChange={(e) => setFormData({...formData, item_name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                      <option value="">Select Inventory Item</option>
+                      {inventory.map(i => <option key={i.id} value={i.name || i.item_name}>{i.name || i.item_name}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
@@ -780,6 +841,39 @@ export default function ProcurementDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Requisition Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-2">Reject Requisition</h2>
+            <p className="text-sm text-stone mb-4">Please provide a reason for rejection. This will be visible to the department head.</p>
+            <textarea
+              value={rejectionReason}
+              onChange={e => setRejectionReason(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-red-400 transition text-sm"
+              rows={4}
+              placeholder="e.g. Budget not available for this quarter, please resubmit in Q2..."
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => { setShowRejectModal(false); setRejectingReqId(null); setRejectionReason(''); }}
+                className="flex-1 py-2.5 rounded-xl border border-stone/25 text-stone font-semibold hover:bg-stone/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={!rejectionReason.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-50"
+              >
+                Confirm Rejection
+              </button>
+            </div>
           </div>
         </div>
       )}
