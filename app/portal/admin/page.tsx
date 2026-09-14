@@ -4154,15 +4154,8 @@ function CoursesTab() {
                         </div>
                       )}
                       {lv.entry_requirement === 'KCPE' && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-semibold text-stone uppercase tracking-wider w-28 shrink-0">Min. KCPE Marks</span>
-                          <input
-                            type="number" min={0} max={500}
-                            value={lv.min_kcpe_marks}
-                            onChange={e => updateLevel(idx, { min_kcpe_marks: e.target.value })}
-                            placeholder="e.g. 250"
-                            className="flex-1 px-2 py-1.5 rounded-lg border border-stone/25 text-xs text-brand-dark bg-white focus:outline-none focus:border-brand"
-                          />
+                        <div className="rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-[10px] px-3 py-2">
+                          ℹ️ KCPE is a binary qualifier — any student who completed primary school (Std 8) qualifies. Marks are collected for record-keeping only.
                         </div>
                       )}
                     </div>

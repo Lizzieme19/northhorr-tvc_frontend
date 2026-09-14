@@ -22,14 +22,13 @@ function levelIsEligible(level: any, kcseGrade: string, kcpeMarks: string): bool
   const req = level.entry_requirement;
   if (req === 'NONE') return true;
   if (req === 'KCSE') {
-    if (!kcseGrade) return false; // no grade entered yet — don't show
-    if (!level.min_kcse_grade) return true; // no minimum set, KCSE enough
+    if (!kcseGrade) return false; // no grade entered yet
+    if (!level.min_kcse_grade) return true; // no minimum set, any KCSE qualifies
     return kcseGradeMeetsMinimum(kcseGrade, level.min_kcse_grade);
   }
   if (req === 'KCPE') {
-    if (!kcpeMarks) return false; // no marks entered yet
-    if (level.min_kcpe_marks == null) return true;
-    return parseInt(kcpeMarks) >= level.min_kcpe_marks;
+    // Any student who completed KCPE qualifies — marks are for records only
+    return kcpeMarks !== '' && !isNaN(parseInt(kcpeMarks));
   }
   return true;
 }
@@ -270,10 +269,11 @@ export default function ApplicationForm() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">KCPE Marks <span className="text-stone font-normal text-xs">(out of 500)</span></label>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">KCPE Marks <span className="text-stone font-normal text-xs">(for records only)</span></label>
                   <input type="number" name="kcpe_marks" min={0} max={500} value={formData.kcpe_marks} onChange={handleChange}
                     placeholder="e.g. 320"
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm" />
+                  <p className="text-xs text-stone mt-1">Any KCPE score qualifies — marks are collected for record-keeping only.</p>
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -342,10 +342,8 @@ export default function ApplicationForm() {
                         `Minimum KCSE grade required: ${selectedLevelConfig.min_kcse_grade} — Your grade: ${formData.kcse_grade}`}
                       {selectedLevelConfig.entry_requirement === 'KCSE' && !selectedLevelConfig.min_kcse_grade &&
                         `KCSE certificate required — your grade (${formData.kcse_grade}) qualifies.`}
-                      {selectedLevelConfig.entry_requirement === 'KCPE' && selectedLevelConfig.min_kcpe_marks &&
-                        `Minimum KCPE marks required: ${selectedLevelConfig.min_kcpe_marks} — Your marks: ${formData.kcpe_marks}`}
-                      {selectedLevelConfig.entry_requirement === 'KCPE' && !selectedLevelConfig.min_kcpe_marks &&
-                        `KCPE certificate required — your marks qualify.`}
+                      {selectedLevelConfig.entry_requirement === 'KCPE' &&
+                        `KCPE certificate required — students who completed primary school qualify.`}
                       {selectedLevelConfig.entry_requirement === 'NONE' &&
                         `Open entry — no minimum qualification required.`}
                     </div>
