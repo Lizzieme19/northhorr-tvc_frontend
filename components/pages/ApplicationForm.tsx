@@ -17,6 +17,23 @@ function kcseGradeMeetsMinimum(applicantGrade: string, minGrade: string): boolea
   return idx <= minIdx;
 }
 
+/** Check if a level is eligible for the applicant's current qualification */
+function levelIsEligible(level: any, kcseGrade: string, kcpeMarks: string): boolean {
+  const req = level.entry_requirement;
+  if (req === 'NONE') return true;
+  if (req === 'KCSE') {
+    if (!kcseGrade) return false; // no grade entered yet — don't show
+    if (!level.min_kcse_grade) return true; // no minimum set, KCSE enough
+    return kcseGradeMeetsMinimum(kcseGrade, level.min_kcse_grade);
+  }
+  if (req === 'KCPE') {
+    if (!kcpeMarks) return false; // no marks entered yet
+    if (level.min_kcpe_marks == null) return true;
+    return parseInt(kcpeMarks) >= level.min_kcpe_marks;
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Field component
 // ---------------------------------------------------------------------------
@@ -31,24 +48,46 @@ const Field = ({ label, name, type = 'text', required = false, value, onChange, 
 );
 
 // ---------------------------------------------------------------------------
+// Select component
+// ---------------------------------------------------------------------------
+const Select = ({ label, name, required = false, value, onChange, disabled = false, children }: any) => (
+  <div>
+    <label className="block text-sm font-semibold text-brand-dark mb-1.5">{label} {required && <span className="text-terracotta">*</span>}</label>
+    <select name={name} required={required} value={value} onChange={onChange} disabled={disabled}
+      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white disabled:bg-stone/10 disabled:opacity-50 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm">
+      {children}
+    </select>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 export default function ApplicationForm() {
   const [step, setStep] = useState(1);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [allDepartments, setAllDepartments] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<any>(null);
 
   const [formData, setFormData] = useState({
+    // Academic qualification — filled first, drives filtering
+    kcse_grade: '',
+    kcpe_marks: '',
+    kcpe_index: '',
+    kcse_index: '',
+    previous_school: '',
+    // Course selection
+    department_id: '',
+    course_id: '',
+    level_applied: '',
+    // Personal
     surname: '', other_names: '', gender: '', date_of_birth: '', nationality: 'Kenyan', religion: '',
     id_number: '', birth_cert_no: '', email: '', phone: '', address: '',
-    previous_school: '', kcpe_index: '', kcpe_marks: '', kcse_index: '', kcse_grade: '',
+    // Parent / Emergency
     father_present: true, father_name: '', father_phone: '', father_email: '', father_occupation: '',
     mother_present: true, mother_name: '', mother_phone: '', mother_email: '', mother_occupation: '',
     siblings_no: '',
     emergency_person: '', emergency_phone: '',
-    department_id: '', course_id: '', level_applied: ''
   });
 
   const [files, setFiles] = useState<any>({
@@ -56,50 +95,53 @@ export default function ApplicationForm() {
   });
 
   useEffect(() => {
-    departmentsApi.getAll().then(r => setDepartments(r.data)).catch(() => {});
+    departmentsApi.getAll().then(r => setAllDepartments(r.data)).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (formData.department_id) {
-      const dept = departments.find(d => d.id === formData.department_id);
-      setCourses(dept ? dept.courses : []);
-    } else setCourses([]);
-  }, [formData.department_id, departments]);
-
   // ---------------------------------------------------------------------------
-  // Derived: selected course levels + requirement for chosen level
+  // Smart filtering: derive eligible departments → courses → levels from qual
   // ---------------------------------------------------------------------------
-  const selectedCourse = useMemo(
-    () => courses.find((c: any) => c.id === formData.course_id) || null,
-    [courses, formData.course_id]
-  );
+  const hasKcse = formData.kcse_grade !== '';
+  const hasKcpe = formData.kcpe_marks !== '' && !isNaN(parseInt(formData.kcpe_marks));
+  const hasAnyQual = hasKcse || hasKcpe;
 
-  /** Levels array from the selected course (already parsed by the API) */
-  const availableLevels: any[] = useMemo(() => {
-    if (!selectedCourse) return [];
-    return Array.isArray(selectedCourse.levels) ? selectedCourse.levels : [];
-  }, [selectedCourse]);
+  /** Departments that have at least one course with at least one eligible level */
+  const eligibleDepartments = useMemo(() => {
+    if (!hasAnyQual) return [];
+    return allDepartments.filter(dept => {
+      const courses: any[] = dept.courses || [];
+      return courses.some(course => {
+        const levels: any[] = Array.isArray(course.levels) ? course.levels : [];
+        return levels.some(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks));
+      });
+    });
+  }, [allDepartments, formData.kcse_grade, formData.kcpe_marks, hasAnyQual]);
 
-  /** The requirement config for the currently chosen level */
+  /** Courses in the selected department that have at least one eligible level */
+  const eligibleCourses = useMemo(() => {
+    if (!formData.department_id) return [];
+    const dept = allDepartments.find(d => d.id === formData.department_id);
+    if (!dept) return [];
+    return (dept.courses || []).filter((course: any) => {
+      const levels: any[] = Array.isArray(course.levels) ? course.levels : [];
+      return levels.some(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks));
+    });
+  }, [allDepartments, formData.department_id, formData.kcse_grade, formData.kcpe_marks]);
+
+  /** Eligible levels for the selected course */
+  const eligibleLevels = useMemo(() => {
+    if (!formData.course_id) return [];
+    const course = eligibleCourses.find((c: any) => c.id === formData.course_id);
+    if (!course) return [];
+    const levels: any[] = Array.isArray(course.levels) ? course.levels : [];
+    return levels.filter(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks));
+  }, [eligibleCourses, formData.course_id, formData.kcse_grade, formData.kcpe_marks]);
+
+  /** The config for the chosen level */
   const selectedLevelConfig = useMemo(
-    () => availableLevels.find(l => l.name === formData.level_applied) || null,
-    [availableLevels, formData.level_applied]
+    () => eligibleLevels.find(l => l.name === formData.level_applied) || null,
+    [eligibleLevels, formData.level_applied]
   );
-
-  /** Whether the applicant's grade fails the requirement (for warning display) */
-  const gradeFails = useMemo(() => {
-    if (!selectedLevelConfig) return false;
-    if (selectedLevelConfig.entry_requirement === 'KCSE' && selectedLevelConfig.min_kcse_grade) {
-      if (!formData.kcse_grade) return true;
-      return !kcseGradeMeetsMinimum(formData.kcse_grade, selectedLevelConfig.min_kcse_grade);
-    }
-    if (selectedLevelConfig.entry_requirement === 'KCPE' && selectedLevelConfig.min_kcpe_marks != null) {
-      const marks = parseInt(formData.kcpe_marks);
-      if (isNaN(marks)) return true;
-      return marks < selectedLevelConfig.min_kcpe_marks;
-    }
-    return false;
-  }, [selectedLevelConfig, formData.kcse_grade, formData.kcpe_marks]);
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -109,9 +151,11 @@ export default function ApplicationForm() {
     setFormData(prev => ({
       ...prev,
       [name]: value,
-      // When department changes, reset course + level
+      // Reset downstream selections when qualifications change
+      ...(name === 'kcse_grade' || name === 'kcpe_marks'
+        ? { department_id: '', course_id: '', level_applied: '' }
+        : {}),
       ...(name === 'department_id' ? { course_id: '', level_applied: '' } : {}),
-      // When course changes, reset level
       ...(name === 'course_id' ? { level_applied: '' } : {}),
     }));
   };
@@ -120,52 +164,43 @@ export default function ApplicationForm() {
 
   const nextStep = (e: any) => {
     e.preventDefault();
-    if (step === 1 && gradeFails) {
-      if (selectedLevelConfig?.entry_requirement === 'KCSE') {
-        toast.error(`Minimum KCSE grade for ${formData.level_applied} is ${selectedLevelConfig.min_kcse_grade}. Your grade does not meet this requirement.`);
-      } else if (selectedLevelConfig?.entry_requirement === 'KCPE') {
-        toast.error(`Minimum KCPE marks for ${formData.level_applied} is ${selectedLevelConfig.min_kcpe_marks}. Your marks do not meet this requirement.`);
+
+    // Step 1: must have qualification + complete course selection
+    if (step === 1) {
+      if (!hasAnyQual) {
+        toast.error('Please enter your KCSE grade or KCPE marks first.');
+        return;
       }
-      return;
+      if (!formData.department_id || !formData.course_id || !formData.level_applied) {
+        toast.error('Please select a Department, Course, and Level to continue.');
+        return;
+      }
     }
     setStep(s => s + 1);
   };
+
   const prevStep = () => setStep(s => s - 1);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-
-    // Client-side hard block — mirrors backend validation
-    if (gradeFails) {
-      if (selectedLevelConfig?.entry_requirement === 'KCSE') {
-        toast.error(`Minimum KCSE grade for ${formData.level_applied} is ${selectedLevelConfig.min_kcse_grade}. Your grade does not meet this requirement.`);
-      } else if (selectedLevelConfig?.entry_requirement === 'KCPE') {
-        toast.error(`Minimum KCPE marks for ${formData.level_applied} is ${selectedLevelConfig.min_kcpe_marks}. Your marks do not meet this requirement.`);
-      }
-      setStep(1); // send back to step 1 where the level is shown
-      return;
-    }
-
     setSubmitting(true);
-    const data = new FormData();
 
+    const data = new FormData();
     const backendData = {
       ...formData,
-      father_present: formData.father_present,
-      father_name: formData.father_present ? formData.father_name : null,
-      father_phone: formData.father_present ? formData.father_phone : null,
-      father_email: formData.father_present ? formData.father_email : null,
-      father_occupation: formData.father_present ? formData.father_occupation : null,
-      mother_present: formData.mother_present,
-      mother_name: formData.mother_present ? formData.mother_name : null,
-      mother_phone: formData.mother_present ? formData.mother_phone : null,
-      mother_email: formData.mother_present ? formData.mother_email : null,
-      mother_occupation: formData.mother_present ? formData.mother_occupation : null,
-      emergency_person: formData.emergency_person,
-      emergency_phone: formData.emergency_phone,
+      father_name: formData.father_present ? formData.father_name : '',
+      father_phone: formData.father_present ? formData.father_phone : '',
+      father_email: formData.father_present ? formData.father_email : '',
+      father_occupation: formData.father_present ? formData.father_occupation : '',
+      mother_name: formData.mother_present ? formData.mother_name : '',
+      mother_phone: formData.mother_present ? formData.mother_phone : '',
+      mother_email: formData.mother_present ? formData.mother_email : '',
+      mother_occupation: formData.mother_present ? formData.mother_occupation : '',
     };
 
-    Object.entries(backendData).forEach(([k, v]) => data.append(k, v as string));
+    Object.entries(backendData).forEach(([k, v]) => {
+      if (v !== null && v !== undefined) data.append(k, String(v));
+    });
     Object.entries(files).forEach(([k, v]: any) => { if (v) data.append(k, v); });
 
     try {
@@ -183,10 +218,10 @@ export default function ApplicationForm() {
   // ---------------------------------------------------------------------------
   if (success) {
     return (
-      <div className="text-center py-10 animate-fade-up">
+      <div className="text-center py-10">
         <div className="h-20 w-20 rounded-full bg-green-100 text-green-600 text-4xl grid place-items-center mx-auto mb-6">✅</div>
         <h2 className="font-display text-3xl text-brand-dark mb-4">Application Submitted!</h2>
-        <p className="text-stone mb-6 max-w-md mx-auto">Your application has been received and is currently under review. Keep your application reference number safe.</p>
+        <p className="text-stone mb-6 max-w-md mx-auto">Your application has been received and is currently under review. Keep your reference number safe.</p>
         <div className="bg-cream-deep p-6 rounded-2xl max-w-sm mx-auto border border-stone/15">
           <div className="text-xs text-stone uppercase tracking-widest mb-1">Reference Number</div>
           <div className="font-mono text-2xl font-bold text-brand">{success.application_no}</div>
@@ -196,118 +231,127 @@ export default function ApplicationForm() {
   }
 
   // ---------------------------------------------------------------------------
-  // Form render
+  // Render
   // ---------------------------------------------------------------------------
   return (
     <div>
-      {/* Stepper Header */}
-      <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+      {/* Stepper */}
+      <div className="flex gap-2 mb-8">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className={`flex-1 h-2 rounded-full min-w-[40px] transition-colors ${step >= i ? 'bg-brand' : 'bg-stone/20'}`} />
+          <div key={i} className={`flex-1 h-2 rounded-full transition-colors ${step >= i ? 'bg-brand' : 'bg-stone/20'}`} />
         ))}
       </div>
-      <h2 className="font-display text-2xl text-brand-dark mb-8">
-        {step === 1 && 'Step 1: Course & Academic Qualifications'}
+      <h2 className="font-display text-2xl text-brand-dark mb-6">
+        {step === 1 && 'Step 1: Qualifications & Course'}
         {step === 2 && 'Step 2: Personal Details'}
         {step === 3 && 'Step 3: Supporting Documents'}
         {step === 4 && 'Step 4: Parent & Emergency Details'}
       </h2>
 
-      <form onSubmit={step === 4 ? handleSubmit : nextStep} className="space-y-8 animate-fade-in">
+      <form onSubmit={step === 4 ? handleSubmit : nextStep} className="space-y-8">
 
-        {/* ── Step 1: Course Selection & Academics ── */}
+        {/* ── Step 1: Qualifications first → then filtered course selection ── */}
         {step === 1 && (
-          <div className="space-y-5">
-            <div className="grid sm:grid-cols-2 gap-5">
-              {/* Department */}
-              <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department <span className="text-terracotta">*</span></label>
-                <select name="department_id" required value={formData.department_id} onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm">
-                  <option value="">Select Department...</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              </div>
+          <div className="space-y-7">
 
-              {/* Course */}
+            {/* ── QUALIFICATION ENTRY ── */}
+            <div className="rounded-2xl border-2 border-brand/20 bg-brand/5 p-5 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Course <span className="text-terracotta">*</span></label>
-                <select name="course_id" required value={formData.course_id} onChange={handleChange}
-                  disabled={!formData.department_id}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white disabled:bg-stone/10 disabled:opacity-50 focus:outline-none focus:border-brand transition text-sm">
-                  <option value="">Select Course...</option>
-                  {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <h3 className="font-display text-base text-brand-dark mb-0.5">Your Academic Qualification</h3>
+                <p className="text-xs text-stone">Enter your qualification below. We'll automatically show only the courses and levels you qualify for.</p>
               </div>
-
-              {/* Level — dynamically populated from selected course */}
-              <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Level Applied <span className="text-terracotta">*</span></label>
-                <select name="level_applied" required value={formData.level_applied} onChange={handleChange}
-                  disabled={!formData.course_id || availableLevels.length === 0}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white disabled:bg-stone/10 disabled:opacity-50 focus:outline-none focus:border-brand transition text-sm">
-                  <option value="">Select Level...</option>
-                  {availableLevels.map((l: any) => (
-                    <option key={l.name} value={l.name}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Entry requirement hint */}
-            {selectedLevelConfig && (
-              <div className={`rounded-xl p-4 text-sm border ${gradeFails
-                ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-blue-50 border-blue-200 text-blue-800'
-              }`}>
-                {selectedLevelConfig.entry_requirement === 'KCSE' && selectedLevelConfig.min_kcse_grade && (
-                  <>
-                    <span className="font-semibold">Entry Requirement:</span> KCSE with minimum mean grade&nbsp;
-                    <span className="font-bold">{selectedLevelConfig.min_kcse_grade}</span>.
-                    {formData.kcse_grade && gradeFails && (
-                      <> Your current grade (<span className="font-bold">{formData.kcse_grade}</span>) does not meet this requirement.</>
-                    )}
-                  </>
-                )}
-                {selectedLevelConfig.entry_requirement === 'KCSE' && !selectedLevelConfig.min_kcse_grade && (
-                  <><span className="font-semibold">Entry Requirement:</span> KCSE certificate required (no minimum grade set).</>
-                )}
-                {selectedLevelConfig.entry_requirement === 'KCPE' && selectedLevelConfig.min_kcpe_marks != null && (
-                  <>
-                    <span className="font-semibold">Entry Requirement:</span> KCPE with minimum marks&nbsp;
-                    <span className="font-bold">{selectedLevelConfig.min_kcpe_marks}</span>.
-                    {formData.kcpe_marks && gradeFails && (
-                      <> Your current marks (<span className="font-bold">{formData.kcpe_marks}</span>) do not meet this requirement.</>
-                    )}
-                  </>
-                )}
-                {selectedLevelConfig.entry_requirement === 'KCPE' && selectedLevelConfig.min_kcpe_marks == null && (
-                  <><span className="font-semibold">Entry Requirement:</span> KCPE certificate required.</>
-                )}
-                {selectedLevelConfig.entry_requirement === 'NONE' && (
-                  <><span className="font-semibold">Entry Requirement:</span> Open entry — no minimum qualification required.</>
-                )}
-              </div>
-            )}
-            
-            {/* Academic Background Fields now in Step 1 */}
-            <div className="pt-6 border-t border-stone/15">
-              <h3 className="font-display text-lg text-brand-dark mb-4">Academic Background</h3>
-              <div className="grid sm:grid-cols-2 gap-5">
-                <Field name="previous_school" label="Previous School Attended" value={formData.previous_school} onChange={handleChange} />
-                <div className="hidden sm:block" />
-                <Field name="kcpe_index" label="KCPE Index Number" value={formData.kcpe_index} onChange={handleChange} />
-                <Field name="kcpe_marks" label="KCPE Marks" type="number" value={formData.kcpe_marks} onChange={handleChange} />
-                <Field name="kcse_index" label="KCSE Index Number" value={formData.kcse_index} onChange={handleChange} />
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">KCSE Mean Grade</label>
                   <select name="kcse_grade" value={formData.kcse_grade} onChange={handleChange}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm">
-                    <option value="">Select Grade...</option>
+                    <option value="">— Select KCSE Grade —</option>
                     {KCSE_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">KCPE Marks <span className="text-stone font-normal text-xs">(out of 500)</span></label>
+                  <input type="number" name="kcpe_marks" min={0} max={500} value={formData.kcpe_marks} onChange={handleChange}
+                    placeholder="e.g. 320"
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm" />
+                </div>
               </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field name="kcse_index" label="KCSE Index Number" value={formData.kcse_index} onChange={handleChange} />
+                <Field name="kcpe_index" label="KCPE Index Number" value={formData.kcpe_index} onChange={handleChange} />
+              </div>
+              <Field name="previous_school" label="Previous School Attended" value={formData.previous_school} onChange={handleChange} />
+            </div>
+
+            {/* ── COURSE SELECTION (filtered by qual) ── */}
+            <div className={`space-y-4 transition-opacity ${hasAnyQual ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+              <div>
+                <h3 className="font-display text-base text-brand-dark mb-0.5">Course Selection</h3>
+                {!hasAnyQual && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    ↑ Enter your KCSE grade or KCPE marks above to see the courses available to you.
+                  </p>
+                )}
+                {hasAnyQual && eligibleDepartments.length === 0 && (
+                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    Unfortunately, no courses are currently available for your qualification. Please contact the institution for guidance.
+                  </p>
+                )}
+                {hasAnyQual && eligibleDepartments.length > 0 && (
+                  <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    ✓ {eligibleDepartments.length} department{eligibleDepartments.length !== 1 ? 's' : ''} available for your qualification.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Select label="Department" name="department_id" required value={formData.department_id} onChange={handleChange}
+                  disabled={!hasAnyQual || eligibleDepartments.length === 0}>
+                  <option value="">Select Department...</option>
+                  {eligibleDepartments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </Select>
+
+                <Select label="Course" name="course_id" required value={formData.course_id} onChange={handleChange}
+                  disabled={!formData.department_id || eligibleCourses.length === 0}>
+                  <option value="">Select Course...</option>
+                  {eligibleCourses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Select>
+              </div>
+
+              <Select label="Level Applied" name="level_applied" required value={formData.level_applied} onChange={handleChange}
+                disabled={!formData.course_id || eligibleLevels.length === 0}>
+                <option value="">Select Level...</option>
+                {eligibleLevels.map((l: any) => {
+                  const reqLabel = l.entry_requirement === 'KCSE' && l.min_kcse_grade
+                    ? ` — min. KCSE ${l.min_kcse_grade}`
+                    : l.entry_requirement === 'KCPE' && l.min_kcpe_marks
+                      ? ` — min. KCPE ${l.min_kcpe_marks}`
+                      : '';
+                  return <option key={l.name} value={l.name}>{l.name}{reqLabel}</option>;
+                })}
+              </Select>
+
+              {/* Entry requirement confirmation badge */}
+              {selectedLevelConfig && (
+                <div className="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm p-4 flex items-start gap-3">
+                  <span className="text-lg mt-0.5">✅</span>
+                  <div>
+                    <div className="font-semibold">You qualify for {formData.level_applied}!</div>
+                    <div className="text-xs mt-0.5">
+                      {selectedLevelConfig.entry_requirement === 'KCSE' && selectedLevelConfig.min_kcse_grade &&
+                        `Minimum KCSE grade required: ${selectedLevelConfig.min_kcse_grade} — Your grade: ${formData.kcse_grade}`}
+                      {selectedLevelConfig.entry_requirement === 'KCSE' && !selectedLevelConfig.min_kcse_grade &&
+                        `KCSE certificate required — your grade (${formData.kcse_grade}) qualifies.`}
+                      {selectedLevelConfig.entry_requirement === 'KCPE' && selectedLevelConfig.min_kcpe_marks &&
+                        `Minimum KCPE marks required: ${selectedLevelConfig.min_kcpe_marks} — Your marks: ${formData.kcpe_marks}`}
+                      {selectedLevelConfig.entry_requirement === 'KCPE' && !selectedLevelConfig.min_kcpe_marks &&
+                        `KCPE certificate required — your marks qualify.`}
+                      {selectedLevelConfig.entry_requirement === 'NONE' &&
+                        `Open entry — no minimum qualification required.`}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -317,14 +361,11 @@ export default function ApplicationForm() {
           <div className="grid sm:grid-cols-2 gap-5">
             <Field name="surname" label="Surname" required value={formData.surname} onChange={handleChange} />
             <Field name="other_names" label="Other Names" required value={formData.other_names} onChange={handleChange} />
-            <div>
-              <label className="block text-sm font-semibold text-brand-dark mb-1.5">Gender <span className="text-terracotta">*</span></label>
-              <select name="gender" required value={formData.gender} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                <option value="">Select...</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </div>
+            <Select label="Gender" name="gender" required value={formData.gender} onChange={handleChange}>
+              <option value="">Select...</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </Select>
             <Field name="date_of_birth" label="Date of Birth" type="date" required value={formData.date_of_birth} onChange={handleChange} />
             <Field name="id_number" label="National ID No." value={formData.id_number} onChange={handleChange} />
             <Field name="birth_cert_no" label="Birth Certificate No." value={formData.birth_cert_no} onChange={handleChange} />
@@ -338,7 +379,7 @@ export default function ApplicationForm() {
         {/* ── Step 3: Supporting Documents ── */}
         {step === 3 && (
           <div className="space-y-6">
-            <p className="text-sm text-stone mb-4">Please upload the required supporting documents. Allowed formats: PDF, JPG, PNG (Max 5MB each).</p>
+            <p className="text-sm text-stone">Please upload the required supporting documents. Allowed formats: PDF, JPG, PNG (Max 10MB each).</p>
             {[
               { name: 'doc_id_copy', label: 'National ID / Passport Copy', hint: 'Front and back if applicable' },
               { name: 'doc_kcse', label: 'KCSE Certificate / Result Slip', hint: 'Must be clearly legible' },
@@ -349,13 +390,8 @@ export default function ApplicationForm() {
               <div key={doc.name}>
                 <label className="block text-sm font-semibold text-brand-dark mb-1">{doc.label}</label>
                 <p className="text-xs text-stone mb-1.5">{doc.hint}</p>
-                <input
-                  type="file"
-                  name={doc.name}
-                  accept=".pdf,image/jpeg,image/jpg,image/png"
-                  onChange={handleFileChange}
-                  className="w-full text-sm text-stone file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:bg-brand/10 file:text-brand file:font-semibold hover:file:bg-brand hover:file:text-cream transition"
-                />
+                <input type="file" name={doc.name} accept=".pdf,image/jpeg,image/jpg,image/png" onChange={handleFileChange}
+                  className="w-full text-sm text-stone file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:bg-brand/10 file:text-brand file:font-semibold hover:file:bg-brand hover:file:text-cream transition" />
                 {files[doc.name] && <p className="text-xs text-green-600 mt-1">✓ {files[doc.name].name}</p>}
               </div>
             ))}
@@ -365,16 +401,15 @@ export default function ApplicationForm() {
         {/* ── Step 4: Parent & Emergency Details ── */}
         {step === 4 && (
           <div className="space-y-8">
+            {/* Father */}
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <h3 className="text-lg font-display text-brand-dark">Father Information</h3>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-stone">Present?</label>
-                  <button type="button" onClick={() => setFormData({ ...formData, father_present: !formData.father_present })}
-                    className={`w-12 h-6 rounded-full transition ${formData.father_present ? 'bg-brand' : 'bg-stone/30'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full transition ${formData.father_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
-                </div>
+                <button type="button" onClick={() => setFormData(f => ({ ...f, father_present: !f.father_present }))}
+                  className={`w-12 h-6 rounded-full transition ${formData.father_present ? 'bg-brand' : 'bg-stone/30'} flex items-center`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.father_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
+                <span className="text-sm text-stone">{formData.father_present ? 'Present' : 'Not present'}</span>
               </div>
               {formData.father_present && (
                 <div className="grid sm:grid-cols-2 gap-5">
@@ -385,16 +420,16 @@ export default function ApplicationForm() {
                 </div>
               )}
             </div>
+
+            {/* Mother */}
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <h3 className="text-lg font-display text-brand-dark">Mother Information</h3>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-stone">Present?</label>
-                  <button type="button" onClick={() => setFormData({ ...formData, mother_present: !formData.mother_present })}
-                    className={`w-12 h-6 rounded-full transition ${formData.mother_present ? 'bg-brand' : 'bg-stone/30'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full transition ${formData.mother_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
-                </div>
+                <button type="button" onClick={() => setFormData(f => ({ ...f, mother_present: !f.mother_present }))}
+                  className={`w-12 h-6 rounded-full transition ${formData.mother_present ? 'bg-brand' : 'bg-stone/30'} flex items-center`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.mother_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
+                <span className="text-sm text-stone">{formData.mother_present ? 'Present' : 'Not present'}</span>
               </div>
               {formData.mother_present && (
                 <div className="grid sm:grid-cols-2 gap-5">
@@ -405,23 +440,19 @@ export default function ApplicationForm() {
                 </div>
               )}
             </div>
+
+            {/* Emergency */}
             <div>
-              <h3 className="text-lg font-display text-brand-dark mb-4">Emergency Details</h3>
+              <h3 className="text-lg font-display text-brand-dark mb-4">Emergency Contact</h3>
               <div className="grid sm:grid-cols-2 gap-5">
                 <Field name="emergency_person" label="Emergency Contact Name" required value={formData.emergency_person} onChange={handleChange} />
                 <Field name="emergency_phone" label="Phone Number" required value={formData.emergency_phone} onChange={handleChange} />
               </div>
             </div>
-
-            {/* Grade warning summary before final submit */}
-            {gradeFails && (
-              <div className="rounded-xl bg-red-50 border border-red-200 text-red-800 p-4 text-sm">
-                ⚠️ <strong>Entry requirement not met</strong> — please go back to Step 1 and review the level you applied for, or update your grade/marks in Step 3.
-              </div>
-            )}
           </div>
         )}
 
+        {/* Navigation */}
         <div className="pt-6 flex items-center justify-between border-t border-stone/10">
           {step > 1 ? (
             <button type="button" onClick={prevStep} className="px-6 py-3 rounded-full text-brand font-semibold hover:bg-brand/10 transition">
@@ -429,9 +460,11 @@ export default function ApplicationForm() {
             </button>
           ) : <div />}
 
-          <button type="submit" disabled={submitting || (step === 4 && gradeFails)}
+          <button type="submit" disabled={submitting}
             className="px-8 py-3 rounded-full bg-brand text-cream font-semibold hover:bg-brand-dark transition shadow-lg disabled:opacity-50">
-            {step === 4 ? (submitting ? 'Submitting...' : 'Submit Application ✅') : 'Next Step →'}
+            {step === 4
+              ? (submitting ? 'Submitting...' : 'Submit Application ✅')
+              : 'Next Step →'}
           </button>
         </div>
       </form>
