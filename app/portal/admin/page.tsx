@@ -3785,8 +3785,8 @@ function CoursesTab() {
   const [deptFilter, setDeptFilter] = useState('');
 
   // courseForm.levels is now a structured array of level objects
-  type LevelObj = { name: string; entry_requirement: 'KCPE' | 'KCSE' | 'NONE'; min_kcse_grade: string; min_kcpe_marks: string };
-  const DEFAULT_LEVEL_OBJ: LevelObj = { name: 'Level 5', entry_requirement: 'KCSE', min_kcse_grade: '', min_kcpe_marks: '' };
+  type LevelObj = { name: string; entry_requirement: 'KCPE' | 'KCSE' | 'NONE'; min_kcse_grade: string; min_kcpe_marks: string; allow_progression_from: string };
+  const DEFAULT_LEVEL_OBJ: LevelObj = { name: 'Level 5', entry_requirement: 'KCSE', min_kcse_grade: '', min_kcpe_marks: '', allow_progression_from: '' };
   const [courseForm, setCourseForm] = useState({ id: '', name: '', shortcode: '', department_id: '' });
   const [levelObjs, setLevelObjs] = useState<LevelObj[]>([{ ...DEFAULT_LEVEL_OBJ }]);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -3794,6 +3794,7 @@ function CoursesTab() {
 
   const KCSE_GRADES = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'E'];
   const LEVEL_OPTIONS = ['Level 3', 'Level 4', 'Level 5', 'Level 6'];
+  const PROGRESSION_OPTIONS = ['Level 3', 'Level 4', 'Level 5'];
 
   const addLevel = () => setLevelObjs(prev => [...prev, { ...DEFAULT_LEVEL_OBJ }]);
   const removeLevel = (idx: number) => setLevelObjs(prev => prev.filter((_, i) => i !== idx));
@@ -3806,11 +3807,12 @@ function CoursesTab() {
     return levelsArr.map(l => {
       const name = typeof l === 'string' ? l : l.name;
       const req = l.entry_requirement;
-      if (req === 'KCSE' && l.min_kcse_grade) return `${name} (KCSE ≥${l.min_kcse_grade})`;
-      if (req === 'KCPE' && l.min_kcpe_marks) return `${name} (KCPE ≥${l.min_kcpe_marks})`;
-      if (req === 'KCSE') return `${name} (KCSE)`;
-      if (req === 'KCPE') return `${name} (KCPE)`;
-      return name;
+      const prog = l.allow_progression_from ? ` / or from ${l.allow_progression_from}` : '';
+      if (req === 'KCSE' && l.min_kcse_grade) return `${name} (KCSE ≥${l.min_kcse_grade}${prog})`;
+      if (req === 'KCPE' && l.min_kcpe_marks) return `${name} (KCPE ≥${l.min_kcpe_marks}${prog})`;
+      if (req === 'KCSE') return `${name} (KCSE${prog})`;
+      if (req === 'KCPE') return `${name} (KCPE${prog})`;
+      return `${name}${prog ? ` (${prog.trim()})` : ''}`;
     }).join(', ');
   };
 
@@ -3888,6 +3890,7 @@ function CoursesTab() {
           entry_requirement: l.entry_requirement,
           min_kcse_grade: l.entry_requirement === 'KCSE' ? (l.min_kcse_grade || null) : null,
           min_kcpe_marks: l.entry_requirement === 'KCPE' ? (l.min_kcpe_marks ? Number(l.min_kcpe_marks) : null) : null,
+          allow_progression_from: l.allow_progression_from || null,
         }))),
       };
       if (courseForm.id) {
@@ -4003,6 +4006,7 @@ function CoursesTab() {
                             entry_requirement: l.entry_requirement || 'KCSE',
                             min_kcse_grade: l.min_kcse_grade || '',
                             min_kcpe_marks: l.min_kcpe_marks != null ? String(l.min_kcpe_marks) : '',
+                            allow_progression_from: l.allow_progression_from || '',
                           })) : [{ ...DEFAULT_LEVEL_OBJ }]);
                           setIsCourseModalOpen(true);
                         }} className="text-brand hover:underline text-xs font-semibold">Edit</button>
@@ -4156,6 +4160,23 @@ function CoursesTab() {
                       {lv.entry_requirement === 'KCPE' && (
                         <div className="rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-[10px] px-3 py-2">
                           ℹ️ KCPE is a binary qualifier — any student who completed primary school (Std 8) qualifies. Marks are collected for record-keeping only.
+                        </div>
+                      )}
+                      {/* ── Progression bypass rule ── */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-semibold text-stone uppercase tracking-wider w-28 shrink-0">Progression From</span>
+                        <select
+                          value={lv.allow_progression_from}
+                          onChange={e => updateLevel(idx, { allow_progression_from: e.target.value })}
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-stone/25 text-xs text-brand-dark bg-white focus:outline-none focus:border-brand"
+                        >
+                          <option value="">— None (no progression shortcut) —</option>
+                          {PROGRESSION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      </div>
+                      {lv.allow_progression_from && (
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[10px] px-3 py-2">
+                          🔁 Students who completed <strong>{lv.allow_progression_from}</strong> at any institution can apply for this level without meeting the KCSE/KCPE requirement above.
                         </div>
                       )}
                     </div>

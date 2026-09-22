@@ -18,7 +18,12 @@ function kcseGradeMeetsMinimum(applicantGrade: string, minGrade: string): boolea
 }
 
 /** Check if a level is eligible for the applicant's current qualification */
-function levelIsEligible(level: any, kcseGrade: string, kcpeMarks: string): boolean {
+function levelIsEligible(level: any, kcseGrade: string, kcpeMarks: string, priorLevelCompleted: string): boolean {
+  // ── Progression bypass: if the level allows entry via a prior level and the
+  // applicant has completed that level, they qualify regardless of KCSE/KCPE.
+  if (level.allow_progression_from && priorLevelCompleted && priorLevelCompleted === level.allow_progression_from) {
+    return true;
+  }
   const req = level.entry_requirement;
   if (req === 'NONE') return true;
   if (req === 'KCSE') {
@@ -69,6 +74,8 @@ export default function ApplicationForm() {
   const [success, setSuccess] = useState<any>(null);
 
   const [formData, setFormData] = useState({
+    // Prior level completed — drives progression bypass
+    prior_level_completed: '',
     // Academic qualification — filled first, drives filtering
     kcse_grade: '',
     kcpe_marks: '',
@@ -102,7 +109,8 @@ export default function ApplicationForm() {
   // ---------------------------------------------------------------------------
   const hasKcse = formData.kcse_grade !== '';
   const hasKcpe = formData.kcpe_marks !== '' && !isNaN(parseInt(formData.kcpe_marks));
-  const hasAnyQual = hasKcse || hasKcpe;
+  const hasPriorLevel = formData.prior_level_completed !== '';
+  const hasAnyQual = hasKcse || hasKcpe || hasPriorLevel;
 
   /** Departments that have at least one course with at least one eligible level */
   const eligibleDepartments = useMemo(() => {
@@ -111,10 +119,10 @@ export default function ApplicationForm() {
       const courses: any[] = dept.courses || [];
       return courses.some(course => {
         const levels: any[] = Array.isArray(course.levels) ? course.levels : [];
-        return levels.some(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks));
+        return levels.some(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks, formData.prior_level_completed));
       });
     });
-  }, [allDepartments, formData.kcse_grade, formData.kcpe_marks, hasAnyQual]);
+  }, [allDepartments, formData.kcse_grade, formData.kcpe_marks, formData.prior_level_completed, hasAnyQual]);
 
   /** Courses in the selected department that have at least one eligible level */
   const eligibleCourses = useMemo(() => {
@@ -123,9 +131,9 @@ export default function ApplicationForm() {
     if (!dept) return [];
     return (dept.courses || []).filter((course: any) => {
       const levels: any[] = Array.isArray(course.levels) ? course.levels : [];
-      return levels.some(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks));
+      return levels.some(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks, formData.prior_level_completed));
     });
-  }, [allDepartments, formData.department_id, formData.kcse_grade, formData.kcpe_marks]);
+  }, [allDepartments, formData.department_id, formData.kcse_grade, formData.kcpe_marks, formData.prior_level_completed]);
 
   /** Eligible levels for the selected course */
   const eligibleLevels = useMemo(() => {
@@ -133,8 +141,8 @@ export default function ApplicationForm() {
     const course = eligibleCourses.find((c: any) => c.id === formData.course_id);
     if (!course) return [];
     const levels: any[] = Array.isArray(course.levels) ? course.levels : [];
-    return levels.filter(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks));
-  }, [eligibleCourses, formData.course_id, formData.kcse_grade, formData.kcpe_marks]);
+    return levels.filter(l => levelIsEligible(l, formData.kcse_grade, formData.kcpe_marks, formData.prior_level_completed));
+  }, [eligibleCourses, formData.course_id, formData.kcse_grade, formData.kcpe_marks, formData.prior_level_completed]);
 
   /** The config for the chosen level */
   const selectedLevelConfig = useMemo(
@@ -150,8 +158,8 @@ export default function ApplicationForm() {
     setFormData(prev => ({
       ...prev,
       [name]: value,
-      // Reset downstream selections when qualifications change
-      ...(name === 'kcse_grade' || name === 'kcpe_marks'
+      // Reset downstream selections when qualifications or prior level change
+      ...(name === 'kcse_grade' || name === 'kcpe_marks' || name === 'prior_level_completed'
         ? { department_id: '', course_id: '', level_applied: '' }
         : {}),
       ...(name === 'department_id' ? { course_id: '', level_applied: '' } : {}),
@@ -259,6 +267,26 @@ export default function ApplicationForm() {
                 <h3 className="font-display text-base text-brand-dark mb-0.5">Your Academic Qualification</h3>
                 <p className="text-xs text-stone">Enter your qualification below. We'll automatically show only the courses and levels you qualify for.</p>
               </div>
+
+              {/* Prior level completed — shown first, can bypass KCSE/KCPE */}
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">
+                  Highest TVET / Technical Level Completed <span className="text-stone font-normal text-xs">(if any)</span>
+                </label>
+                <select name="prior_level_completed" value={formData.prior_level_completed} onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm">
+                  <option value="">— None (first-time applicant) —</option>
+                  <option value="Level 3">Level 3 (completed)</option>
+                  <option value="Level 4">Level 4 (completed)</option>
+                  <option value="Level 5">Level 5 (completed)</option>
+                </select>
+                {formData.prior_level_completed && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                    🔁 As a continuing student from <strong>{formData.prior_level_completed}</strong>, you may qualify for the next level without needing KCSE/KCPE — depending on the course.
+                  </p>
+                )}
+              </div>
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">KCSE Mean Grade</label>
@@ -289,7 +317,7 @@ export default function ApplicationForm() {
                 <h3 className="font-display text-base text-brand-dark mb-0.5">Course Selection</h3>
                 {!hasAnyQual && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    ↑ Enter your KCSE grade or KCPE marks above to see the courses available to you.
+                    ↑ Enter your KCSE grade, KCPE marks, or select a completed TVET level above to see the courses available to you.
                   </p>
                 )}
                 {hasAnyQual && eligibleDepartments.length === 0 && (
@@ -338,14 +366,23 @@ export default function ApplicationForm() {
                   <div>
                     <div className="font-semibold">You qualify for {formData.level_applied}!</div>
                     <div className="text-xs mt-0.5">
-                      {selectedLevelConfig.entry_requirement === 'KCSE' && selectedLevelConfig.min_kcse_grade &&
-                        `Minimum KCSE grade required: ${selectedLevelConfig.min_kcse_grade} — Your grade: ${formData.kcse_grade}`}
-                      {selectedLevelConfig.entry_requirement === 'KCSE' && !selectedLevelConfig.min_kcse_grade &&
-                        `KCSE certificate required — your grade (${formData.kcse_grade}) qualifies.`}
-                      {selectedLevelConfig.entry_requirement === 'KCPE' &&
-                        `KCPE certificate required — students who completed primary school qualify.`}
-                      {selectedLevelConfig.entry_requirement === 'NONE' &&
-                        `Open entry — no minimum qualification required.`}
+                      {/* Progression bypass path */}
+                      {selectedLevelConfig.allow_progression_from &&
+                        formData.prior_level_completed === selectedLevelConfig.allow_progression_from &&
+                        `Progression entry: you completed ${formData.prior_level_completed} — KCSE/KCPE requirement waived.`}
+                      {/* Normal paths */}
+                      {!(selectedLevelConfig.allow_progression_from && formData.prior_level_completed === selectedLevelConfig.allow_progression_from) && (
+                        <>
+                          {selectedLevelConfig.entry_requirement === 'KCSE' && selectedLevelConfig.min_kcse_grade &&
+                            `Minimum KCSE grade required: ${selectedLevelConfig.min_kcse_grade} — Your grade: ${formData.kcse_grade}`}
+                          {selectedLevelConfig.entry_requirement === 'KCSE' && !selectedLevelConfig.min_kcse_grade &&
+                            `KCSE certificate required — your grade (${formData.kcse_grade}) qualifies.`}
+                          {selectedLevelConfig.entry_requirement === 'KCPE' &&
+                            `KCPE certificate required — students who completed primary school qualify.`}
+                          {selectedLevelConfig.entry_requirement === 'NONE' &&
+                            `Open entry — no minimum qualification required.`}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
