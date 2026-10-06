@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi } from '@/lib/services';
+import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi, invoicesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
@@ -10,13 +10,14 @@ export default function ProcurementDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [tab, setTab] = useState<'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'inventory'>('suppliers');
+  const [tab, setTab] = useState<'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'inventory' | 'invoices'>('suppliers');
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [rfqs, setRfqs] = useState<any[]>([]);
   const [lpos, setLpos] = useState<any[]>([]);
   const [grns, setGrns] = useState<any[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -28,6 +29,13 @@ export default function ProcurementDashboard() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectingReqId, setRejectingReqId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  // Invoices
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [invoiceForm, setInvoiceForm] = useState<any>({});
+  const [payForm, setPayForm] = useState({ paid_amount: '', payment_date: '' });
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'PROCUREMENT')) router.replace('/login');
@@ -41,7 +49,77 @@ export default function ProcurementDashboard() {
     grnsApi.getAll().then(r => setGrns(r.data?.grns || [])).catch(() => setGrns([]));
     inventoryApi.getAll().then(r => setInventory(r.data?.items || [])).catch(() => setInventory([]));
     departmentsApi.getAll().then(r => setDepartments(Array.isArray(r.data) ? r.data : [])).catch(() => setDepartments([]));
+    invoicesApi.getAll().then(r => setInvoices(r.data?.invoices || [])).catch(() => setInvoices([]));
   }, []);
+
+  const refreshInvoices = () => invoicesApi.getAll().then(r => setInvoices(r.data?.invoices || [])).catch(() => {});
+
+  const handleDownloadInvoicePdf = async (invoiceId: string) => {
+    setDownloadingPdf(invoiceId);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('ntvc_access_token') : '';
+      const url = invoicesApi.getPdfUrl(invoiceId);
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Failed to download');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `invoice-${invoiceId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      toast.error('Failed to download invoice PDF');
+    } finally {
+      setDownloadingPdf(null);
+    }
+  };
+
+  const handleCreateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await invoicesApi.create(invoiceForm);
+      toast.success('Invoice created successfully');
+      refreshInvoices();
+      setShowInvoiceModal(false);
+      setInvoiceForm({});
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to create invoice');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvoice) return;
+    setSubmitting(true);
+    try {
+      await invoicesApi.recordPayment(selectedInvoice.id, { paid_amount: parseFloat(payForm.paid_amount), payment_date: payForm.payment_date });
+      toast.success('Payment recorded successfully');
+      refreshInvoices();
+      setShowPayModal(false);
+      setPayForm({ paid_amount: '', payment_date: '' });
+      setSelectedInvoice(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to record payment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteInvoice = (id: string) => {
+    toast('Delete this invoice? This cannot be undone.', {
+      action: { label: 'Delete', onClick: async () => {
+        try {
+          await invoicesApi.delete(id);
+          toast.success('Invoice deleted');
+          refreshInvoices();
+        } catch { toast.error('Failed to delete invoice'); }
+      }},
+      cancel: { label: 'Cancel', onClick: () => {} },
+    });
+  };
 
   const handleCreate = () => {
     setEditingItem(null);
@@ -291,6 +369,7 @@ export default function ProcurementDashboard() {
           { key: 'lpos', label: `📄 LPOs (${lpos.length})` },
           { key: 'grns', label: `✅ GRNs (${grns.length})` },
           { key: 'inventory', label: `📦 Inventory (${inventory.length})` },
+          { key: 'invoices', label: `🧾 Invoices (${invoices.length})` },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)}
             className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
@@ -874,6 +953,174 @@ export default function ProcurementDashboard() {
                 Confirm Rejection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── INVOICES TAB CONTENT ── */}
+      {tab === 'invoices' && (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="font-display text-2xl text-brand-dark">Supplier Invoices</h2>
+              <p className="text-sm text-stone mt-1">Manage and download invoices from suppliers against LPOs.</p>
+            </div>
+            <button onClick={() => { setInvoiceForm({}); setShowInvoiceModal(true); }}
+              className="px-5 py-2.5 rounded-xl bg-brand text-cream font-semibold text-sm hover:bg-brand-dark transition shadow">
+              + New Invoice
+            </button>
+          </div>
+
+          {invoices.length === 0 ? (
+            <div className="text-center py-16 text-stone">No invoices found. Create one to get started.</div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-stone/15 overflow-hidden shadow-sm">
+              <table className="w-full text-sm">
+                <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wide">
+                  <tr>
+                    <th className="px-5 py-3 text-left">Invoice No</th>
+                    <th className="px-5 py-3 text-left">Supplier</th>
+                    <th className="px-5 py-3 text-left">LPO</th>
+                    <th className="px-5 py-3 text-right">Amount (KES)</th>
+                    <th className="px-5 py-3 text-right">Paid (KES)</th>
+                    <th className="px-5 py-3 text-left">Due Date</th>
+                    <th className="px-5 py-3 text-left">Status</th>
+                    <th className="px-5 py-3 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone/10">
+                  {invoices.map((inv: any) => (
+                    <tr key={inv.id} className="hover:bg-cream-deep/50 transition">
+                      <td className="px-5 py-4 font-mono text-xs text-brand-dark">{inv.invoice_no}</td>
+                      <td className="px-5 py-4">{inv.supplier?.name || '—'}</td>
+                      <td className="px-5 py-4 text-xs text-stone">{inv.lpo?.lpo_number || '—'}</td>
+                      <td className="px-5 py-4 text-right font-semibold">{Number(inv.amount || 0).toLocaleString()}</td>
+                      <td className="px-5 py-4 text-right text-green-700">{Number(inv.paid_amount || 0).toLocaleString()}</td>
+                      <td className="px-5 py-4 text-xs">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</td>
+                      <td className="px-5 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          inv.status === 'PAID' ? 'bg-green-100 text-green-800' :
+                          inv.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
+                          inv.status === 'OVERDUE' ? 'bg-red-100 text-red-800' :
+                          'bg-stone/10 text-stone'
+                        }`}>{inv.status}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDownloadInvoicePdf(inv.id)}
+                            disabled={downloadingPdf === inv.id}
+                            title="Download PDF"
+                            className="px-3 py-1.5 rounded-lg bg-brand text-cream text-xs font-semibold hover:bg-brand-dark transition disabled:opacity-50">
+                            {downloadingPdf === inv.id ? '...' : '⬇ PDF'}
+                          </button>
+                          {inv.status !== 'PAID' && (
+                            <button
+                              onClick={() => { setSelectedInvoice(inv); setPayForm({ paid_amount: '', payment_date: new Date().toISOString().split('T')[0] }); setShowPayModal(true); }}
+                              className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition">
+                              Record Payment
+                            </button>
+                          )}
+                          <button onClick={() => handleDeleteInvoice(inv.id)}
+                            className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition">
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create Invoice Modal */}
+      {showInvoiceModal && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-6">New Supplier Invoice</h2>
+            <form onSubmit={handleCreateInvoice} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">LPO</label>
+                  <select value={invoiceForm.lpo_id || ''} onChange={e => setInvoiceForm({...invoiceForm, lpo_id: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                    <option value="">Select LPO</option>
+                    {lpos.map((l: any) => <option key={l.id} value={l.id}>{l.lpo_number}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Supplier</label>
+                  <select value={invoiceForm.supplier_id || ''} onChange={e => setInvoiceForm({...invoiceForm, supplier_id: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
+                    <option value="">Select Supplier</option>
+                    {suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Invoice Number</label>
+                <input type="text" required value={invoiceForm.invoice_no || ''} onChange={e => setInvoiceForm({...invoiceForm, invoice_no: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="e.g. INV-2026-001" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Amount (KES)</label>
+                  <input type="number" required min="0" step="0.01" value={invoiceForm.amount || ''} onChange={e => setInvoiceForm({...invoiceForm, amount: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Invoice Date</label>
+                  <input type="date" required value={invoiceForm.invoice_date || ''} onChange={e => setInvoiceForm({...invoiceForm, invoice_date: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Due Date</label>
+                <input type="date" value={invoiceForm.due_date || ''} onChange={e => setInvoiceForm({...invoiceForm, due_date: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setShowInvoiceModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-stone/25 text-stone font-semibold hover:bg-stone/5 transition">Cancel</button>
+                <button type="submit" disabled={submitting}
+                  className="flex-1 py-3 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-60">
+                  {submitting ? 'Saving...' : 'Create Invoice'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      {showPayModal && selectedInvoice && (
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Record Payment</h2>
+            <p className="text-sm text-stone mb-6">Invoice: <span className="font-semibold">{selectedInvoice.invoice_no}</span> — Balance: <span className="font-semibold">KES {Number((selectedInvoice.amount || 0) - (selectedInvoice.paid_amount || 0)).toLocaleString()}</span></p>
+            <form onSubmit={handleRecordPayment} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Amount Paid (KES)</label>
+                <input type="number" required min="0.01" step="0.01" value={payForm.paid_amount} onChange={e => setPayForm({...payForm, paid_amount: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Payment Date</label>
+                <input type="date" required value={payForm.payment_date} onChange={e => setPayForm({...payForm, payment_date: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => { setShowPayModal(false); setSelectedInvoice(null); }}
+                  className="flex-1 py-3 rounded-xl border border-stone/25 text-stone font-semibold hover:bg-stone/5 transition">Cancel</button>
+                <button type="submit" disabled={submitting}
+                  className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-60">
+                  {submitting ? 'Saving...' : 'Record Payment'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
