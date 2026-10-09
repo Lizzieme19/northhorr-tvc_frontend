@@ -1934,6 +1934,45 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     }
   };
 
+  // ── Delete student + Duplicates ──────────────────────────────────────
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [loadingDuplicates, setLoadingDuplicates] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+
+  const handleFindDuplicates = async () => {
+    setLoadingDuplicates(true);
+    try {
+      const res = await api.get('/students/duplicates');
+      setDuplicates(res.data.duplicates || []);
+      setShowDuplicates(true);
+      if (res.data.duplicates.length === 0) toast.success('No duplicates found! Database is clean.');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to fetch duplicates');
+    } finally {
+      setLoadingDuplicates(false);
+    }
+  };
+
+  const handleDeleteStudent = (student: any) => {
+    const name = `${student.application?.surname || ''} ${student.application?.other_names || ''}`.trim();
+    toast(`Permanently delete ${name} (${student.admission_no}) and all linked records? This cannot be undone.`, {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            await api.delete(`/students/${student.id}`);
+            toast.success(`${name} deleted successfully.`);
+            const updated = await studentsApi.getAll({ page, limit: 15, search });
+            setStudents(updated.data.students);
+            if (showDuplicates) handleFindDuplicates();
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Failed to delete student');
+          }
+        },
+      },
+    });
+  };
+
   const handleAssignTerm = async () => {
     if (!selectedTermId) {
       toast.warning('Please select a term');
@@ -2134,8 +2173,61 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               </button>
             </>
           )}
+          <button
+            onClick={handleFindDuplicates}
+            disabled={loadingDuplicates}
+            className="px-4 py-2 rounded-xl bg-red-50 text-red-700 border border-red-200 font-semibold hover:bg-red-100 transition text-sm disabled:opacity-50"
+          >
+            {loadingDuplicates ? 'Scanning…' : '🔍 Find Duplicates'}
+          </button>
         </div>
       </div>
+
+      {/* Duplicates Panel */}
+      {showDuplicates && duplicates.length > 0 && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display text-base text-red-800 font-semibold">⚠️ {duplicates.length} Duplicate Group(s) Found</h3>
+            <button onClick={() => setShowDuplicates(false)} className="text-xs text-red-600 hover:text-red-800">Dismiss</button>
+          </div>
+          <div className="space-y-4">
+            {duplicates.map((group: any, gi: number) => (
+              <div key={gi} className="bg-white rounded-xl border border-red-200 overflow-hidden">
+                <div className="px-4 py-2 bg-red-100 text-red-800 text-sm font-semibold">{group.name} — {group.count} records</div>
+                <table className="w-full text-xs">
+                  <thead className="bg-red-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-stone">Admission No</th>
+                      <th className="px-3 py-2 text-left text-stone">Course</th>
+                      <th className="px-3 py-2 text-left text-stone">Level</th>
+                      <th className="px-3 py-2 text-left text-stone">Intake</th>
+                      <th className="px-3 py-2 text-left text-stone">Created</th>
+                      <th className="px-3 py-2 text-left text-stone">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.students.map((s: any) => (
+                      <tr key={s.id} className="border-t border-red-100">
+                        <td className="px-3 py-2 font-mono text-brand">{s.admission_no}</td>
+                        <td className="px-3 py-2">{s.course}</td>
+                        <td className="px-3 py-2">{s.level}</td>
+                        <td className="px-3 py-2">{s.intake}</td>
+                        <td className="px-3 py-2">{new Date(s.created_at).toLocaleDateString()}</td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => handleDeleteStudent(students.find((st: any) => st.id === s.id) || s)}
+                            className="text-red-600 hover:text-red-800 font-semibold transition"
+                          >Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* CSV Imports */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -2263,14 +2355,17 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                       <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                       <button onClick={() => { setShowProgressionModal(true); setProgressionForm({ ...progressionForm, toLevel: s.level }); setSelectedStudent(s); }} className="text-purple-600 hover:text-purple-800 font-medium text-xs transition">Promote</button>
-                      <button
-                        onClick={() => handleDownloadIDCard(s.id)}
-                        disabled={downloadingIDCard === s.id || !s.profile_picture_url}
-                        className="text-orange-600 hover:text-orange-800 font-medium text-xs transition disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {downloadingIDCard === s.id ? 'Downloading...' : 'ID Card'}
-                      </button>
-                    </div>
+                        <button onClick={() => handleDownloadIDCard(s.id)}
+                          disabled={downloadingIDCard === s.id || !s.profile_picture_url}
+                          className="text-orange-600 hover:text-orange-800 font-medium text-xs transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {downloadingIDCard === s.id ? 'Downloading...' : 'ID Card'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudent(s)}
+                          className="text-red-600 hover:text-red-800 font-medium text-xs transition"
+                        >Delete</button>
+                      </div>
                   </td>
                 </tr>
               ))}
