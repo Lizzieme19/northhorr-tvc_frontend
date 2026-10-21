@@ -1943,9 +1943,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
   const [selectedPaymentTermId, setSelectedPaymentTermId] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
-  const [showProgressionModal, setShowProgressionModal] = useState(false);
-  const [progressionForm, setProgressionForm] = useState({ toLevel: '', termId: '', notes: '', forcePromote: false });
-  const [promoting, setPromoting] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
   const [showTermAssignModal, setShowTermAssignModal] = useState(false);
   const [assigningTerm, setAssigningTerm] = useState(false);
@@ -2062,25 +2059,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
     }
   };
 
-  const handlePromoteStudent = async (studentId: string) => {
-    if (!progressionForm.toLevel || !progressionForm.termId) {
-      toast.warning('Please select level and term');
-      return;
-    }
-    setPromoting(true);
-    try {
-      await api.post(`/fees/students/${studentId}/promote`, progressionForm);
-      toast.success('Student promoted successfully');
-      setShowProgressionModal(false);
-      setProgressionForm({ toLevel: '', termId: '', notes: '', forcePromote: false });
-      const updated = await studentsApi.getAll({ page, limit: 15, search });
-      setStudents(updated.data.students);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to promote student');
-    } finally {
-      setPromoting(false);
-    }
-  };
 
   // ── Delete student + Duplicates ──────────────────────────────────────
   const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -2502,7 +2480,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
                       <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
-                      <button onClick={() => { setShowProgressionModal(true); setProgressionForm({ ...progressionForm, toLevel: s.level }); setSelectedStudent(s); }} className="text-purple-600 hover:text-purple-800 font-medium text-xs transition">Promote</button>
                         <button onClick={() => handleDownloadIDCard(s.id)}
                           disabled={downloadingIDCard === s.id || !s.profile_picture_url}
                           className="text-orange-600 hover:text-orange-800 font-medium text-xs transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -2930,77 +2907,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         </div>
       )}
 
-      {/* Progression Modal */}
-      {showProgressionModal && selectedStudent && (
-        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
-            <h2 className="font-display text-xl text-brand-dark mb-1">Promote Student</h2>
-            <p className="text-sm text-stone mb-4">{selectedStudent.admission_no} — Current: {selectedStudent.level}</p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1">New Level</label>
-                <select
-                  value={progressionForm.toLevel}
-                  onChange={e => setProgressionForm({ ...progressionForm, toLevel: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                >
-                  <option value="">Select Level</option>
-                  <option value="Level 3">Level 3 (Short Course)</option>
-                  <option value="Level 4">Level 4 (Artisan)</option>
-                  <option value="Level 5">Level 5 (Certificate)</option>
-                  <option value="Level 6">Level 6 (Diploma)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1">Term</label>
-                <select
-                  value={progressionForm.termId}
-                  onChange={e => setProgressionForm({ ...progressionForm, termId: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                >
-                  <option value="">Select Term</option>
-                  {terms.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.academic_year})</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1">Notes (optional)</label>
-                <textarea
-                  value={progressionForm.notes}
-                  onChange={e => setProgressionForm({ ...progressionForm, notes: e.target.value })}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                  rows={3}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="forcePromote"
-                  checked={progressionForm.forcePromote}
-                  onChange={e => setProgressionForm({ ...progressionForm, forcePromote: e.target.checked })}
-                  className="rounded border-stone/25"
-                />
-                <label htmlFor="forcePromote" className="text-sm text-stone">Force promotion (ignore outstanding balances)</label>
-              </div>
-              <button
-                onClick={() => handlePromoteStudent(selectedStudent.id)}
-                disabled={promoting}
-                className="w-full py-2.5 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 transition disabled:opacity-50"
-              >
-                {promoting ? 'Promoting...' : 'Promote Student'}
-              </button>
-              <button
-                onClick={() => { setShowProgressionModal(false); setProgressionForm({ toLevel: '', termId: '', notes: '', forcePromote: false }); }}
-                className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Term Assignment Modal */}
       {showTermAssignModal && selectedStudent && (
