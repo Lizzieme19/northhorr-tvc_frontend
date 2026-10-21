@@ -1586,7 +1586,7 @@ export default function AdminDashboard() {
                         <div className="bg-cream-deep/40 rounded-xl p-4 border border-stone/10">
                           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                             <div className="font-semibold text-brand-dark">
-                              {p.student?.user?.first_name} {p.student?.user?.last_name}
+                              {p.student?.application?.surname} {p.student?.application?.other_names}
                             </div>
                             <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full font-medium">
                               {p.term?.name} · {p.academic_year}
