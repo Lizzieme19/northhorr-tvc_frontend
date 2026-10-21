@@ -326,13 +326,34 @@ export default function ProcurementDashboard() {
     }
   };
 
-  const handleDownloadLPO = async (id: string) => {
+  const handleDownloadPdf = async (url: string, filename: string) => {
+    setDownloadingPdf(filename);
     try {
-      window.open(`/api/lpos/${id}/pdf`, '_blank');
-    } catch (err: any) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('ntvc_access_token') : '';
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Failed');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success('PDF downloaded');
+    } catch {
       toast.error('Failed to download PDF');
+    } finally {
+      setDownloadingPdf(null);
     }
   };
+
+  const handleDownloadLPO = (id: string, lpo_no: string) =>
+    handleDownloadPdf(lposApi.getPdfUrl(id), `${lpo_no.replace(/\//g, '_')}.pdf`);
+
+  const handleDownloadRFQ = (id: string, rfq_no: string) =>
+    handleDownloadPdf(rfqsApi.getPdfUrl(id), `${rfq_no.replace(/\//g, '_')}.pdf`);
+
+  const handleDownloadGRN = (id: string, grn_no: string) =>
+    handleDownloadPdf(grnsApi.getPdfUrl(id), `${grn_no.replace(/\//g, '_')}.pdf`);
 
   const handleVerifyGRN = async (id: string, status: string) => {
     try {
@@ -533,6 +554,13 @@ export default function ProcurementDashboard() {
                             <button onClick={() => handleEdit(r)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">Edit</button>
                           </>
                         )}
+                        <button
+                          onClick={() => handleDownloadRFQ(r.id, r.rfq_no || r.title)}
+                          disabled={downloadingPdf === `${(r.rfq_no || r.title).replace(/\//g, '_')}.pdf`}
+                          className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition disabled:opacity-50"
+                        >
+                          {downloadingPdf === `${(r.rfq_no || r.title).replace(/\//g, '_')}.pdf` ? '⏳' : '📄 PDF'}
+                        </button>
                       </div>
                     </div>
                     <div className="text-xs mt-1 mb-3">
@@ -588,9 +616,13 @@ export default function ProcurementDashboard() {
                       {l.status === 'APPROVED' && (
                         <button onClick={() => handleIssueLPO(l.id)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">Issue</button>
                       )}
-                      {l.status === 'APPROVED' && (
-                        <button onClick={() => handleDownloadLPO(l.id)} className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 text-sm hover:bg-purple-200 transition">PDF</button>
-                      )}
+                      <button
+                        onClick={() => handleDownloadLPO(l.id, l.lpo_no)}
+                        disabled={downloadingPdf === `${l.lpo_no.replace(/\//g, '_')}.pdf`}
+                        className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 text-sm hover:bg-purple-200 transition disabled:opacity-50"
+                      >
+                        {downloadingPdf === `${l.lpo_no.replace(/\//g, '_')}.pdf` ? '⏳' : '📄 PDF'}
+                      </button>
                     </div>
                   </div>
                 ))
@@ -619,6 +651,13 @@ export default function ProcurementDashboard() {
                       {g.status === 'PENDING' && (
                         <button onClick={() => handleVerifyGRN(g.id, 'REJECTED')} className="px-3 py-1 rounded-lg bg-red-100 text-red-800 text-sm hover:bg-red-200 transition">Reject</button>
                       )}
+                      <button
+                        onClick={() => handleDownloadGRN(g.id, g.grn_no)}
+                        disabled={downloadingPdf === `${g.grn_no.replace(/\//g, '_')}.pdf`}
+                        className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 text-sm hover:bg-purple-200 transition disabled:opacity-50"
+                      >
+                        {downloadingPdf === `${g.grn_no.replace(/\//g, '_')}.pdf` ? '⏳' : '📄 PDF'}
+                      </button>
                     </div>
                   </div>
                 ))

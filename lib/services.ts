@@ -116,6 +116,7 @@ export const rfqsApi = {
   close: (id: string) => api.patch(`/rfqs/${id}/close`),
   award: (id: string, data: any) => api.patch(`/rfqs/${id}/award`, data),
   submitQuotation: (id: string, data: any) => api.post(`/rfqs/${id}/quotations`, data),
+  getPdfUrl: (id: string) => `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/rfqs/${id}/pdf`,
 };
 
 export const lposApi = {
@@ -125,6 +126,7 @@ export const lposApi = {
   update: (id: string, data: any) => api.patch(`/lpos/${id}`, data),
   approve: (id: string) => api.patch(`/lpos/${id}/approve`),
   issue: (id: string) => api.patch(`/lpos/${id}/issue`),
+  getPdfUrl: (id: string) => `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/lpos/${id}/pdf`,
 };
 
 export const grnsApi = {
@@ -133,6 +135,7 @@ export const grnsApi = {
   create: (data: any) => api.post('/grns', data),
   update: (id: string, data: any) => api.patch(`/grns/${id}`, data),
   verify: (id: string, data: any) => api.patch(`/grns/${id}/verify`, data),
+  getPdfUrl: (id: string) => `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/grns/${id}/pdf`,
 };
 
 export const inventoryApi = {
