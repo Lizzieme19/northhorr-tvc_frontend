@@ -1474,29 +1474,46 @@ export default function AdminDashboard() {
                 <h2 className="font-display text-lg text-brand-dark mb-5">View Student Balances</h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student ID</label>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Search Student</label>
                     <input
                       type="text"
-                      value={lookupStudentId}
-                      onChange={e => setLookupStudentId(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                      placeholder="Enter student ID to view balances"
+                      value={studentSearch}
+                      onChange={e => setStudentSearch(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm mb-2"
+                      placeholder="Search by admission no or name..."
                     />
+                    <select
+                      value={lookupStudentId}
+                      onChange={async (e) => {
+                        const id = e.target.value;
+                        setLookupStudentId(id);
+                        if (!id) { setStudentBalances([]); return; }
+                        try {
+                          const response = await termProgressionApi.getBalances(id);
+                          setStudentBalances(response.data || []);
+                        } catch (err: any) {
+                          toast.error(err?.response?.data?.error || 'Failed to fetch balances');
+                        }
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    >
+                      <option value="">Select a student</option>
+                      {availableStudents
+                        .filter((s: any) => {
+                          const q = studentSearch.toLowerCase();
+                          return (
+                            s.admission_no?.toLowerCase().includes(q) ||
+                            s.application?.surname?.toLowerCase().includes(q) ||
+                            s.application?.other_names?.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((s: any) => (
+                          <option key={s.id} value={s.id}>
+                            {s.admission_no} — {s.application?.surname} {s.application?.other_names}
+                          </option>
+                        ))}
+                    </select>
                   </div>
-                  <button
-                    onClick={async () => {
-                      if (!lookupStudentId) { toast.error('Please enter a student ID'); return; }
-                      try {
-                        const response = await termProgressionApi.getBalances(lookupStudentId);
-                        setStudentBalances(response.data || []);
-                      } catch (e: any) {
-                        toast.error(e?.response?.data?.error || 'Failed to fetch balances');
-                      }
-                    }}
-                    className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
-                  >
-                    View Balances
-                  </button>
                   <div className="space-y-3 max-h-[400px] overflow-y-auto">
                     {studentBalances.length === 0 ? (
                       <p className="text-stone text-center py-8">No balances found</p>
