@@ -993,7 +993,7 @@ export default function ProcurementDashboard() {
                     <tr key={inv.id} className="hover:bg-cream-deep/50 transition">
                       <td className="px-5 py-4 font-mono text-xs text-brand-dark">{inv.invoice_no}</td>
                       <td className="px-5 py-4">{inv.supplier?.name || '—'}</td>
-                      <td className="px-5 py-4 text-xs text-stone">{inv.lpo?.lpo_number || '—'}</td>
+                      <td className="px-5 py-4 text-xs text-stone">{inv.lpo?.lpo_no || '—'}</td>
                       <td className="px-5 py-4 text-right font-semibold">{Number(inv.amount || 0).toLocaleString()}</td>
                       <td className="px-5 py-4 text-right text-green-700">{Number(inv.paid_amount || 0).toLocaleString()}</td>
                       <td className="px-5 py-4 text-xs">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</td>
@@ -1048,7 +1048,7 @@ export default function ProcurementDashboard() {
                   <select value={invoiceForm.lpo_id || ''} onChange={e => setInvoiceForm({...invoiceForm, lpo_id: e.target.value})}
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
                     <option value="">Select LPO</option>
-                    {lpos.map((l: any) => <option key={l.id} value={l.id}>{l.lpo_number}</option>)}
+                    {lpos.map((l: any) => <option key={l.id} value={l.id}>{l.lpo_no} - {l.supplier?.name}</option>)}
                   </select>
                 </div>
                 <div>
