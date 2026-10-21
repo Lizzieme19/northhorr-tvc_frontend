@@ -69,6 +69,9 @@ export default function AdminDashboard() {
   const [availableStudents, setAvailableStudents] = useState<any[]>([]);
   const [availableTerms, setAvailableTerms] = useState<any[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
+  const [promotionHistory, setPromotionHistory] = useState<any[]>([]);
+  const [promotionHistoryLoading, setPromotionHistoryLoading] = useState(false);
+  const [promotionHistoryFilter, setPromotionHistoryFilter] = useState({ level: '', academic_year: '' });
 
   // Auth guard
   useEffect(() => {
@@ -98,6 +101,12 @@ export default function AdminDashboard() {
     if (tab === 'term-progression') {
       studentsApi.getAll({ page: 1, limit: 1000 }).then(r => setAvailableStudents(r.data?.students || [])).catch(() => setAvailableStudents([]));
       termsApi.getAll().then(r => setAvailableTerms(r.data.terms || [])).catch(() => setAvailableTerms([]));
+      // Load promotion history
+      setPromotionHistoryLoading(true);
+      termProgressionApi.getAllPromotions()
+        .then(r => setPromotionHistory(r.data?.progressions || []))
+        .catch(() => setPromotionHistory([]))
+        .finally(() => setPromotionHistoryLoading(false));
     }
     // Load fee types for payment recording
     feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
@@ -1338,157 +1347,279 @@ export default function AdminDashboard() {
 
         {/* ── TERM PROGRESSION ── */}
         {tab === 'term-progression' && (
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Admit Student to Term */}
-            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-              <h2 className="font-display text-lg text-brand-dark mb-5">Admit Student to New Term</h2>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  const response = await termProgressionApi.admitToTerm({
-                    student_id: progressionForm.student_id,
-                    new_term_id: progressionForm.new_term_id,
-                    new_level: progressionForm.new_level || undefined,
-                    notes: progressionForm.notes,
-                  });
-                  toast.success('Student admitted to new term successfully!');
-                  setProgressionForm({ student_id: '', new_term_id: '', new_level: '', notes: '' });
-                } catch (e: any) {
-                  toast.error(e?.response?.data?.error || 'Failed to admit student');
-                }
-              }} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student *</label>
-                  <input
-                    type="text"
-                    value={studentSearch}
-                    onChange={e => setStudentSearch(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm mb-2"
-                    placeholder="Search by admission no or name..."
-                  />
-                  <select
-                    required
-                    value={progressionForm.student_id}
-                    onChange={e => setProgressionForm({ ...progressionForm, student_id: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                  >
-                    <option value="">Select a student</option>
-                    {availableStudents
-                      .filter((student: any) => {
-                        const searchLower = studentSearch.toLowerCase();
-                        return (
-                          student.admission_no?.toLowerCase().includes(searchLower) ||
-                          student.application?.surname?.toLowerCase().includes(searchLower) ||
-                          student.application?.other_names?.toLowerCase().includes(searchLower)
-                        );
-                      })
-                      .map((student: any) => (
-                        <option key={student.id} value={student.id}>
-                          {student.admission_no} - {student.application?.surname} {student.application?.other_names} ({student.level})
+          <div className="space-y-8">
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Admit Student to Term */}
+              <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+                <h2 className="font-display text-lg text-brand-dark mb-5">Admit Student to New Term</h2>
+
+                {/* Promotion warning when level changes */}
+                {progressionForm.new_level && (() => {
+                  const sel = availableStudents.find((s: any) => s.id === progressionForm.student_id);
+                  return sel && progressionForm.new_level !== sel.level ? (
+                    <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                      <span className="font-bold">⚠️ Level promotion detected.</span> A new admission number will be auto-generated
+                      ({sel.admission_no?.split('/').map((p: string, i: number) => i === 1 ? progressionForm.new_level : p).join('/')}).
+                      The current number <span className="font-mono font-bold">{sel.admission_no}</span> is preserved in promotion history.
+                    </div>
+                  ) : null;
+                })()}
+
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const response = await termProgressionApi.admitToTerm({
+                      student_id: progressionForm.student_id,
+                      new_term_id: progressionForm.new_term_id,
+                      new_level: progressionForm.new_level || undefined,
+                      notes: progressionForm.notes,
+                    });
+                    const newAdmNo = response.data?.progression?.new_admission_no;
+                    if (newAdmNo) {
+                      toast.success(`✅ Student promoted! New admission number: ${newAdmNo}`);
+                    } else {
+                      toast.success('Student admitted to new term successfully!');
+                    }
+                    setProgressionForm({ student_id: '', new_term_id: '', new_level: '', notes: '' });
+                    // Refresh promotion history
+                    termProgressionApi.getAllPromotions()
+                      .then(r => setPromotionHistory(r.data?.progressions || []))
+                      .catch(() => {});
+                  } catch (e: any) {
+                    toast.error(e?.response?.data?.error || 'Failed to admit student');
+                  }
+                }} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student *</label>
+                    <input
+                      type="text"
+                      value={studentSearch}
+                      onChange={e => setStudentSearch(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm mb-2"
+                      placeholder="Search by admission no or name..."
+                    />
+                    <select
+                      required
+                      value={progressionForm.student_id}
+                      onChange={e => setProgressionForm({ ...progressionForm, student_id: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    >
+                      <option value="">Select a student</option>
+                      {availableStudents
+                        .filter((student: any) => {
+                          const searchLower = studentSearch.toLowerCase();
+                          return (
+                            student.admission_no?.toLowerCase().includes(searchLower) ||
+                            student.application?.surname?.toLowerCase().includes(searchLower) ||
+                            student.application?.other_names?.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((student: any) => (
+                          <option key={student.id} value={student.id}>
+                            {student.admission_no} - {student.application?.surname} {student.application?.other_names} ({student.level})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Term *</label>
+                    <select
+                      required
+                      value={progressionForm.new_term_id}
+                      onChange={e => setProgressionForm({ ...progressionForm, new_term_id: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    >
+                      <option value="">Select a term</option>
+                      {availableTerms.map((term: any) => (
+                        <option key={term.id} value={term.id}>
+                          {term.name} - {term.academic_year} ({term.is_active ? 'Active' : 'Inactive'})
                         </option>
                       ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Term *</label>
-                  <select
-                    required
-                    value={progressionForm.new_term_id}
-                    onChange={e => setProgressionForm({ ...progressionForm, new_term_id: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">
+                      New Level <span className="text-stone font-normal">(leave blank to keep current level)</span>
+                    </label>
+                    <select
+                      value={progressionForm.new_level}
+                      onChange={e => setProgressionForm({ ...progressionForm, new_level: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    >
+                      <option value="">— No level change —</option>
+                      {['L3', 'L4', 'L5', 'L6'].map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes</label>
+                    <textarea
+                      value={progressionForm.notes}
+                      onChange={e => setProgressionForm({ ...progressionForm, notes: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                      rows={2}
+                      placeholder="Optional notes about this progression"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
                   >
-                    <option value="">Select a term</option>
-                    {availableTerms.map((term: any) => (
-                      <option key={term.id} value={term.id}>
-                        {term.name} - {term.academic_year} ({term.is_active ? 'Active' : 'Inactive'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Level (Optional)</label>
-                  <input
-                    type="text"
-                    value={progressionForm.new_level}
-                    onChange={e => setProgressionForm({ ...progressionForm, new_level: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    placeholder="e.g., L4, L5, L6"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes</label>
-                  <textarea
-                    value={progressionForm.notes}
-                    onChange={e => setProgressionForm({ ...progressionForm, notes: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    rows={2}
-                    placeholder="Optional notes about this progression"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
-                >
-                  Admit Student
-                </button>
-              </form>
-            </div>
+                    Admit Student
+                  </button>
+                </form>
+              </div>
 
-            {/* Student Balances Lookup */}
-            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-              <h2 className="font-display text-lg text-brand-dark mb-5">View Student Balances</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student ID</label>
-                  <input
-                    type="text"
-                    value={lookupStudentId}
-                    onChange={e => setLookupStudentId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    placeholder="Enter student ID to view balances"
-                  />
-                </div>
-                <button
-                  onClick={async () => {
-                    if (!lookupStudentId) {
-                      toast.error('Please enter a student ID');
-                      return;
-                    }
-                    try {
-                      const response = await termProgressionApi.getBalances(lookupStudentId);
-                      setStudentBalances(response.data || []);
-                    } catch (e: any) {
-                      toast.error(e?.response?.data?.error || 'Failed to fetch balances');
-                    }
-                  }}
-                  className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
-                >
-                  View Balances
-                </button>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {studentBalances.length === 0 ? (
-                    <p className="text-stone text-center py-8">No balances found</p>
-                  ) : (
-                    studentBalances.map((balance: any) => (
-                      <div key={balance.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
-                        <div className="font-semibold text-brand-dark">{balance.term?.name} ({balance.term?.academic_year})</div>
-                        <div className="text-sm text-stone mt-1">Level: {balance.level}</div>
-                        <div className="text-sm text-stone">Total Fees: KES {balance.total_fees.toLocaleString()}</div>
-                        <div className="text-sm text-stone">Amount Paid: KES {balance.amount_paid.toLocaleString()}</div>
-                        <div className={`text-sm font-semibold ${balance.balance > 0 ? 'text-red-600' : balance.balance < 0 ? 'text-green-600' : 'text-brand-dark'}`}>
-                          Balance: KES {balance.balance.toLocaleString()}
-                        </div>
-                        {balance.previous_balance_carryover !== 0 && (
-                          <div className="text-xs text-stone mt-2">
-                            Carry-over: KES {balance.previous_balance_carryover.toLocaleString()}
-                            {balance.carryover_notes && ` (${balance.carryover_notes})`}
+              {/* Student Balances Lookup */}
+              <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+                <h2 className="font-display text-lg text-brand-dark mb-5">View Student Balances</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student ID</label>
+                    <input
+                      type="text"
+                      value={lookupStudentId}
+                      onChange={e => setLookupStudentId(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                      placeholder="Enter student ID to view balances"
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!lookupStudentId) { toast.error('Please enter a student ID'); return; }
+                      try {
+                        const response = await termProgressionApi.getBalances(lookupStudentId);
+                        setStudentBalances(response.data || []);
+                      } catch (e: any) {
+                        toast.error(e?.response?.data?.error || 'Failed to fetch balances');
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
+                  >
+                    View Balances
+                  </button>
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {studentBalances.length === 0 ? (
+                      <p className="text-stone text-center py-8">No balances found</p>
+                    ) : (
+                      studentBalances.map((balance: any) => (
+                        <div key={balance.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10">
+                          <div className="font-semibold text-brand-dark">{balance.term?.name} ({balance.term?.academic_year})</div>
+                          <div className="text-sm text-stone mt-1">Level: {balance.level}</div>
+                          <div className="text-sm text-stone">Total Fees: KES {balance.total_fees.toLocaleString()}</div>
+                          <div className="text-sm text-stone">Amount Paid: KES {balance.amount_paid.toLocaleString()}</div>
+                          <div className={`text-sm font-semibold ${balance.balance > 0 ? 'text-red-600' : balance.balance < 0 ? 'text-green-600' : 'text-brand-dark'}`}>
+                            Balance: KES {balance.balance.toLocaleString()}
                           </div>
-                        )}
-                      </div>
-                    ))
-                  )}
+                          {balance.previous_balance_carryover !== 0 && (
+                            <div className="text-xs text-stone mt-2">
+                              Carry-over: KES {balance.previous_balance_carryover.toLocaleString()}
+                              {balance.carryover_notes && ` (${balance.carryover_notes})`}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
+
+            {/* ── Promotion History ── */}
+            <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-display text-lg text-brand-dark">📈 Level Promotion History</h2>
+                <div className="flex gap-3">
+                  <select
+                    value={promotionHistoryFilter.level}
+                    onChange={e => {
+                      const f = { ...promotionHistoryFilter, level: e.target.value };
+                      setPromotionHistoryFilter(f);
+                      setPromotionHistoryLoading(true);
+                      termProgressionApi.getAllPromotions({ level: f.level, academic_year: f.academic_year })
+                        .then(r => setPromotionHistory(r.data?.progressions || []))
+                        .catch(() => {})
+                        .finally(() => setPromotionHistoryLoading(false));
+                    }}
+                    className="px-3 py-2 rounded-lg border border-stone/25 text-sm bg-white"
+                  >
+                    <option value="">All Levels</option>
+                    {['L3', 'L4', 'L5', 'L6'].map(l => <option key={l} value={l}>Promoted to {l}</option>)}
+                  </select>
+                  <input
+                    type="text"
+                    value={promotionHistoryFilter.academic_year}
+                    onChange={e => {
+                      const f = { ...promotionHistoryFilter, academic_year: e.target.value };
+                      setPromotionHistoryFilter(f);
+                    }}
+                    onBlur={() => {
+                      setPromotionHistoryLoading(true);
+                      termProgressionApi.getAllPromotions(promotionHistoryFilter)
+                        .then(r => setPromotionHistory(r.data?.progressions || []))
+                        .catch(() => {})
+                        .finally(() => setPromotionHistoryLoading(false));
+                    }}
+                    placeholder="Academic year e.g. 2026"
+                    className="px-3 py-2 rounded-lg border border-stone/25 text-sm bg-white w-44"
+                  />
+                </div>
+              </div>
+
+              {promotionHistoryLoading ? (
+                <div className="text-center py-12 text-stone">Loading promotions...</div>
+              ) : promotionHistory.length === 0 ? (
+                <div className="text-center py-12 text-stone">No level promotions recorded yet.</div>
+              ) : (
+                <div className="space-y-0">
+                  {promotionHistory.map((p: any, idx: number) => (
+                    <div key={p.id} className="flex gap-4 relative">
+                      {/* Timeline line */}
+                      {idx < promotionHistory.length - 1 && (
+                        <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-brand/20" />
+                      )}
+                      {/* Dot */}
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-brand/10 border-2 border-brand flex items-center justify-center text-brand font-bold text-xs mt-1">
+                        {p.to_level}
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 pb-6">
+                        <div className="bg-cream-deep/40 rounded-xl p-4 border border-stone/10">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <div className="font-semibold text-brand-dark">
+                              {p.student?.user?.first_name} {p.student?.user?.last_name}
+                            </div>
+                            <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full font-medium">
+                              {p.term?.name} · {p.academic_year}
+                            </span>
+                          </div>
+                          <div className="text-sm text-stone mb-2">
+                            {p.student?.course?.name} · {p.student?.department?.name}
+                          </div>
+
+                          {/* Admission number change */}
+                          {p.old_admission_no && p.new_admission_no ? (
+                            <div className="flex items-center gap-2 flex-wrap mt-2">
+                              <span className="font-mono text-xs bg-red-50 border border-red-200 text-red-700 px-2 py-0.5 rounded line-through">{p.old_admission_no}</span>
+                              <span className="text-stone text-xs">→</span>
+                              <span className="font-mono text-xs bg-green-50 border border-green-200 text-green-700 px-2 py-0.5 rounded font-bold">{p.new_admission_no}</span>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-stone mt-1 font-mono">{p.student?.admission_no}</div>
+                          )}
+
+                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-stone">
+                            <span>Level: <strong className="text-brand-dark">{p.from_level || '—'} → {p.to_level}</strong></span>
+                            <span>Fees cleared: <strong className={p.fee_clearance ? 'text-green-600' : 'text-red-500'}>{p.fee_clearance ? 'Yes' : 'No'}</strong></span>
+                            <span>Promoted by: <strong className="text-brand-dark">{p.promoter?.email}</strong></span>
+                            <span>{new Date(p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                          </div>
+                          {p.notes && <div className="mt-2 text-xs text-stone italic">{p.notes}</div>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

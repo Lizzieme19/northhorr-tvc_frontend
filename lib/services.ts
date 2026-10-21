@@ -227,7 +227,9 @@ export const termProgressionApi = {
   admitToTerm: (data: any) => api.post('/term-progression/admit', data),
   getProgression: (studentId: string) => api.get(`/term-progression/${studentId}`),
   getBalances: (studentId: string) => api.get(`/term-progression/${studentId}/balances`),
-  updateNotes: (id: string, data: any) => api.patch(`/term-progression/${id}/notes`),
+  updateNotes: (id: string, data: any) => api.patch(`/term-progression/${id}/notes`, data),
+  getAllPromotions: (params?: { level?: string; academic_year?: string; page?: number; limit?: number }) =>
+    api.get('/term-progression/admin/all', { params }),
 };
 
 export const invoicesApi = {
