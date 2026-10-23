@@ -1977,6 +1977,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [bulkPaymentTermId, setBulkPaymentTermId] = useState('');
   const [recordingBulkPayment, setRecordingBulkPayment] = useState(false);
   const [downloadingIDCard, setDownloadingIDCard] = useState<string | null>(null);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -1986,6 +1987,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
 
   useEffect(() => {
     api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => { });
+    api.get('/courses').then(r => setCoursesList(r.data.courses || r.data || [])).catch(() => { });
   }, []);
 
   const handleDownloadIDCard = async (studentId: string) => {
@@ -2213,9 +2215,19 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const handleEditStudent = (student: any) => {
     setSelectedStudent(student);
     setEditForm({
+      // Academic — Admin-only fields
+      admission_no: student.admission_no || '',
+      course_id: student.course_id || '',
+      department_id: student.department_id || '',
+      level: student.level || '',
+      intake: student.intake || '',
+      year: student.year || '',
+      status: student.status || '',
+      // Contact
       phone: student.application?.phone || '',
       address: student.application?.address || '',
       id_number: student.application?.id_number || '',
+      // Family
       emergency_person: student.application?.emergency_person || '',
       emergency_phone: student.application?.emergency_phone || '',
       father_present: student.application?.father_present !== false,
@@ -2228,12 +2240,6 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
       mother_phone: student.application?.mother_phone || '',
       mother_email: student.application?.mother_email || '',
       mother_occupation: student.application?.mother_occupation || '',
-      level: student.level || '',
-      intake: student.intake || '',
-      year: student.year || '',
-      status: student.status || '',
-      course_id: student.course_id || '',
-      department_id: student.department_id || '',
     });
   };
 
@@ -2553,6 +2559,26 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               <div>
                 <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Academic Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Admission Number */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Admission Number <span className="text-red-500 text-xs">(Admin only)</span></label>
+                    <input type="text" value={editForm.admission_no || ''} onChange={e => setEditForm({ ...editForm, admission_no: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-amber-300 bg-amber-50 focus:outline-none focus:border-brand text-sm font-mono"
+                      placeholder="e.g. CEE/017/2023" />
+                    <p className="text-xs text-amber-700 mt-1">⚠ Changing this affects the student&apos;s login email. Update their email separately if needed.</p>
+                  </div>
+                  {/* Course */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Course <span className="text-red-500 text-xs">(Admin only)</span></label>
+                    <select value={editForm.course_id || ''} onChange={e => setEditForm({ ...editForm, course_id: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select Course...</option>
+                      {coursesList?.map((c: any) => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.shortcode})</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Level */}
                   <div>
                     <label className="block text-sm font-medium text-brand-dark mb-1">Level</label>
                     <select value={editForm.level} onChange={e => setEditForm({ ...editForm, level: e.target.value })}
@@ -2588,6 +2614,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                       <option value="DEFERRED">Deferred</option>
                       <option value="GRADUATED">Graduated</option>
                       <option value="WITHDRAWN">Withdrawn</option>
+                      <option value="ATTACHMENT">Attachment</option>
                     </select>
                   </div>
                 </div>
