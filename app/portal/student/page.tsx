@@ -331,7 +331,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
               {/* ── Filler-email warning banner ───────────────────────────── */}
-              {editForm.email?.endsWith('@ntvc.ac.ke') && (
+              {editForm.email?.endsWith('@northhorrtvc.ac.ke') && (
                 <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex gap-2">
                   <span>⚠️</span>
                   <span>Your login email is an auto-generated placeholder. Please update it to your real email address below so you can receive notifications and reset your password.</span>
