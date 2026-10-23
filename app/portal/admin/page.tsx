@@ -1723,6 +1723,26 @@ export default function AdminDashboard() {
                   onChange={e => setEditableAppData({ ...editableAppData, address: e.target.value })}
                   className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
                 />
+                <div className="text-stone">Gender:</div>
+                <select
+                  value={editableAppData?.gender || ''}
+                  onChange={e => setEditableAppData({ ...editableAppData, gender: e.target.value })}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                >
+                  <option value="">Select...</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div className="text-stone">Date of Birth:</div>
+                <input
+                  type="date"
+                  value={editableAppData?.date_of_birth
+                    ? new Date(editableAppData.date_of_birth).toISOString().split('T')[0]
+                    : ''}
+                  onChange={e => setEditableAppData({ ...editableAppData, date_of_birth: e.target.value })}
+                  className="px-2 py-1 rounded border border-stone/25 text-xs focus:outline-none focus:border-brand"
+                />
 
                 <div className="col-span-2 mt-3 font-semibold text-brand-dark border-b border-stone/10 pb-1">Academic Info (Editable)</div>
                 <div className="text-stone">Previous School:</div>

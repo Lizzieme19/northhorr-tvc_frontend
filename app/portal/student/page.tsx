@@ -137,9 +137,19 @@ export default function StudentDashboard() {
       api.get('/students/me').then(r => {
         setProfile(r.data);
         setEditForm({
+          // Personal identity — may be placeholders from bulk import
+          email: r.data.user?.email || '',
+          surname: r.data.application?.surname || '',
+          other_names: r.data.application?.other_names || '',
+          gender: r.data.application?.gender || '',
+          date_of_birth: r.data.application?.date_of_birth
+            ? new Date(r.data.application.date_of_birth).toISOString().split('T')[0]
+            : '',
+          // Contact
           phone: r.data.application?.phone || '',
           address: r.data.application?.address || '',
           id_number: r.data.application?.id_number || '',
+          // Emergency
           emergency_contact_name: r.data.application?.emergency_person || '',
           emergency_contact_phone: r.data.application?.emergency_phone || '',
         });
@@ -320,6 +330,77 @@ export default function StudentDashboard() {
                   <p className="text-xs text-stone">Upload a passport-style photo with white background (min 300x300px, max 5MB)</p>
                 </div>
               </div>
+              {/* ── Filler-email warning banner ───────────────────────────── */}
+              {editForm.email?.endsWith('@ntvc.ac.ke') && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex gap-2">
+                  <span>⚠️</span>
+                  <span>Your login email is an auto-generated placeholder. Please update it to your real email address below so you can receive notifications and reset your password.</span>
+                </div>
+              )}
+
+              {/* ── Name fields ──────────────────────────────────────────────── */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Surname</label>
+                  <input
+                    type="text"
+                    value={editForm.surname || ''}
+                    onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                    placeholder="e.g. Abdi"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Other Names</label>
+                  <input
+                    type="text"
+                    value={editForm.other_names || ''}
+                    onChange={(e) => setEditForm({ ...editForm, other_names: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                    placeholder="e.g. Roba Hassan"
+                  />
+                </div>
+              </div>
+
+              {/* ── Email ───────────────────────────────────────────────────── */}
+              <div>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  value={editForm.email || ''}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                  placeholder="yourname@example.com"
+                />
+                <p className="text-xs text-stone mt-1">This becomes your login email. Must be unique.</p>
+              </div>
+
+              {/* ── Gender & Date of Birth ───────────────────────────────────── */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Gender</label>
+                  <select
+                    value={editForm.gender || ''}
+                    onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={editForm.date_of_birth || ''}
+                    onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone Number</label>
                 <input
