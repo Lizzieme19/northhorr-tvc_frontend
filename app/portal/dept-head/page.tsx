@@ -27,6 +27,7 @@ export default function DeptHeadDashboard() {
   const [showReqModal, setShowReqModal] = useState(false);
   const [reqForm, setReqForm] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'DEPT_HEAD')) router.replace('/login');
@@ -54,12 +55,22 @@ export default function DeptHeadDashboard() {
           if (mine) setMyDepartment(mine);
         })
         .catch(() => setDepartments([]));
+      // fetch courses for the edit form dropdown
+      import('@/lib/services').then(({ coursesApi }) => {
+        coursesApi.getAll().then((r: any) => setCoursesList(r.data.courses || r.data || [])).catch(() => {});
+      });
     }
   }, [page, tab]);
 
   const handleEditStudent = (student: any) => {
     setSelectedStudent(student);
     setEditForm({
+      // Academic — editable by dept-head
+      admission_no: student.admission_no || '',
+      course_id: student.course_id || '',
+      level: student.level || '',
+      status: student.status || '',
+      // Contact
       phone: student.application?.phone || '',
       address: student.application?.address || '',
       id_number: student.application?.id_number || '',
@@ -330,6 +341,53 @@ export default function DeptHeadDashboard() {
             <p className="text-sm text-stone mb-4">{selectedStudent.admission_no} — {selectedStudent.application?.surname} {selectedStudent.application?.other_names}</p>
             
             <form onSubmit={handleUpdateStudent} className="flex-1 overflow-y-auto mb-5 pr-2 space-y-6">
+
+              {/* Academic Information */}
+              <div>
+                <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Academic Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Admission Number</label>
+                    <input type="text" value={editForm.admission_no || ''} onChange={e => setEditForm({ ...editForm, admission_no: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-amber-300 bg-amber-50 focus:outline-none focus:border-brand text-sm font-mono"
+                      placeholder="e.g. CSW/001/2025M" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Course</label>
+                    <select value={editForm.course_id || ''} onChange={e => setEditForm({ ...editForm, course_id: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select Course...</option>
+                      {coursesList.map((c: any) => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.shortcode})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Level</label>
+                    <select value={editForm.level || ''} onChange={e => setEditForm({ ...editForm, level: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select Level</option>
+                      <option value="Level 3">Level 3 (Short Course)</option>
+                      <option value="Level 4">Level 4 (Artisan)</option>
+                      <option value="Level 5">Level 5 (Certificate)</option>
+                      <option value="Level 6">Level 6 (Diploma)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Status</label>
+                    <select value={editForm.status || ''} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select Status</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="DEFERRED">Deferred</option>
+                      <option value="GRADUATED">Graduated</option>
+                      <option value="WITHDRAWN">Withdrawn</option>
+                      <option value="ATTACHMENT">Attachment</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* Contact Information */}
               <div>
                 <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Contact Information</h3>
