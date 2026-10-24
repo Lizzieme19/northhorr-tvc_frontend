@@ -89,7 +89,7 @@ export default function ResourcesPage() {
                             <div className="mt-1 text-xs text-stone-soft">{r.file_size}</div>
                           </div>
                           <a
-                            href={`${process.env.NEXT_PUBLIC_API_URL}/api/resources/${r.id}/download`}
+                            href={`${process.env.NEXT_PUBLIC_API_URL}/resources/${r.id}/download`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="shrink-0 px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition"
