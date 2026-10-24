@@ -658,6 +658,7 @@ export default function AdminDashboard() {
                     <option value="Forms">Forms</option>
                     <option value="Timetables">Timetables</option>
                     <option value="Policies">Policies</option>
+                    <option value="Tenders">Tenders</option>
                   </select>
                 </div>
                 <div>

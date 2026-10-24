@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-const categories = ["Prospectus", "Forms", "Timetables", "Policies"] as const;
+const categories = ["Prospectus", "Forms", "Timetables", "Policies", "Tenders"] as const;
 
 const typeColors: Record<string, string> = {
   PDF: "bg-terracotta/15 text-terracotta",
@@ -39,7 +39,7 @@ export default function ResourcesPage() {
       <PageHero
         eyebrow="Downloads"
         title="Resources at your fingertips."
-        description="Download the prospectus, application forms, timetables and student policies — all in one place."
+        description="Download the prospectus, application forms, timetables, student policies and tender notices — all in one place."
         image="https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=2000&q=80"
       />
 

@@ -638,7 +638,7 @@ export type Resource = {
   description: string;
   type: "PDF" | "DOCX" | "ZIP";
   size: string;
-  category: "Prospectus" | "Forms" | "Timetables" | "Policies";
+  category: "Prospectus" | "Forms" | "Timetables" | "Policies" | "Tenders";
 };
 
 export const resources: Resource[] = [
