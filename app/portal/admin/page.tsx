@@ -2342,12 +2342,12 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               </button>}
             </>
           )}
-          {isAdmin && <button
+          <button
             onClick={() => setShowReports(true)}
             className="px-4 py-2 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm"
           >
             ⬇ Download Reports
-          </button>}
+          </button>
           <button
             onClick={handleFindDuplicates}
             disabled={loadingDuplicates}
@@ -2358,7 +2358,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         </div>
       </div>
 
-      {showReports && <ReportsExport onClose={() => setShowReports(false)} initialType="students" />}
+      {showReports && <ReportsExport onClose={() => setShowReports(false)} types={isAdmin ? ['fees', 'students'] : ['students']} initialType="students" hideFinance={!isAdmin} />}
 
       {/* Duplicates Panel */}
       {showDuplicates && duplicates.length > 0 && (

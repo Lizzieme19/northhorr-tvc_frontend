@@ -19,7 +19,7 @@ const REPORTS: Record<ReportType, { title: string; blurb: string; sheets: string
   },
   students: {
     title: 'Full Student Details Report',
-    blurb: 'Personal, contact, academic, guardian, medical and fee position for every student.',
+    blurb: 'Personal, contact, academic, guardian and medical details for every student (plus fee position for Admin).',
     sheets: 'Sheets: Summary · Students',
   },
 };
@@ -43,7 +43,8 @@ const readBlobError = async (e: any): Promise<string> => {
 };
 
 // `types` limits which reports are offered — the full student details report is Admin-only
-export default function ReportsExport({ onClose, types = ['fees', 'students'], initialType }: { onClose: () => void; types?: ReportType[]; initialType?: ReportType }) {
+// `hideFinance` removes the fee filters (Registrars have no finance access)
+export default function ReportsExport({ onClose, types = ['fees', 'students'], initialType, hideFinance = false }: { onClose: () => void; types?: ReportType[]; initialType?: ReportType; hideFinance?: boolean }) {
   const [type, setType] = useState<ReportType>(initialType && types.includes(initialType) ? initialType : types[0]);
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
   const [options, setOptions] = useState<any>(null);
@@ -198,17 +199,17 @@ export default function ReportsExport({ onClose, types = ['fees', 'students'], i
             </select>
           </div>
 
-          <div>
+          {!hideFinance && <div>
             <label className={labelCls}>Fee status</label>
             <select value={filters.fee_status} onChange={e => set('fee_status', e.target.value)} className={inputCls}>
               <option value="">All</option>
               {(options?.fee_statuses || []).map((s: string) => <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>)}
             </select>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-brand-dark sm:col-span-2 sm:pt-5">
+          </div>}
+          {!hideFinance && <label className="flex items-center gap-2 text-sm text-brand-dark sm:col-span-2 sm:pt-5">
             <input type="checkbox" checked={filters.outstanding_only} onChange={e => set('outstanding_only', e.target.checked)} className="h-4 w-4 accent-brand" />
             Only students with an outstanding balance
-          </label>
+          </label>}
 
           {type === 'fees' && (
             <>
