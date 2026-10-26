@@ -1397,7 +1397,7 @@ export default function AdminDashboard() {
                     // Refresh promotion history
                     termProgressionApi.getAllPromotions()
                       .then(r => setPromotionHistory(r.data?.progressions || []))
-                      .catch(() => {});
+                      .catch(() => { });
                   } catch (e: any) {
                     toast.error(e?.response?.data?.error || 'Failed to admit student');
                   }
@@ -1567,7 +1567,7 @@ export default function AdminDashboard() {
                       setPromotionHistoryLoading(true);
                       termProgressionApi.getAllPromotions({ level: f.level, academic_year: f.academic_year })
                         .then(r => setPromotionHistory(r.data?.progressions || []))
-                        .catch(() => {})
+                        .catch(() => { })
                         .finally(() => setPromotionHistoryLoading(false));
                     }}
                     className="px-3 py-2 rounded-lg border border-stone/25 text-sm bg-white"
@@ -1586,7 +1586,7 @@ export default function AdminDashboard() {
                       setPromotionHistoryLoading(true);
                       termProgressionApi.getAllPromotions(promotionHistoryFilter)
                         .then(r => setPromotionHistory(r.data?.progressions || []))
-                        .catch(() => {})
+                        .catch(() => { })
                         .finally(() => setPromotionHistoryLoading(false));
                     }}
                     placeholder="Academic year e.g. 2026"
@@ -2531,17 +2531,17 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
                       {isAdmin && <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>}
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
-                        <button onClick={() => handleDownloadIDCard(s.id)}
-                          disabled={downloadingIDCard === s.id || !s.profile_picture_url}
-                          className="text-orange-600 hover:text-orange-800 font-medium text-xs transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {downloadingIDCard === s.id ? 'Downloading...' : 'ID Card'}
-                        </button>
-                        {isAdmin && <button
-                          onClick={() => handleDeleteStudent(s)}
-                          className="text-red-600 hover:text-red-800 font-medium text-xs transition"
-                        >Delete</button>}
-                      </div>
+                      <button onClick={() => handleDownloadIDCard(s.id)}
+                        disabled={downloadingIDCard === s.id || !s.profile_picture_url}
+                        className="text-orange-600 hover:text-orange-800 font-medium text-xs transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {downloadingIDCard === s.id ? 'Downloading...' : 'ID Card'}
+                      </button>
+                      {isAdmin && <button
+                        onClick={() => handleDeleteStudent(s)}
+                        className="text-red-600 hover:text-red-800 font-medium text-xs transition"
+                      >Delete</button>}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -4919,10 +4919,10 @@ function SystemSettingsTab() {
   useEffect(() => {
     api.get('/settings/student_edit_deadline')
       .then(r => { setSavedDeadline(r.data.value); setDeadline(isoToLocal(r.data.value)); })
-      .catch(() => {});
+      .catch(() => { });
     api.get('/settings')
       .then(r => setAllSettings(r.data || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleSave = async () => {
@@ -4947,16 +4947,16 @@ function SystemSettingsTab() {
 
   const savedDateFormatted = savedDeadline
     ? new Date(savedDeadline).toLocaleString('en-GB', {
-        weekday: 'long', day: 'numeric', month: 'long',
-        year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
-      })
+      weekday: 'long', day: 'numeric', month: 'long',
+      year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    })
     : '—';
 
   const previewDate = deadline
     ? new Date(deadline).toLocaleString('en-GB', {
-        weekday: 'long', day: 'numeric', month: 'long',
-        year: 'numeric', hour: '2-digit', minute: '2-digit',
-      })
+      weekday: 'long', day: 'numeric', month: 'long',
+      year: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
     : '';
 
   const isChanged = deadline && deadline !== isoToLocal(savedDeadline);
@@ -4965,7 +4965,7 @@ function SystemSettingsTab() {
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       <div>
         <h2 className="font-display text-2xl text-brand-dark mb-1">⚙️ System Settings</h2>
-        <p className="text-sm text-stone">Changes take effect immediately — no redeployment needed.</p>
+
       </div>
 
       <div className="bg-white rounded-2xl border border-stone/15 shadow-sm overflow-hidden">

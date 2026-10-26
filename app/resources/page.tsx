@@ -72,27 +72,36 @@ export default function ResourcesPage() {
                       {items.map((r: any) => (
                         <div
                           key={r.id}
-                          className="group flex items-center gap-4 p-5 bg-white rounded-2xl border border-stone/15 hover:border-brand hover:shadow-md transition"
+                          className="group flex items-start gap-4 p-5 bg-white rounded-2xl border border-stone/15 hover:border-brand hover:shadow-md transition"
                         >
                           <div
-                            className={`h-14 w-14 rounded-xl grid place-items-center font-display font-bold text-sm ${typeColors[r.file_type] || typeColors.FILE}`}
+                            className={`h-14 w-14 shrink-0 rounded-xl grid place-items-center font-display font-bold text-sm ${typeColors[r.file_type] || typeColors.FILE}`}
                           >
                             {r.file_type}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-display font-semibold text-brand-dark truncate">
+                            <h3 className="font-display font-semibold text-brand-dark break-words">
                               {r.title}
                             </h3>
-                            <p className="text-sm text-stone line-clamp-1">
-                              {r.description}
-                            </p>
-                            <div className="mt-1 text-xs text-stone-soft">{r.file_size}</div>
+                            {r.description && (
+                              <p className="mt-1 text-sm text-stone whitespace-pre-line break-words">
+                                {r.description}
+                              </p>
+                            )}
+                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone">
+                              <span className="px-2 py-0.5 rounded-full bg-cream-deep font-medium text-brand-dark">{r.category}</span>
+                              <span>{r.file_type}</span>
+                              {r.file_size && <span>{r.file_size}</span>}
+                              {r.created_at && (
+                                <span>Added {new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                              )}
+                            </div>
                           </div>
                           <a
                             href={`${process.env.NEXT_PUBLIC_API_URL}/resources/${r.id}/download`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="shrink-0 px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition"
+                            className="shrink-0 self-center px-4 py-2 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition"
                             title="Download"
                           >
                             ↓ Download
