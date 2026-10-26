@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'settings'>('overview');
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -488,6 +488,7 @@ export default function AdminDashboard() {
           { key: 'requisitions', label: '🛒 Requisitions' },
           { key: 'term-progression', label: '📈 Term Progression' },
           { key: 'doc-templates', label: '📝 Doc Templates' },
+          { key: 'settings', label: '⚙️ Settings' },
         ].map((t) => (
           <button
             key={t.key}
@@ -1934,6 +1935,8 @@ export default function AdminDashboard() {
       {tab === 'doc-templates' && (
         <DocTemplatesTab />
       )}
+
+      {tab === 'settings' && <SystemSettingsTab />}
     </div>
   );
 }
@@ -4874,6 +4877,163 @@ function DocTemplatesTab() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── System Settings Tab ───────────────────────────────────────────────────────
+function SystemSettingsTab() {
+  const [deadline, setDeadline] = useState('');
+  const [savedDeadline, setSavedDeadline] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [allSettings, setAllSettings] = useState<any[]>([]);
+
+  const isoToLocal = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  useEffect(() => {
+    api.get('/settings/student_edit_deadline')
+      .then(r => { setSavedDeadline(r.data.value); setDeadline(isoToLocal(r.data.value)); })
+      .catch(() => {});
+    api.get('/settings')
+      .then(r => setAllSettings(r.data || []))
+      .catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    if (!deadline) return;
+    setSaving(true);
+    setStatus('idle');
+    try {
+      const isoValue = new Date(deadline).toISOString();
+      await api.patch('/settings/student_edit_deadline', { value: isoValue });
+      setSavedDeadline(isoValue);
+      setStatus('success');
+      toast.success('Deadline updated — takes effect immediately');
+      const r = await api.get('/settings');
+      setAllSettings(r.data || []);
+    } catch (err: any) {
+      setStatus('error');
+      toast.error(err?.response?.data?.error || 'Failed to update deadline');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const savedDateFormatted = savedDeadline
+    ? new Date(savedDeadline).toLocaleString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long',
+        year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+      })
+    : '—';
+
+  const previewDate = deadline
+    ? new Date(deadline).toLocaleString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long',
+        year: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
+    : '';
+
+  const isChanged = deadline && deadline !== isoToLocal(savedDeadline);
+
+  return (
+    <div className="p-6 max-w-3xl mx-auto space-y-6">
+      <div>
+        <h2 className="font-display text-2xl text-brand-dark mb-1">⚙️ System Settings</h2>
+        <p className="text-sm text-stone">Changes take effect immediately — no redeployment needed.</p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-stone/15 shadow-sm overflow-hidden">
+        <div className="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-center gap-3">
+          <span className="text-2xl">🗓️</span>
+          <div>
+            <div className="font-semibold text-amber-900">Student Personal Info Edit Deadline</div>
+            <div className="text-xs text-amber-700 mt-0.5">
+              After this deadline, students can only change their profile photo and email.
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-stone/5 border border-stone/15">
+            <span className="text-stone text-sm font-medium">Current deadline:</span>
+            <span className="text-brand-dark text-sm font-semibold">{savedDateFormatted}</span>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-brand-dark mb-1.5">
+              New Deadline <span className="font-normal text-stone">(your local time)</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={deadline}
+              onChange={e => { setDeadline(e.target.value); setStatus('idle'); }}
+              className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+            />
+            {isChanged && previewDate && (
+              <p className="text-xs text-brand mt-1.5">
+                📅 Will be set to: <strong>{previewDate}</strong>
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              id="save-deadline-btn"
+              onClick={handleSave}
+              disabled={saving || !isChanged}
+              className="px-6 py-2.5 rounded-full bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition shadow disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {saving
+                ? <><span className="h-3.5 w-3.5 border-2 border-cream/40 border-t-cream rounded-full animate-spin" />Saving...</>
+                : '💾 Save Deadline'}
+            </button>
+            <button
+              onClick={() => { setDeadline(isoToLocal(savedDeadline)); setStatus('idle'); }}
+              disabled={saving || !isChanged}
+              className="px-5 py-2.5 rounded-full border border-stone/25 text-stone text-sm font-medium hover:bg-stone/5 transition disabled:opacity-40"
+            >
+              Reset
+            </button>
+          </div>
+
+          {status === 'success' && (
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
+              ✅ Deadline updated — students will see the new date immediately on next load.
+            </div>
+          )}
+          {status === 'error' && (
+            <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
+              ❌ Failed to save. Please try again.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {allSettings.length > 0 && (
+        <div className="bg-white rounded-2xl border border-stone/15 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-stone/10">
+            <div className="font-semibold text-brand-dark">All System Settings</div>
+            <div className="text-xs text-stone mt-0.5">Full key-value store</div>
+          </div>
+          <div className="divide-y divide-stone/10">
+            {allSettings.map((s: any) => (
+              <div key={s.key} className="px-6 py-3 flex flex-wrap items-center gap-4 text-sm">
+                <span className="font-mono text-xs bg-stone/10 text-stone px-2 py-0.5 rounded">{s.key}</span>
+                <span className="text-brand-dark font-medium flex-1 truncate">{s.value}</span>
+                <span className="text-xs text-stone flex-shrink-0">
+                  Updated: {new Date(s.updated_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

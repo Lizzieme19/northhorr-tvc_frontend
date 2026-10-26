@@ -43,7 +43,7 @@ export default function StudentDashboard() {
     try {
       let endpoint = '';
       let filename = '';
-      
+
       switch (docType) {
         case 'letter_of_acceptance':
           endpoint = `/students/${profile.id}/documents/letter-of-acceptance`;
@@ -65,7 +65,7 @@ export default function StudentDashboard() {
           endpoint = `/students/documents/${docType}`;
           filename = `${docType.replace('_', ' ').toUpperCase()}.pdf`;
       }
-      
+
       const response = await api.get(endpoint, {
         responseType: 'blob'
       });
@@ -109,16 +109,16 @@ export default function StudentDashboard() {
   const handleProfilePhotoUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profilePhoto) return;
-    
+
     setUploadingPhoto(true);
     try {
       const formData = new FormData();
       formData.append('profile_picture', profilePhoto);
-      
+
       const response = await api.patch('/students/me/profile-picture', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       const updated = await api.get('/students/me');
       setProfile(updated.data);
       setProfilePhoto(null);
@@ -172,19 +172,25 @@ export default function StudentDashboard() {
           parent_email: r.data.application?.parent_email || '',
           parent_relationship: r.data.application?.parent_relationship || '',
         });
-        // Compute editing window
-        const created = new Date(r.data.created_at);
-        const wEnd = new Date(created.getTime() + 14 * 24 * 60 * 60 * 1000);
-        setWindowEnd(wEnd);
-        setWithinWindow(new Date() <= wEnd);
+        // Fetch editing deadline from DB (admin can change without redeploy)
+        api.get('/settings/student_edit_deadline').then(s => {
+          const wEnd = new Date(s.data.value);
+          setWindowEnd(wEnd);
+          setWithinWindow(new Date() <= wEnd);
+        }).catch(() => {
+          // Fallback if setting endpoint fails
+          const wEnd = new Date('2026-10-30T20:59:59.000Z');
+          setWindowEnd(wEnd);
+          setWithinWindow(new Date() <= wEnd);
+        });
       }).catch(console.error);
-      
+
       // Fetch active terms
       api.get('/terms').then(r => {
         const list = r.data.terms || r.data;
         setTerms(Array.isArray(list) ? list.filter((t: any) => t.is_active) : []);
       }).catch(console.error);
-      
+
       // Fetch current enrollments
       api.get('/fees/students/me/enrollments').then(r => {
         setEnrollments(Array.isArray(r.data) ? r.data : []);
@@ -225,7 +231,7 @@ export default function StudentDashboard() {
     try {
       await api.post(`/students/me/enroll/${termId}`);
       toast.success('Enrolled successfully!');
-      
+
       // Refresh enrollments
       const updated = await api.get('/students/me/enrollments');
       setEnrollments(Array.isArray(updated.data) ? updated.data : []);
@@ -365,10 +371,10 @@ export default function StudentDashboard() {
               <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 flex gap-3">
                 <span className="text-red-500 text-xl mt-0.5">🔒</span>
                 <div>
-                  <div className="font-semibold text-red-800 mb-1">Editing period has expired</div>
+                  <div className="font-semibold text-red-800 mb-1">Editing deadline has passed</div>
                   <p className="text-sm text-red-700">
-                    You had 14 days from enrolment to update your personal and parent details.
-                    That window has now closed. Only your <strong>profile photo</strong> and <strong>email address</strong> can still be changed.
+                    The deadline to update personal and parent details was <strong>{windowEnd?.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
+                    Only your <strong>profile photo</strong> and <strong>email address</strong> can still be changed.
                     For any other corrections, please visit the <strong>Registrar's Office</strong>.
                   </p>
                 </div>
@@ -434,7 +440,7 @@ export default function StudentDashboard() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Surname</label>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">FirstName</label>
                     <input
                       type="text"
                       value={editForm.surname || ''}
@@ -628,7 +634,7 @@ export default function StudentDashboard() {
 
             <div className="lg:col-span-2">
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Documents</h2>
-              
+
               <div className="grid sm:grid-cols-2 gap-4">
                 {/* Pre-admission documents - always available */}
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
@@ -746,9 +752,8 @@ export default function StudentDashboard() {
                   { key: 'birth_certificate_url', label: '📋 Birth Certificate', url: profile.birth_certificate_url },
                   { key: 'other_documents_url', label: '📎 Other Documents', url: profile.other_documents_url },
                 ].map(({ key, label, url }) => (
-                  <div key={key} className={`rounded-xl p-4 border flex items-center justify-between ${
-                    url ? 'bg-green-50 border-green-200' : 'bg-cream-deep border-stone/10'
-                  }`}>
+                  <div key={key} className={`rounded-xl p-4 border flex items-center justify-between ${url ? 'bg-green-50 border-green-200' : 'bg-cream-deep border-stone/10'
+                    }`}>
                     <div>
                       <div className="text-sm font-medium text-brand-dark">{label}</div>
                       <div className={`text-xs mt-0.5 ${url ? 'text-green-600' : 'text-stone'}`}>
