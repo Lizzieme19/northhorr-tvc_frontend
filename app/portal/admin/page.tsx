@@ -3631,14 +3631,13 @@ function UsersTab() {
   }, []);
 
   useEffect(() => {
-    const params: any = { page, limit: 20 };
+    const params: any = { page, limit: 20, exclude_students: 'true' };
     if (roleFilter) params.role = roleFilter;
     if (search) params.search = search;
     api.get('/auth/users', { params }).then(r => {
-      // Filter out students from the users list
-      const filteredUsers = r.data.users.filter((u: any) => u.role !== 'STUDENT');
-      setUsers(filteredUsers);
-      setTotal(filteredUsers.length);
+      // Students are excluded server-side so pagination only counts staff accounts
+      setUsers(r.data.users);
+      setTotal(r.data.pagination?.total ?? r.data.users.length);
     }).catch(err => {
       console.error('Failed to fetch users:', err);
       toast.error('Failed to load users. Please check your connection.');
@@ -3693,9 +3692,9 @@ function UsersTab() {
       setStaffMsg('✅ Staff account created successfully!');
       setStaffForm({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '', phone: '' });
       setShowCreateForm(false);
-      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search } });
-      setUsers(updated.data.users.filter((u: any) => u.role !== 'STUDENT'));
-      setTotal(updated.data.users.filter((u: any) => u.role !== 'STUDENT').length);
+      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search, exclude_students: 'true' } });
+      setUsers(updated.data.users);
+      setTotal(updated.data.pagination?.total ?? updated.data.users.length);
     } catch (err: any) {
       setStaffMsg(err?.response?.data?.error || 'Failed to create staff account');
     } finally {
@@ -3737,9 +3736,9 @@ function UsersTab() {
       }
       await api.patch(`/auth/users/${editingUser.id}`, updateData);
       setEditMsg('✅ User updated successfully!');
-      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search } });
-      setUsers(updated.data.users.filter((u: any) => u.role !== 'STUDENT'));
-      setTotal(updated.data.users.filter((u: any) => u.role !== 'STUDENT').length);
+      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search, exclude_students: 'true' } });
+      setUsers(updated.data.users);
+      setTotal(updated.data.pagination?.total ?? updated.data.users.length);
       setTimeout(() => {
         setShowEditModal(false);
         setEditingUser(null);
