@@ -673,9 +673,15 @@ export default function AdminDashboard() {
                 <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">File *</label>
                   <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
-                    <input type="file" className="hidden" onChange={e => setResourceFile(e.target.files?.[0] || null)} />
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+                      onChange={e => setResourceFile(e.target.files?.[0] || null)}
+                    />
                     <div className="text-3xl mb-2">📁</div>
                     <div className="text-sm font-medium text-brand-dark">{resourceFile ? resourceFile.name : 'Click to upload file'}</div>
+                    <div className="text-xs text-stone mt-1">PDF, Word (.doc / .docx), or Image (JPG / PNG)</div>
                   </label>
                 </div>
                 <button
