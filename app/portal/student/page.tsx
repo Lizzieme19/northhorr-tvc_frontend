@@ -25,6 +25,8 @@ export default function StudentDashboard() {
   const [loadingFeeSummary, setLoadingFeeSummary] = useState(false);
   const [showFeeSummary, setShowFeeSummary] = useState(false);
   const [userNeedsPasswordChange, setUserNeedsPasswordChange] = useState(false);
+  const [withinWindow, setWithinWindow] = useState(true);
+  const [windowEnd, setWindowEnd] = useState<Date | null>(null);
 
   // Document upload state
   const [docFiles, setDocFiles] = useState<Record<string, File | null>>({
@@ -137,7 +139,7 @@ export default function StudentDashboard() {
       api.get('/students/me').then(r => {
         setProfile(r.data);
         setEditForm({
-          // Personal identity — may be placeholders from bulk import
+          // Personal identity
           email: r.data.user?.email || '',
           surname: r.data.application?.surname || '',
           other_names: r.data.application?.other_names || '',
@@ -152,7 +154,29 @@ export default function StudentDashboard() {
           // Emergency
           emergency_contact_name: r.data.application?.emergency_person || '',
           emergency_contact_phone: r.data.application?.emergency_phone || '',
+          // Father
+          father_name: r.data.application?.father_name || '',
+          father_phone: r.data.application?.father_phone || '',
+          father_email: r.data.application?.father_email || '',
+          father_occupation: r.data.application?.father_occupation || '',
+          father_present: r.data.application?.father_present ?? true,
+          // Mother
+          mother_name: r.data.application?.mother_name || '',
+          mother_phone: r.data.application?.mother_phone || '',
+          mother_email: r.data.application?.mother_email || '',
+          mother_occupation: r.data.application?.mother_occupation || '',
+          mother_present: r.data.application?.mother_present ?? true,
+          // Guardian (fallback)
+          parent_names: r.data.application?.parent_names || '',
+          parent_phone: r.data.application?.parent_phone || '',
+          parent_email: r.data.application?.parent_email || '',
+          parent_relationship: r.data.application?.parent_relationship || '',
         });
+        // Compute editing window
+        const created = new Date(r.data.created_at);
+        const wEnd = new Date(created.getTime() + 14 * 24 * 60 * 60 * 1000);
+        setWindowEnd(wEnd);
+        setWithinWindow(new Date() <= wEnd);
       }).catch(console.error);
       
       // Fetch active terms
@@ -172,13 +196,24 @@ export default function StudentDashboard() {
     e.preventDefault();
     setUpdating(true);
     try {
-      await api.patch('/students/me', editForm);
+      const res = await api.patch('/students/me', editForm);
+      // Server may update withinWindow status
+      if (res.data.windowEnd) {
+        const wEnd = new Date(res.data.windowEnd);
+        setWindowEnd(wEnd);
+        setWithinWindow(new Date() <= wEnd);
+      }
       const updated = await api.get('/students/me');
       setProfile(updated.data);
       setShowProfileEdit(false);
       toast.success('Profile updated successfully');
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Failed to update profile');
+      if (err?.response?.status === 403 && err?.response?.data?.windowExpired) {
+        toast.error(err.response.data.error);
+        setWithinWindow(false);
+      } else {
+        toast.error(err?.response?.data?.error || 'Failed to update profile');
+      }
     } finally {
       setUpdating(false);
     }
@@ -301,10 +336,50 @@ export default function StudentDashboard() {
       <main className="max-w-4xl mx-auto px-6 py-10">
         {showProfileEdit && (
           <div className="bg-white rounded-3xl shadow-xl p-8 mb-6 border border-stone/10">
-            <h2 className="font-display text-2xl text-brand-dark mb-6">Edit Profile</h2>
-            <form onSubmit={handleProfileUpdate} className="space-y-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl text-brand-dark">Edit Profile</h2>
+              {windowEnd && (
+                withinWindow ? (
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200">
+                    <span className="text-amber-600 text-lg">⏳</span>
+                    <div>
+                      <div className="text-xs font-semibold text-amber-800">Editing window open</div>
+                      <div className="text-xs text-amber-700">
+                        Closes {windowEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 border border-red-200">
+                    <span className="text-red-500 text-lg">🔒</span>
+                    <div>
+                      <div className="text-xs font-semibold text-red-800">Personal info locked</div>
+                      <div className="text-xs text-red-600">Only photo &amp; email editable</div>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+
+            {!withinWindow && (
+              <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 flex gap-3">
+                <span className="text-red-500 text-xl mt-0.5">🔒</span>
+                <div>
+                  <div className="font-semibold text-red-800 mb-1">Editing period has expired</div>
+                  <p className="text-sm text-red-700">
+                    You had 14 days from enrolment to update your personal and parent details.
+                    That window has now closed. Only your <strong>profile photo</strong> and <strong>email address</strong> can still be changed.
+                    For any other corrections, please visit the <strong>Registrar's Office</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleProfileUpdate} className="space-y-6">
+
+              {/* ── Profile Photo (always editable) ── */}
               <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Profile Photo</label>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Profile Photo <span className="text-xs font-normal text-green-600">(always editable)</span></label>
                 <div className="space-y-2">
                   {profile.profile_picture_url && (
                     <img src={profile.profile_picture_url} alt="Profile" className="w-24 h-24 rounded-full object-cover border-2 border-stone/20" />
@@ -327,44 +402,19 @@ export default function StudentDashboard() {
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-stone">Upload a passport-style photo with white background (min 300x300px, max 5MB)</p>
+                  <p className="text-xs text-stone">Passport-style photo with white background (min 300×300 px, max 5 MB)</p>
                 </div>
               </div>
-              {/* ── Filler-email warning banner ───────────────────────────── */}
+
+              {/* ── Email (always editable) ── */}
               {editForm.email?.endsWith('@northhorrtvc.ac.ke') && (
                 <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex gap-2">
                   <span>⚠️</span>
-                  <span>Your login email is an auto-generated placeholder. Please update it to your real email address below so you can receive notifications and reset your password.</span>
+                  <span>Your login email is an auto-generated placeholder. Please update it to your real email so you can receive notifications.</span>
                 </div>
               )}
-
-              {/* ── Name fields ──────────────────────────────────────────────── */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Surname</label>
-                  <input
-                    type="text"
-                    value={editForm.surname || ''}
-                    onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                    placeholder="e.g. Abdi"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Other Names</label>
-                  <input
-                    type="text"
-                    value={editForm.other_names || ''}
-                    onChange={(e) => setEditForm({ ...editForm, other_names: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                    placeholder="e.g. Roba Hassan"
-                  />
-                </div>
-              </div>
-
-              {/* ── Email ───────────────────────────────────────────────────── */}
               <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email Address</label>
+                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email Address <span className="text-xs font-normal text-green-600">(always editable)</span></label>
                 <input
                   type="email"
                   value={editForm.email || ''}
@@ -375,78 +425,145 @@ export default function StudentDashboard() {
                 <p className="text-xs text-stone mt-1">This becomes your login email. Must be unique.</p>
               </div>
 
-              {/* ── Gender & Date of Birth ───────────────────────────────────── */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Gender</label>
-                  <select
-                    value={editForm.gender || ''}
-                    onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                  >
-                    <option value="">Select...</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Date of Birth</label>
-                  <input
-                    type="date"
-                    value={editForm.date_of_birth || ''}
-                    onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                  />
-                </div>
-              </div>
+              {/* ── Personal Info (window-gated) ── */}
+              <fieldset disabled={!withinWindow} className="space-y-4 disabled:opacity-50">
+                <legend className="font-display text-base font-semibold text-brand-dark flex items-center gap-2 mb-3">
+                  Personal Information
+                  {!withinWindow && <span className="text-xs font-normal px-2 py-0.5 bg-red-100 text-red-600 rounded-full">🔒 Locked</span>}
+                </legend>
 
-              <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone Number</label>
-                <input
-                  type="text"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Address</label>
-                <input
-                  type="text"
-                  value={editForm.address}
-                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">ID Number</label>
-                <input
-                  type="text"
-                  value={editForm.id_number}
-                  onChange={(e) => setEditForm({ ...editForm, id_number: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Emergency Contact Name</label>
-                <input
-                  type="text"
-                  value={editForm.emergency_contact_name}
-                  onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-brand-dark mb-1.5">Emergency Contact Phone</label>
-                <input
-                  type="text"
-                  value={editForm.emergency_contact_phone}
-                  onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-brand/20 transition text-sm"
-                />
-              </div>
-              <div className="flex gap-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Surname</label>
+                    <input
+                      type="text"
+                      value={editForm.surname || ''}
+                      onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm disabled:bg-stone/10"
+                      placeholder="e.g. Abdi"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Other Names</label>
+                    <input
+                      type="text"
+                      value={editForm.other_names || ''}
+                      onChange={(e) => setEditForm({ ...editForm, other_names: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                      placeholder="e.g. Roba Hassan"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Gender</label>
+                    <select
+                      value={editForm.gender || ''}
+                      onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={editForm.date_of_birth || ''}
+                      onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone Number</label>
+                    <input type="text" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">ID Number</label>
+                    <input type="text" value={editForm.id_number || ''} onChange={(e) => setEditForm({ ...editForm, id_number: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Address</label>
+                  <input type="text" value={editForm.address || ''} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Emergency Contact Name</label>
+                    <input type="text" value={editForm.emergency_contact_name || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Emergency Contact Phone</label>
+                    <input type="text" value={editForm.emergency_contact_phone || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  </div>
+                </div>
+
+                {/* ── Father / Guardian ── */}
+                <div className="pt-2 border-t border-stone/10">
+                  <div className="font-semibold text-sm text-brand-dark mb-3">👨 Father / Male Guardian</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Full Name</label>
+                      <input type="text" value={editForm.father_name || ''} onChange={(e) => setEditForm({ ...editForm, father_name: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="e.g. Mohammed Abdi" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
+                      <input type="text" value={editForm.father_phone || ''} onChange={(e) => setEditForm({ ...editForm, father_phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email</label>
+                      <input type="email" value={editForm.father_email || ''} onChange={(e) => setEditForm({ ...editForm, father_email: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Occupation</label>
+                      <input type="text" value={editForm.father_occupation || ''} onChange={(e) => setEditForm({ ...editForm, father_occupation: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 mt-3 text-sm text-brand-dark">
+                    <input type="checkbox" checked={!!editForm.father_present} onChange={(e) => setEditForm({ ...editForm, father_present: e.target.checked })} className="rounded" />
+                    Father is alive / present
+                  </label>
+                </div>
+
+                {/* ── Mother / Guardian ── */}
+                <div className="pt-2 border-t border-stone/10">
+                  <div className="font-semibold text-sm text-brand-dark mb-3">👩 Mother / Female Guardian</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Full Name</label>
+                      <input type="text" value={editForm.mother_name || ''} onChange={(e) => setEditForm({ ...editForm, mother_name: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="e.g. Fatuma Hassan" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
+                      <input type="text" value={editForm.mother_phone || ''} onChange={(e) => setEditForm({ ...editForm, mother_phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email</label>
+                      <input type="email" value={editForm.mother_email || ''} onChange={(e) => setEditForm({ ...editForm, mother_email: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Occupation</label>
+                      <input type="text" value={editForm.mother_occupation || ''} onChange={(e) => setEditForm({ ...editForm, mother_occupation: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 mt-3 text-sm text-brand-dark">
+                    <input type="checkbox" checked={!!editForm.mother_present} onChange={(e) => setEditForm({ ...editForm, mother_present: e.target.checked })} className="rounded" />
+                    Mother is alive / present
+                  </label>
+                </div>
+
+              </fieldset>
+
+              <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
                   disabled={updating}
