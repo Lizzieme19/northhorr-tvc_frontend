@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from './api';
 
-export type UserRole = 'STUDENT' | 'ADMIN' | 'DEPT_HEAD' | 'FINANCE' | 'STAFF' | 'PROCUREMENT' | 'HR';
+export type UserRole = 'STUDENT' | 'ADMIN' | 'DEPT_HEAD' | 'FINANCE' | 'STAFF' | 'PROCUREMENT' | 'HR' | 'REGISTRAR';
 
 export interface AuthUser {
   id: string;
@@ -102,6 +102,7 @@ export const portalRoute = (role: UserRole) => {
     case 'STAFF': return '/portal/staff';
     case 'PROCUREMENT': return '/portal/procurement';
     case 'HR': return '/portal/hr';
+    case 'REGISTRAR': return '/portal/registrar';
     default: return '/login';
   }
 };

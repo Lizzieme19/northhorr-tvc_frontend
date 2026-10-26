@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { financeApi, feeTypesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import ReportsExport from '@/components/ReportsExport';
 import { toast } from 'sonner';
 
 export default function FinanceDashboard() {
@@ -19,6 +20,7 @@ export default function FinanceDashboard() {
   const [feeCleared, setFeeCleared] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
+  const [showReports, setShowReports] = useState(false);
   const [showBillingDashboard, setShowBillingDashboard] = useState(false);
   const [billingData, setBillingData] = useState<any>(null);
   const [billingTermId, setBillingTermId] = useState('');
@@ -272,6 +274,12 @@ export default function FinanceDashboard() {
           <h2 className="font-display text-xl text-brand-dark">Fee Clearance List</h2>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowReports(true)}
+              className="px-4 py-2 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm"
+            >
+              ⬇ Download Reports
+            </button>
+            <button
               onClick={() => setShowBillingDashboard(true)}
               className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
             >
@@ -351,6 +359,8 @@ export default function FinanceDashboard() {
             </div>
           </div>
         </div>
+
+        {showReports && <ReportsExport onClose={() => setShowReports(false)} types={['fees']} />}
 
         {/* ── Record Payment Modal ── */}
         {recordPaymentStudent && (

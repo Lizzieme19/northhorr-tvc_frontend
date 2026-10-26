@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi, termProgressionApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
+import ReportsExport from '@/components/ReportsExport';
 import { toast } from 'sonner';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -17,9 +18,13 @@ const STATUS_COLORS: Record<string, string> = {
   REJECTED: 'bg-red-100 text-red-800',
 };
 
+// Registrars handle student affairs: applications, students, departments/courses and progression — never finance or system admin
+const REGISTRAR_TABS = ['overview', 'applications', 'students', 'courses', 'term-progression'];
+
 export default function AdminDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
+  const isAdmin = user?.role === 'ADMIN';
   const [stats, setStats] = useState<Stats | null>(null);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -75,7 +80,7 @@ export default function AdminDashboard() {
 
   // Auth guard
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'ADMIN')) router.replace('/login');
+    if (!loading && (!user || !['ADMIN', 'REGISTRAR'].includes(user.role))) router.replace('/login');
   }, [user, loading, router]);
 
   useEffect(() => {
@@ -92,7 +97,7 @@ export default function AdminDashboard() {
     if (tab === 'gallery') {
       galleryApi.getAll().then(r => setGallery(r.data?.items || [])).catch(() => setGallery([]));
     }
-    if (tab === 'fee-types') {
+    if (tab === 'fee-types' && isAdmin) {
       feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
     }
     if (tab === 'terms') {
@@ -109,8 +114,8 @@ export default function AdminDashboard() {
         .finally(() => setPromotionHistoryLoading(false));
     }
     // Load fee types for payment recording
-    feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
-  }, [tab]);
+    if (isAdmin) feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
+  }, [tab, isAdmin]);
 
   useEffect(() => {
     const params: any = { page, limit: 15 };
@@ -461,11 +466,11 @@ export default function AdminDashboard() {
       <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          <span className="font-display font-semibold hidden sm:block">North Horr TVC Admin Portal</span>
+          <span className="font-display font-semibold hidden sm:block">{isAdmin ? 'North Horr TVC Admin Portal' : 'North Horr TVC Registrar Portal'}</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
-          <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">ADMIN</span>
+          <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">{user.role}</span>
           <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
           <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
         </div>
@@ -489,7 +494,7 @@ export default function AdminDashboard() {
           { key: 'term-progression', label: '📈 Term Progression' },
           { key: 'doc-templates', label: '📝 Doc Templates' },
           { key: 'settings', label: '⚙️ Settings' },
-        ].map((t) => (
+        ].filter((t) => isAdmin || REGISTRAR_TABS.includes(t.key)).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key as any)}
@@ -536,11 +541,11 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-brand-dark">Review Applications</div>
                   <div className="text-xs text-stone mt-1">{stats?.pendingApps || 0} pending</div>
                 </button>
-                <button onClick={() => setTab('users')} className="p-4 rounded-xl border-2 border-dashed border-purple/30 hover:border-purple hover:bg-purple/5 transition text-left">
+                {isAdmin && <button onClick={() => setTab('users')} className="p-4 rounded-xl border-2 border-dashed border-purple/30 hover:border-purple hover:bg-purple/5 transition text-left">
                   <div className="text-2xl mb-2">👥</div>
                   <div className="font-semibold text-brand-dark">Manage Users</div>
                   <div className="text-xs text-stone mt-1">View all system users</div>
-                </button>
+                </button>}
                 <button onClick={() => setTab('students')} className="p-4 rounded-xl border-2 border-dashed border-terracotta/30 hover:border-terracotta hover:bg-terracotta/5 transition text-left">
                   <div className="text-2xl mb-2">🎓</div>
                   <div className="font-semibold text-brand-dark">View All Students</div>
@@ -1942,6 +1947,7 @@ export default function AdminDashboard() {
 }
 
 function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string) => void; feeTypes: any[] }) {
+  const isAdmin = useAuth().user?.role === 'ADMIN';
   const [students, setStudents] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -1988,6 +1994,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [recordingBulkPayment, setRecordingBulkPayment] = useState(false);
   const [downloadingIDCard, setDownloadingIDCard] = useState<string | null>(null);
   const [coursesList, setCoursesList] = useState<any[]>([]);
+  const [showReports, setShowReports] = useState(false);
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -2327,14 +2334,20 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               >
                 Assign Term ({selectedStudentIds.length})
               </button>
-              <button
+              {isAdmin && <button
                 onClick={() => setShowBulkPaymentModal(true)}
                 className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
               >
                 Record Payment ({selectedStudentIds.length})
-              </button>
+              </button>}
             </>
           )}
+          {isAdmin && <button
+            onClick={() => setShowReports(true)}
+            className="px-4 py-2 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm"
+          >
+            ⬇ Download Reports
+          </button>}
           <button
             onClick={handleFindDuplicates}
             disabled={loadingDuplicates}
@@ -2344,6 +2357,8 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
           </button>
         </div>
       </div>
+
+      {showReports && <ReportsExport onClose={() => setShowReports(false)} initialType="students" />}
 
       {/* Duplicates Panel */}
       {showDuplicates && duplicates.length > 0 && (
@@ -2376,10 +2391,10 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                         <td className="px-3 py-2">{s.intake}</td>
                         <td className="px-3 py-2">{new Date(s.created_at).toLocaleDateString()}</td>
                         <td className="px-3 py-2">
-                          <button
+                          {isAdmin && <button
                             onClick={() => handleDeleteStudent(students.find((st: any) => st.id === s.id) || s)}
                             className="text-red-600 hover:text-red-800 font-semibold transition"
-                          >Delete</button>
+                          >Delete</button>}
                         </td>
                       </tr>
                     ))}
@@ -2514,7 +2529,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
-                      <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>
+                      {isAdmin && <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>}
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                         <button onClick={() => handleDownloadIDCard(s.id)}
                           disabled={downloadingIDCard === s.id || !s.profile_picture_url}
@@ -2522,10 +2537,10 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                         >
                           {downloadingIDCard === s.id ? 'Downloading...' : 'ID Card'}
                         </button>
-                        <button
+                        {isAdmin && <button
                           onClick={() => handleDeleteStudent(s)}
                           className="text-red-600 hover:text-red-800 font-medium text-xs transition"
-                        >Delete</button>
+                        >Delete</button>}
                       </div>
                   </td>
                 </tr>
@@ -3744,6 +3759,7 @@ function UsersTab() {
     STAFF: 'bg-gray-100 text-gray-800',
     PROCUREMENT: 'bg-orange-100 text-orange-800',
     HR: 'bg-pink-100 text-pink-800',
+    REGISTRAR: 'bg-teal-100 text-teal-800',
     STUDENT: 'bg-brand/10 text-brand',
   };
 
@@ -3764,6 +3780,7 @@ function UsersTab() {
             <option value="STAFF">Staff</option>
             <option value="PROCUREMENT">Procurement</option>
             <option value="HR">HR</option>
+            <option value="REGISTRAR">Registrar</option>
           </select>
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search email…"
@@ -3812,6 +3829,7 @@ function UsersTab() {
                   <option value="STAFF">Staff</option>
                   <option value="PROCUREMENT">Procurement</option>
                   <option value="HR">HR</option>
+                  <option value="REGISTRAR">Registrar</option>
                 </select>
               </div>
               {staffForm.role === 'DEPT_HEAD' && (
@@ -3861,6 +3879,7 @@ function UsersTab() {
                   <option value="STAFF">Staff</option>
                   <option value="PROCUREMENT">Procurement</option>
                   <option value="HR">HR</option>
+                  <option value="REGISTRAR">Registrar</option>
                 </select>
               </div>
               {editForm.role === 'DEPT_HEAD' && (
@@ -3974,6 +3993,7 @@ function UsersTab() {
 }
 
 function CoursesTab() {
+  const isAdmin = useAuth().user?.role === 'ADMIN';
   const [subTab, setSubTab] = useState<'courses' | 'departments'>('courses');
   const [depts, setDepts] = useState<any[]>([]);
 
@@ -4216,7 +4236,7 @@ function CoursesTab() {
                           })) : [{ ...DEFAULT_LEVEL_OBJ }]);
                           setIsCourseModalOpen(true);
                         }} className="text-brand hover:underline text-xs font-semibold">Edit</button>
-                        <button onClick={() => handleCourseDelete(c.id)} className="text-red-600 hover:underline text-xs font-semibold">Delete</button>
+                        {isAdmin && <button onClick={() => handleCourseDelete(c.id)} className="text-red-600 hover:underline text-xs font-semibold">Delete</button>}
                       </td>
                     </tr>
                   ))}
@@ -4278,7 +4298,7 @@ function CoursesTab() {
                           setDeptForm({ id: d.id, name: d.name, tagline: d.tagline || '', description: d.description || '', icon: d.icon || '🏢', image_url: d.image_url || '' });
                           setIsDeptModalOpen(true);
                         }} className="text-brand hover:underline text-xs font-semibold">Edit</button>
-                        <button onClick={() => handleDeptDelete(d.id)} className="text-red-600 hover:underline text-xs font-semibold">Delete</button>
+                        {isAdmin && <button onClick={() => handleDeptDelete(d.id)} className="text-red-600 hover:underline text-xs font-semibold">Delete</button>}
                       </td>
                     </tr>
                   ))}

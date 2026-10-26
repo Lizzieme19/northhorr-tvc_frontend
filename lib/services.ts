@@ -53,6 +53,10 @@ export const financeApi = {
   getFeeRecords: (params?: any) => api.get('/finance/students', { params }),
   createFeeRecord: (studentId: string, data: any) => api.patch(`/finance/students/${studentId}/fees`, data),
   getReports: () => api.get('/finance/summary'),
+  getReportFilters: () => api.get('/finance/reports/filters'),
+  // Excel downloads — returned as a Blob
+  exportFeesReport: (params?: any) => api.get('/finance/reports/fees/export', { params, responseType: 'blob' }),
+  exportStudentsReport: (params?: any) => api.get('/finance/reports/students/export', { params, responseType: 'blob' }),
 };
 
 // Staff
