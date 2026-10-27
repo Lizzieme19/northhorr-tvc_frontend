@@ -19,22 +19,48 @@ const blobError = async (e: any, fallback: string): Promise<string> => {
   return e?.response?.data?.error || fallback;
 };
 
-// Fetches an issued document and saves it to the user's device
-export async function downloadStudentDocument(studentId: string, slug: string, fallbackName = 'document.pdf') {
+// Fetches an issued document, then either saves it to the device or opens it in a new tab.
+// Shows progress and a clear result, and never saves an empty or non-PDF response.
+export async function downloadStudentDocument(
+  studentId: string,
+  slug: string,
+  fallbackName = 'document.pdf',
+  opts: { mode?: 'download' | 'view'; quiet?: boolean } = {}
+) {
+  const { mode = 'download', quiet = false } = opts;
+  // Open the tab straight away (inside the click) so popup blockers allow it
+  const viewTab = mode === 'view' ? window.open('', '_blank') : null;
+  const toastId = quiet ? undefined : toast.loading(mode === 'view' ? 'Opening document…' : 'Preparing your download…');
   try {
-    const r = await studentDocumentsApi.download(studentId, slug);
+    // timestamp keeps proxies/CDNs from replaying a stale or empty cached response
+    const r = await studentDocumentsApi.download(studentId, slug, { _: Date.now() });
+    const blob: Blob = r.data;
+    if (!blob || blob.size === 0) throw new Error('empty');
+    if (blob.type && !blob.type.includes('pdf')) throw { response: { data: blob } };
+
     const name = r.headers?.['content-disposition']?.match(/filename="?([^";]+)"?/i)?.[1] || fallbackName;
-    const url = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+
+    if (viewTab) {
+      viewTab.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    }
+    if (!quiet) toast.success(mode === 'view' ? 'Document opened in a new tab' : `Downloaded ${name}`, { id: toastId });
     return true;
   } catch (e: any) {
-    toast.error(await blobError(e, 'Failed to download document'));
+    viewTab?.close();
+    const message = e?.message === 'empty'
+      ? 'The file came back empty. Please try again.'
+      : await blobError(e, 'Failed to download document. Please try again.');
+    toast.error(message, { id: toastId });
     return false;
   }
 }
@@ -47,6 +73,8 @@ export function StudentDocumentsModal({ student, onClose, onChanged }: { student
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  // which file is being fetched, as `${slug}:${download|view}`
+  const [fetching, setFetching] = useState<string | null>(null);
 
   const load = () =>
     studentDocumentsApi.getForStudent(student.id)
@@ -55,6 +83,15 @@ export function StudentDocumentsModal({ student, onClose, onChanged }: { student
       .finally(() => setLoading(false));
 
   useEffect(() => { load(); }, [student.id]);
+
+  const fetchDoc = async (slug: string, mode: 'download' | 'view') => {
+    setFetching(`${slug}:${mode}`);
+    try {
+      await downloadStudentDocument(student.id, slug, `${slug}.pdf`, { mode });
+    } finally {
+      setFetching(null);
+    }
+  };
 
   // Issues the chosen documents from the saved templates, then saves each new copy to this device too
   const issue = async (slugs: string[] | 'all', regenerate = false) => {
@@ -68,7 +105,7 @@ export function StudentDocumentsModal({ student, onClose, onChanged }: { student
       if (failed.length) toast.error(`Could not generate: ${failed.map(f => f.label).join(', ')}`);
       if (done.length) toast.success(`${done.map(d => d.label).join(', ')} ${regenerate ? 'regenerated' : 'issued'} — students can now download it`);
       for (const d of done) {
-        await downloadStudentDocument(student.id, d.slug, `${d.slug}.pdf`);
+        await downloadStudentDocument(student.id, d.slug, `${d.slug}.pdf`, { quiet: true });
         if (done.length > 1) await pause(400);
       }
     } catch (e: any) {
@@ -114,7 +151,12 @@ export function StudentDocumentsModal({ student, onClose, onChanged }: { student
                 </div>
                 {d.issued ? (
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => downloadStudentDocument(student.id, d.slug, `${d.slug}.pdf`)} className="text-xs px-3 py-1.5 rounded-full bg-brand text-cream hover:bg-brand-dark transition font-medium">Download</button>
+                    <button onClick={() => fetchDoc(d.slug, 'view')} disabled={fetching !== null} className="text-xs px-3 py-1.5 rounded-full border border-stone/25 text-brand hover:bg-stone/5 transition font-medium disabled:opacity-50">
+                      {fetching === `${d.slug}:view` ? 'Opening…' : 'View'}
+                    </button>
+                    <button onClick={() => fetchDoc(d.slug, 'download')} disabled={fetching !== null} className="text-xs px-3 py-1.5 rounded-full bg-brand text-cream hover:bg-brand-dark transition font-medium disabled:opacity-50">
+                      {fetching === `${d.slug}:download` ? 'Downloading…' : 'Download'}
+                    </button>
                     <button onClick={() => confirmRegenerate(d)} disabled={busy !== null} className="text-xs px-3 py-1.5 rounded-full border border-stone/25 text-brand hover:bg-stone/5 transition font-medium disabled:opacity-50">
                       {busy === d.slug ? 'Working…' : 'Regenerate'}
                     </button>

@@ -52,12 +52,10 @@ export default function StudentDashboard() {
       .finally(() => setDocsLoaded(true));
   }, [profile?.id]);
 
-  const handleDownloadDocument = async (slug: string) => {
-    setDownloadingDoc(slug);
+  const handleDownloadDocument = async (slug: string, mode: 'download' | 'view' = 'download') => {
+    setDownloadingDoc(`${slug}:${mode}`);
     try {
-      if (await downloadStudentDocument(profile.id, slug, `${slug}_${profile.admission_no}.pdf`)) {
-        toast.success('Document downloaded successfully');
-      }
+      await downloadStudentDocument(profile.id, slug, `${slug}_${profile.admission_no}.pdf`, { mode });
     } finally {
       setDownloadingDoc(null);
     }
@@ -621,13 +619,22 @@ export default function StudentDashboard() {
                     <div className="flex items-center justify-between mb-2 gap-3">
                       <span className="font-medium text-brand-dark text-sm">{d.label}</span>
                       {d.issued ? (
-                        <button
-                          onClick={() => handleDownloadDocument(d.slug)}
-                          disabled={downloadingDoc === d.slug}
-                          className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50 shrink-0"
-                        >
-                          {downloadingDoc === d.slug ? 'Downloading...' : 'Download'}
-                        </button>
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => handleDownloadDocument(d.slug, 'view')}
+                            disabled={downloadingDoc !== null}
+                            className="text-xs px-3 py-1 border border-stone/25 text-brand rounded-full hover:bg-stone/5 transition disabled:opacity-50"
+                          >
+                            {downloadingDoc === `${d.slug}:view` ? 'Opening...' : 'View'}
+                          </button>
+                          <button
+                            onClick={() => handleDownloadDocument(d.slug)}
+                            disabled={downloadingDoc !== null}
+                            className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
+                          >
+                            {downloadingDoc === `${d.slug}:download` ? 'Downloading...' : 'Download'}
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-xs px-3 py-1 bg-stone/20 text-stone rounded-full shrink-0">Not yet issued</span>
                       )}

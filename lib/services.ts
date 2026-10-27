@@ -65,7 +65,7 @@ export const studentDocumentsApi = {
   getForStudent: (studentId: string) => api.get(`/student-documents/${studentId}`),
   issue: (studentId: string, data: { documents: string[] | 'all'; regenerate?: boolean }) => api.post(`/student-documents/${studentId}/issue`, data),
   bulkIssue: (data: { student_ids: string[]; documents: string[] | 'all'; regenerate?: boolean }) => api.post('/student-documents/bulk-issue', data),
-  download: (studentId: string, slug: string) => api.get(`/student-documents/${studentId}/${slug}/download`, { responseType: 'blob' }),
+  download: (studentId: string, slug: string, params?: any) => api.get(`/student-documents/${studentId}/${slug}/download`, { params, responseType: 'blob' }),
 };
 
 // Staff
