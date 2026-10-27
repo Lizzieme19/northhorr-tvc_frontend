@@ -59,6 +59,15 @@ export const financeApi = {
   exportStudentsReport: (params?: any) => api.get('/finance/reports/students/export', { params, responseType: 'blob' }),
 };
 
+// Student documents issued by the college (Admission Letter, Letter of Acceptance, ...)
+export const studentDocumentsApi = {
+  getMine: () => api.get('/student-documents/me'),
+  getForStudent: (studentId: string) => api.get(`/student-documents/${studentId}`),
+  issue: (studentId: string, data: { documents: string[] | 'all'; regenerate?: boolean }) => api.post(`/student-documents/${studentId}/issue`, data),
+  bulkIssue: (data: { student_ids: string[]; documents: string[] | 'all'; regenerate?: boolean }) => api.post('/student-documents/bulk-issue', data),
+  download: (studentId: string, slug: string) => api.get(`/student-documents/${studentId}/${slug}/download`, { responseType: 'blob' }),
+};
+
 // Staff
 export const staffApi = {
   getAll: (params?: any) => api.get('/staff', { params }),

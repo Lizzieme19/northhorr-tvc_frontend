@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-const categories = ["Prospectus", "Forms", "Timetables", "Policies", "Tenders"] as const;
+const categories = ["Prospectus", "Fee Structure", "Forms", "Timetables", "Policies", "Tenders"] as const;
 
 const typeColors: Record<string, string> = {
   PDF: "bg-terracotta/15 text-terracotta",

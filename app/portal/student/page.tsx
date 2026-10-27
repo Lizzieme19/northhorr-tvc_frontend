@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import ChangePassword from '@/components/ChangePassword';
+import { downloadStudentDocument } from '@/components/StudentDocuments';
+import { studentDocumentsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
 export default function StudentDashboard() {
@@ -38,48 +40,24 @@ export default function StudentDashboard() {
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [showDocUpload, setShowDocUpload] = useState(false);
 
-  const handleDownloadDocument = async (docType: string) => {
-    setDownloadingDoc(docType);
+  // Documents the college has issued to this student; the rest stay locked until issued
+  const [issuedDocs, setIssuedDocs] = useState<any[]>([]);
+  const [docsLoaded, setDocsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!profile) return;
+    studentDocumentsApi.getMine()
+      .then(r => setIssuedDocs(r.data.documents || []))
+      .catch(() => { })
+      .finally(() => setDocsLoaded(true));
+  }, [profile?.id]);
+
+  const handleDownloadDocument = async (slug: string) => {
+    setDownloadingDoc(slug);
     try {
-      let endpoint = '';
-      let filename = '';
-
-      switch (docType) {
-        case 'letter_of_acceptance':
-          endpoint = `/students/${profile.id}/documents/letter-of-acceptance`;
-          filename = `Letter_of_Acceptance_${profile.admission_no}.pdf`;
-          break;
-        case 'admission_for_training':
-          endpoint = `/students/${profile.id}/documents/admission-for-training`;
-          filename = `Admission_for_Training_${profile.admission_no}.pdf`;
-          break;
-        case 'fee_structure':
-          endpoint = `/students/${profile.id}/documents/fee-structure`;
-          filename = `Fee_Structure_${profile.admission_no}.pdf`;
-          break;
-        case 'personal_information':
-          endpoint = `/students/${profile.id}/documents/personal-information`;
-          filename = `Student_Personal_Information_${profile.admission_no}.pdf`;
-          break;
-        default:
-          endpoint = `/students/documents/${docType}`;
-          filename = `${docType.replace('_', ' ').toUpperCase()}.pdf`;
+      if (await downloadStudentDocument(profile.id, slug, `${slug}_${profile.admission_no}.pdf`)) {
+        toast.success('Document downloaded successfully');
       }
-
-      const response = await api.get(endpoint, {
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success('Document downloaded successfully');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Failed to download document');
     } finally {
       setDownloadingDoc(null);
     }
@@ -636,46 +614,31 @@ export default function StudentDashboard() {
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Documents</h2>
 
               <div className="grid sm:grid-cols-2 gap-4">
-                {/* Pre-admission documents - always available */}
-                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Letter of Acceptance</span>
-                    <button
-                      onClick={() => handleDownloadDocument('letter_of_acceptance')}
-                      disabled={downloadingDoc === 'letter_of_acceptance'}
-                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
-                    >
-                      {downloadingDoc === 'letter_of_acceptance' ? 'Downloading...' : 'Download'}
-                    </button>
+                {/* Documents issued by the college. Locked until the registrar/admin issues them. */}
+                {!docsLoaded && <p className="text-xs text-stone sm:col-span-2">Loading your documents…</p>}
+                {issuedDocs.map((d: any) => (
+                  <div key={d.slug} className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                    <div className="flex items-center justify-between mb-2 gap-3">
+                      <span className="font-medium text-brand-dark text-sm">{d.label}</span>
+                      {d.issued ? (
+                        <button
+                          onClick={() => handleDownloadDocument(d.slug)}
+                          disabled={downloadingDoc === d.slug}
+                          className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50 shrink-0"
+                        >
+                          {downloadingDoc === d.slug ? 'Downloading...' : 'Download'}
+                        </button>
+                      ) : (
+                        <span className="text-xs px-3 py-1 bg-stone/20 text-stone rounded-full shrink-0">Not yet issued</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-stone">
+                      {d.issued
+                        ? `Issued ${new Date(d.generated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.`
+                        : 'The college has not issued this document yet. It will appear here once it is ready.'}
+                    </p>
                   </div>
-                  <p className="text-xs text-stone">Letter of acceptance - prefilled with your data.</p>
-                </div>
-                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Admission for Training</span>
-                    <button
-                      onClick={() => handleDownloadDocument('admission_for_training')}
-                      disabled={downloadingDoc === 'admission_for_training'}
-                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
-                    >
-                      {downloadingDoc === 'admission_for_training' ? 'Downloading...' : 'Download'}
-                    </button>
-                  </div>
-                  <p className="text-xs text-stone">Admission for training form - prefilled with your data.</p>
-                </div>
-                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-brand-dark text-sm">Student Personal Information</span>
-                    <button
-                      onClick={() => handleDownloadDocument('personal_information')}
-                      disabled={downloadingDoc === 'personal_information'}
-                      className="text-xs px-3 py-1 bg-brand text-cream rounded-full hover:bg-brand-dark transition disabled:opacity-50"
-                    >
-                      {downloadingDoc === 'personal_information' ? 'Downloading...' : 'Download'}
-                    </button>
-                  </div>
-                  <p className="text-xs text-stone">Personal information form - prefilled with your data.</p>
-                </div>
+                ))}
 
                 {/* Student ID Card */}
                 <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">

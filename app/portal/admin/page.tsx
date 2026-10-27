@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi, termProgressionApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
+import { StudentDocumentsModal, BulkIssueDocumentsModal } from '@/components/StudentDocuments';
 import { toast } from 'sonner';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -168,15 +169,6 @@ export default function AdminDashboard() {
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Error updating status');
     } finally { setApproving(null); }
-  };
-
-  const generateLetter = async (studentId: string) => {
-    try {
-      const r = await api.post(`/admissions/generate/${studentId}`);
-      toast.success('Admission letter generated! URL: ' + r.data.letter_url);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to generate letter');
-    }
   };
 
   const handleResourceUpload = async (e: React.FormEvent) => {
@@ -627,7 +619,7 @@ export default function AdminDashboard() {
         )}
 
         {/* ── STUDENTS ── */}
-        {tab === 'students' && <StudentsTab generateLetter={generateLetter} feeTypes={feeTypes} />}
+        {tab === 'students' && <StudentsTab feeTypes={feeTypes} />}
 
         {/* ── USERS ── */}
         {tab === 'users' && <UsersTab />}
@@ -661,6 +653,7 @@ export default function AdminDashboard() {
                     className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                   >
                     <option value="Prospectus">Prospectus</option>
+                    <option value="Fee Structure">Fee Structure</option>
                     <option value="Forms">Forms</option>
                     <option value="Timetables">Timetables</option>
                     <option value="Policies">Policies</option>
@@ -1946,7 +1939,7 @@ export default function AdminDashboard() {
   );
 }
 
-function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string) => void; feeTypes: any[] }) {
+function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const isAdmin = useAuth().user?.role === 'ADMIN';
   const [students, setStudents] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -1995,6 +1988,11 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
   const [downloadingIDCard, setDownloadingIDCard] = useState<string | null>(null);
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [showReports, setShowReports] = useState(false);
+  const [docsStudent, setDocsStudent] = useState<any>(null);
+  const [showBulkDocs, setShowBulkDocs] = useState(false);
+
+  const refreshStudents = () =>
+    studentsApi.getAll({ page, limit: 15, search }).then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); }).catch(() => { });
 
   useEffect(() => {
     studentsApi.getAll({ page, limit: 15, search })
@@ -2334,6 +2332,12 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
               >
                 Assign Term ({selectedStudentIds.length})
               </button>
+              <button
+                onClick={() => setShowBulkDocs(true)}
+                className="px-4 py-2 rounded-xl bg-terracotta text-white font-semibold hover:opacity-90 transition text-sm"
+              >
+                Issue Documents ({selectedStudentIds.length})
+              </button>
               {isAdmin && <button
                 onClick={() => setShowBulkPaymentModal(true)}
                 className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
@@ -2358,6 +2362,8 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
         </div>
       </div>
 
+      {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
+      {showBulkDocs && <BulkIssueDocumentsModal studentIds={selectedStudentIds} onClose={() => setShowBulkDocs(false)} onDone={refreshStudents} />}
       {showReports && <ReportsExport onClose={() => setShowReports(false)} types={isAdmin ? ['fees', 'students'] : ['students']} initialType="students" hideFinance={!isAdmin} />}
 
       {/* Duplicates Panel */}
@@ -2488,7 +2494,7 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                 <th className="px-4 py-3 text-left">Intake</th>
                 <th className="px-4 py-3 text-left">Current Term</th>
                 <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Letter</th>
+                <th className="px-4 py-3 text-left">Documents</th>
                 <th className="px-4 py-3 text-left">Actions</th>
               </tr>
             </thead>
@@ -2520,11 +2526,15 @@ function StudentsTab({ generateLetter, feeTypes }: { generateLetter: (id: string
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-stone/20 text-stone'}`}>{s.status}</span>
                   </td>
                   <td className="px-4 py-3">
-                    {s.admission_letter ? (
-                      <a href={s.admission_letter.letter_url} target="_blank" rel="noreferrer" className="text-brand text-xs hover:underline">Download</a>
-                    ) : (
-                      <button onClick={() => generateLetter(s.id)} className="text-terracotta text-xs hover:underline">Generate</button>
-                    )}
+                    {(() => {
+                      // Admission letters made before the documents feature still count as issued
+                      const issued = (s.documents?.length || 0) + (s.admission_letter && !s.documents?.some((d: any) => d.document_type === 'ADMISSION_LETTER') ? 1 : 0);
+                      return (
+                        <button onClick={() => setDocsStudent(s)} className={`text-xs hover:underline ${issued >= 4 ? 'text-green-700' : 'text-terracotta'}`}>
+                          {issued >= 4 ? '✓ All issued' : issued > 0 ? `${issued}/4 issued` : 'Issue'}
+                        </button>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
@@ -4499,11 +4509,6 @@ function DocTemplatesTab() {
       vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]', '[ACADEMIC_YEAR]'],
     },
     {
-      id: 'FEE_STRUCTURE',
-      name: 'Fee Structure',
-      vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[ACADEMIC_YEAR]', '[DATE]'],
-    },
-    {
       id: 'PERSONAL_INFO',
       name: 'Personal Info Sheet',
       vars: ['[STUDENT_NAME]', '[ADMISSION_NO]', '[PROGRAMME]', '[DATE]'],
@@ -4563,14 +4568,6 @@ function DocTemplatesTab() {
       subheader: 'STUDENT TRAINING ADMISSION FORM',
       instruction: 'Please complete all sections of this form in BLOCK LETTERS. Attach certified copies of all supporting documents. Incomplete forms will not be processed.',
       declaration: 'I, the undersigned, declare that all information provided in this form is true, complete, and correct to the best of my knowledge. I understand that providing false information will lead to automatic disqualification and any admission offered will be withdrawn.',
-      signatory_name: 'JOHN KIPKEMBOI CHUMBA',
-      signatory_title: 'PRINCIPAL - NORTH HORR TVC',
-    },
-    FEE_STRUCTURE: {
-      intro: 'The following is the official fee structure for the [ACADEMIC_YEAR] academic year for [PROGRAMME] at North Horr Technical and Vocational College.',
-      payment_note: "Fees are payable at the beginning of each year or term via Banker's Draft or cash deposit into the college bank account: Kenya Commercial Bank, A/C No.: 127956824, A/C Name: North Horr Technical and Vocational College.",
-      scholarship_note: 'Students are encouraged to apply for government scholarships, loans, and bursaries through www.hef.co.ke to assist with fees and other personal expenses.',
-      footer_note: 'The college reserves the right to revise the fee structure. Any changes will be communicated in advance.',
       signatory_name: 'JOHN KIPKEMBOI CHUMBA',
       signatory_title: 'PRINCIPAL - NORTH HORR TVC',
     },
@@ -4647,14 +4644,6 @@ function DocTemplatesTab() {
       { key: 'declaration', label: 'Student Declaration', hint: 'Declaration statement the student signs at the bottom.' },
       { key: 'signatory_name', label: 'Authorized Signatory Name', hint: 'Name of the authorizing official.' },
       { key: 'signatory_title', label: 'Authorized Signatory Title', hint: 'Title of the authorizing official.' },
-    ],
-    FEE_STRUCTURE: [
-      { key: 'intro', label: 'Opening Paragraph', hint: 'Introduction to the fee structure. Use [ACADEMIC_YEAR] and [PROGRAMME].' },
-      { key: 'payment_note', label: 'Payment Instructions', hint: 'How and where fees should be paid (bank details included).' },
-      { key: 'scholarship_note', label: 'Scholarship & Bursary Note', hint: 'Information about HEF and government scholarship options.' },
-      { key: 'footer_note', label: 'Footer Disclaimer', hint: 'Disclaimer about fee revision rights.' },
-      { key: 'signatory_name', label: 'Signatory Name', hint: 'Name of the person approving the fee structure.' },
-      { key: 'signatory_title', label: 'Signatory Title', hint: 'Title of the approving official.' },
     ],
     PERSONAL_INFO: [
       { key: 'intro', label: 'Opening / Purpose Statement', hint: 'Brief description of why this form is being collected.' },
