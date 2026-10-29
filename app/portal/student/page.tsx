@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import ChangePassword from '@/components/ChangePassword';
 import { downloadStudentDocument } from '@/components/StudentDocuments';
+import { StudentHistoryPanel } from '@/components/StudentHistory';
 import { studentDocumentsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
@@ -666,6 +667,12 @@ export default function StudentDashboard() {
                   <p className="text-xs text-stone">Your student ID card - requires profile photo.</p>
                 </div>
               </div>
+            </div>
+
+            {/* ── Academic history: every level, admission number and intake ── */}
+            <div className="lg:col-span-2">
+              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">My Academic History</h2>
+              <StudentHistoryPanel studentId={profile.id} />
             </div>
 
             {/* ── Uploaded Supporting Documents ── */}

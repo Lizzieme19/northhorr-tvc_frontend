@@ -305,7 +305,8 @@ export default function FinanceDashboard() {
                   <th className="px-4 py-3 text-left">Admission No.</th>
                   <th className="px-4 py-3 text-left">Student</th>
                   <th className="px-4 py-3 text-left">Course</th>
-                  <th className="px-4 py-3 text-right">Total Fees</th>
+                  <th className="px-4 py-3 text-right">Term Fees</th>
+                  <th className="px-4 py-3 text-right">B/F</th>
                   <th className="px-4 py-3 text-right">Paid</th>
                   <th className="px-4 py-3 text-right">Balance</th>
                   <th className="px-4 py-3 text-left">Status</th>
@@ -313,7 +314,7 @@ export default function FinanceDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone/10">
-                {students.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-stone">No records found</td></tr>}
+                {students.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-stone">No records found</td></tr>}
                 {students.map(s => {
                   // Use current term balance if available
                   const currentBalance = s.student_balances?.find((b: any) => b.term_id === s.current_term_id) || s.student_balances?.[0];
@@ -326,6 +327,7 @@ export default function FinanceDashboard() {
                       </td>
                       <td className="px-4 py-3 text-stone text-xs">{s.course?.name}</td>
                       <td className="px-4 py-3 text-right font-medium">KES {currentBalance?.total_fees?.toLocaleString() ?? '—'}</td>
+                      <td className="px-4 py-3 text-right text-stone" title="Balance brought forward from earlier terms">{currentBalance?.previous_balance_carryover ? `KES ${currentBalance.previous_balance_carryover.toLocaleString()}` : '—'}</td>
                       <td className="px-4 py-3 text-right text-green-600 font-medium">KES {currentBalance?.amount_paid?.toLocaleString() ?? '—'}</td>
                       <td className="px-4 py-3 text-right text-red-600 font-medium">KES {currentBalance?.balance?.toLocaleString() ?? '—'}</td>
                       <td className="px-4 py-3">{currentBalance ? statusBadge(currentBalance.status) : <span className="text-xs text-stone">No term</span>}</td>
@@ -662,7 +664,8 @@ export default function FinanceDashboard() {
                             <th className="px-4 py-3 text-left">Admission No.</th>
                             <th className="px-4 py-3 text-left">Student</th>
                             <th className="px-4 py-3 text-left">Term</th>
-                            <th className="px-4 py-3 text-left">Total Fees</th>
+                            <th className="px-4 py-3 text-left">Term Fees</th>
+                            <th className="px-4 py-3 text-left">B/F</th>
                             <th className="px-4 py-3 text-left">Paid</th>
                             <th className="px-4 py-3 text-left">Balance</th>
                             <th className="px-4 py-3 text-left">Status</th>
@@ -678,6 +681,7 @@ export default function FinanceDashboard() {
                               </td>
                               <td className="px-4 py-3 text-stone">{balance.term?.name}</td>
                               <td className="px-4 py-3">KES {balance.total_fees?.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-stone">{balance.previous_balance_carryover ? `KES ${balance.previous_balance_carryover.toLocaleString()}` : '—'}</td>
                               <td className="px-4 py-3 text-green-600">KES {balance.amount_paid?.toLocaleString()}</td>
                               <td className="px-4 py-3 text-red-500">KES {balance.balance?.toLocaleString()}</td>
                               <td className="px-4 py-3">{statusBadge(balance.status)}</td>

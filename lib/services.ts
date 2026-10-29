@@ -46,6 +46,8 @@ export const studentsApi = {
     });
   },
   generateIdCard: (id: string) => api.get(`/students/${id}/id-card`),
+  // Fold an older record of the same person into this one (keeps balances, payments, documents and history)
+  merge: (id: string, mergeStudentId: string) => api.post(`/students/${id}/merge`, { merge_student_id: mergeStudentId }),
 };
 
 // Finance
@@ -239,6 +241,7 @@ export const termsApi = {
 export const termProgressionApi = {
   admitToTerm: (data: any) => api.post('/term-progression/admit', data),
   getProgression: (studentId: string) => api.get(`/term-progression/${studentId}`),
+  getHistory: (studentId: string) => api.get(`/term-progression/${studentId}/history`),
   getBalances: (studentId: string) => api.get(`/term-progression/${studentId}/balances`),
   updateNotes: (id: string, data: any) => api.patch(`/term-progression/${id}/notes`, data),
   getAllPromotions: (params?: { level?: string; academic_year?: string; page?: number; limit?: number }) =>

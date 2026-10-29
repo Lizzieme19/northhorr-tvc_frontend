@@ -7,6 +7,7 @@ import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi,
 import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
 import { StudentDocumentsModal, BulkIssueDocumentsModal } from '@/components/StudentDocuments';
+import { StudentHistoryModal, LinkRecordModal } from '@/components/StudentHistory';
 import { toast } from 'sonner';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -39,6 +40,9 @@ export default function AdminDashboard() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [intake, setIntake] = useState('SEPTEMBER');
   const [studentCredentials, setStudentCredentials] = useState<any>(null);
+  // Set when the applicant looks like an existing student (returning for the next level)
+  const [historyFor, setHistoryFor] = useState<any>(null);
+  const [existingMatches, setExistingMatches] = useState<{ appId: string; matches: any[] } | null>(null);
   const [appDocFiles, setAppDocFiles] = useState({
     doc_kcpe: null as File | null,
     doc_kcse: null as File | null,
@@ -69,7 +73,7 @@ export default function AdminDashboard() {
   const [termForm, setTermForm] = useState({ name: '', start_date: '', end_date: '', academic_year: '', intake: '', term_cost: '', is_active: true });
   const [editingTerm, setEditingTerm] = useState<any>(null);
   const [savingTerm, setSavingTerm] = useState(false);
-  const [progressionForm, setProgressionForm] = useState({ student_id: '', new_term_id: '', new_level: '', notes: '' });
+  const [progressionForm, setProgressionForm] = useState({ student_id: '', new_term_id: '', new_level: '', new_intake: '', new_year: '', notes: '' });
   const [lookupStudentId, setLookupStudentId] = useState('');
   const [studentBalances, setStudentBalances] = useState<any[]>([]);
   const [availableStudents, setAvailableStudents] = useState<any[]>([]);
@@ -155,19 +159,42 @@ export default function AdminDashboard() {
     }
   }, [selectedApp]);
 
-  const handleStatus = async (id: string, status: string) => {
+  // Pre-fill the intake and year of the new stage from the chosen term (or the student's current ones)
+  const withStageDefaults = (f: any) => {
+    const term = availableTerms.find((t: any) => t.id === f.new_term_id);
+    const stu = availableStudents.find((x: any) => x.id === f.student_id);
+    const termIntake = ['JANUARY', 'MAY', 'SEPTEMBER'].includes(term?.intake) ? term.intake : '';
+    return {
+      ...f,
+      new_intake: f.new_intake || termIntake || stu?.intake || '',
+      new_year: f.new_year || (term?.start_date ? String(new Date(term.start_date).getFullYear()) : stu?.year ? String(stu.year) : ''),
+    };
+  };
+
+  // extra: { continue_student_id } continues an existing student; { create_new: true } confirms a brand-new student
+  const handleStatus = async (id: string, status: string, extra: Record<string, any> = {}) => {
     setApproving(id);
     try {
-      const response = await applicationsApi.updateStatus(id, { status, review_notes: reviewNotes, intake, year: new Date().getFullYear() });
+      const response = await applicationsApi.updateStatus(id, { status, review_notes: reviewNotes, intake, year: new Date().getFullYear(), ...extra });
       setSelectedApp(null);
+      setExistingMatches(null);
       setApplications(prev => prev.map(a => a.id === id ? { ...a, status } : a));
 
       // Display student credentials if application was approved
       if (status === 'APPROVED' && response.data.student_credentials) {
         setStudentCredentials(response.data.student_credentials);
       }
+      if (response.data.continued_student) {
+        const c = response.data.continued_student;
+        toast.success(`Approved. Existing student continues: ${c.previous_admission_no} → ${c.admission_no} (${c.level})`, { duration: 8000 });
+      }
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Error updating status');
+      // Looks like a returning student: let the admin choose to continue them or confirm they are new
+      if (e?.response?.status === 409 && e.response.data?.code === 'EXISTING_STUDENT') {
+        setExistingMatches({ appId: id, matches: e.response.data.matches || [] });
+      } else {
+        toast.error(e?.response?.data?.error || 'Error updating status');
+      }
     } finally { setApproving(null); }
   };
 
@@ -1378,6 +1405,9 @@ export default function AdminDashboard() {
                       student_id: progressionForm.student_id,
                       new_term_id: progressionForm.new_term_id,
                       new_level: progressionForm.new_level || undefined,
+                      // intake and year only apply when the level changes (a new stage)
+                      new_intake: progressionForm.new_level ? progressionForm.new_intake || undefined : undefined,
+                      new_year: progressionForm.new_level && progressionForm.new_year ? parseInt(progressionForm.new_year) : undefined,
                       notes: progressionForm.notes,
                     });
                     const newAdmNo = response.data?.progression?.new_admission_no;
@@ -1386,7 +1416,7 @@ export default function AdminDashboard() {
                     } else {
                       toast.success('Student admitted to new term successfully!');
                     }
-                    setProgressionForm({ student_id: '', new_term_id: '', new_level: '', notes: '' });
+                    setProgressionForm({ student_id: '', new_term_id: '', new_level: '', new_intake: '', new_year: '', notes: '' });
                     // Refresh promotion history
                     termProgressionApi.getAllPromotions()
                       .then(r => setPromotionHistory(r.data?.progressions || []))
@@ -1407,7 +1437,7 @@ export default function AdminDashboard() {
                     <select
                       required
                       value={progressionForm.student_id}
-                      onChange={e => setProgressionForm({ ...progressionForm, student_id: e.target.value })}
+                      onChange={e => setProgressionForm(withStageDefaults({ ...progressionForm, student_id: e.target.value, new_intake: '', new_year: '' }))}
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     >
                       <option value="">Select a student</option>
@@ -1432,7 +1462,7 @@ export default function AdminDashboard() {
                     <select
                       required
                       value={progressionForm.new_term_id}
-                      onChange={e => setProgressionForm({ ...progressionForm, new_term_id: e.target.value })}
+                      onChange={e => setProgressionForm(withStageDefaults({ ...progressionForm, new_term_id: e.target.value, new_intake: '', new_year: '' }))}
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     >
                       <option value="">Select a term</option>
@@ -1449,13 +1479,43 @@ export default function AdminDashboard() {
                     </label>
                     <select
                       value={progressionForm.new_level}
-                      onChange={e => setProgressionForm({ ...progressionForm, new_level: e.target.value })}
+                      onChange={e => setProgressionForm(withStageDefaults({ ...progressionForm, new_level: e.target.value }))}
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     >
                       <option value="">— No level change —</option>
                       {['L3', 'L4', 'L5', 'L6'].map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </div>
+                  {progressionForm.new_level && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-brand-dark mb-1.5">Intake for the new level</label>
+                        <select
+                          value={progressionForm.new_intake}
+                          onChange={e => setProgressionForm({ ...progressionForm, new_intake: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                        >
+                          <option value="">Same as current</option>
+                          <option value="JANUARY">January</option>
+                          <option value="MAY">May</option>
+                          <option value="SEPTEMBER">September</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-brand-dark mb-1.5">Year</label>
+                        <input
+                          type="number"
+                          value={progressionForm.new_year}
+                          onChange={e => setProgressionForm({ ...progressionForm, new_year: e.target.value })}
+                          placeholder="e.g. 2026"
+                          className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                        />
+                      </div>
+                      <p className="col-span-2 text-xs text-stone -mt-2">
+                        The new admission number uses this intake and year. The previous level, admission number, intake and dates are kept in the student&apos;s history.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes</label>
                     <textarea
@@ -1630,7 +1690,14 @@ export default function AdminDashboard() {
                             <div className="text-xs text-stone mt-1 font-mono">{p.student?.admission_no}</div>
                           )}
 
+                          {(p.from_intake || p.to_intake) && (
+                            <div className="text-xs text-stone mt-2">
+                              Intake: <strong className="text-brand-dark">{p.from_intake ? `${p.from_intake.charAt(0)}${p.from_intake.slice(1).toLowerCase()} ${p.from_year ?? ''}` : '—'} → {p.to_intake ? `${p.to_intake.charAt(0)}${p.to_intake.slice(1).toLowerCase()} ${p.to_year ?? ''}` : '—'}</strong>
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-4 mt-3 text-xs text-stone">
+                            {p.kind && p.kind !== 'PROMOTION' && <span className="px-2 py-0.5 rounded-full bg-cream-deep font-medium">{p.kind === 'RE_ADMISSION' ? 'Re-admitted' : p.kind === 'LINKED' ? 'Records linked' : p.kind}</span>}
+                            <button type="button" onClick={() => setHistoryFor(p.student)} className="text-brand hover:underline font-medium">Full history</button>
                             <span>Level: <strong className="text-brand-dark">{p.from_level || '—'} → {p.to_level}</strong></span>
                             <span>Fees cleared: <strong className={p.fee_clearance ? 'text-green-600' : 'text-red-500'}>{p.fee_clearance ? 'Yes' : 'No'}</strong></span>
                             <span>Promoted by: <strong className="text-brand-dark">{p.promoter?.email}</strong></span>
@@ -1647,6 +1714,52 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {historyFor && <StudentHistoryModal student={historyFor} onClose={() => setHistoryFor(null)} />}
+
+      {/* Returning student prompt */}
+      {existingMatches && (
+        <div className="fixed inset-0 bg-brand-dark/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl my-auto">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Is this a returning student?</h2>
+            <p className="text-sm text-stone mb-4">
+              This applicant matches {existingMatches.matches.length === 1 ? 'an existing student' : 'existing students'}. Continue their record to keep one history
+              (a new admission number is generated, the earlier one is kept in their history), or confirm they are a new student.
+            </p>
+            <div className="space-y-3 mb-5 max-h-72 overflow-y-auto">
+              {existingMatches.matches.map((m: any) => (
+                <div key={m.id} className="border border-stone/15 rounded-2xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-mono text-xs text-brand">{m.admission_no}</div>
+                      <div className="font-medium text-brand-dark text-sm">{m.name}</div>
+                      <div className="text-xs text-stone">{m.level} · {m.intake} {m.year} · {m.course} · {m.status}</div>
+                      <div className="text-[11px] text-green-700 mt-1">{m.match_reasons.join(' · ')}</div>
+                    </div>
+                    <button
+                      disabled={!!approving}
+                      onClick={() => handleStatus(existingMatches.appId, 'APPROVED', { continue_student_id: m.id })}
+                      className="shrink-0 text-xs px-3 py-2 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      Continue this student
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                disabled={!!approving}
+                onClick={() => handleStatus(existingMatches.appId, 'APPROVED', { create_new: true })}
+                className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition text-sm disabled:opacity-50"
+              >
+                No — create a new student
+              </button>
+              <button onClick={() => setExistingMatches(null)} className="px-5 py-2.5 rounded-xl text-stone hover:text-brand-dark transition text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Student Credentials Modal */}
       {studentCredentials && (
@@ -1989,6 +2102,8 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [showReports, setShowReports] = useState(false);
   const [docsStudent, setDocsStudent] = useState<any>(null);
+  const [historyStudent, setHistoryStudent] = useState<any>(null);
+  const [linkStudent, setLinkStudent] = useState<any>(null);
   const [showBulkDocs, setShowBulkDocs] = useState(false);
 
   const refreshStudents = () =>
@@ -2114,6 +2229,27 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
     } finally {
       setLoadingDuplicates(false);
     }
+  };
+
+  // Same person registered more than once: keep one record and fold the others into its history
+  const handleMergeDuplicates = (group: any, keepId: string) => {
+    const others = group.students.filter((x: any) => x.id !== keepId);
+    toast(`Keep this record and link ${others.length} other${others.length === 1 ? '' : 's'} into its history? Only do this if they are the same person. This can't be undone.`, {
+      duration: 15000,
+      action: {
+        label: 'Link records',
+        onClick: async () => {
+          try {
+            for (const o of others) await studentsApi.merge(keepId, o.id);
+            toast.success('Records linked into one student history');
+            await refreshStudents();
+            handleFindDuplicates();
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Failed to link records');
+          }
+        },
+      },
+    });
   };
 
   const handleDeleteStudent = (student: any) => {
@@ -2362,6 +2498,8 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
         </div>
       </div>
 
+      {historyStudent && <StudentHistoryModal student={historyStudent} onClose={() => setHistoryStudent(null)} />}
+      {linkStudent && <LinkRecordModal student={linkStudent} onClose={() => setLinkStudent(null)} onDone={() => { refreshStudents(); setShowDuplicates(false); }} />}
       {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
       {showBulkDocs && <BulkIssueDocumentsModal studentIds={selectedStudentIds} onClose={() => setShowBulkDocs(false)} onDone={refreshStudents} />}
       {showReports && <ReportsExport onClose={() => setShowReports(false)} types={isAdmin ? ['fees', 'students'] : ['students']} initialType="students" hideFinance={!isAdmin} />}
@@ -2396,7 +2534,12 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                         <td className="px-3 py-2">{s.level}</td>
                         <td className="px-3 py-2">{s.intake}</td>
                         <td className="px-3 py-2">{new Date(s.created_at).toLocaleDateString()}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 space-x-3">
+                          <button
+                            onClick={() => handleMergeDuplicates(group, s.id)}
+                            className="text-brand hover:text-brand-dark font-semibold transition"
+                            title="Keep this record and link the others into its history"
+                          >Keep &amp; link others</button>
                           {isAdmin && <button
                             onClick={() => handleDeleteStudent(students.find((st: any) => st.id === s.id) || s)}
                             className="text-red-600 hover:text-red-800 font-semibold transition"
@@ -2539,6 +2682,8 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
+                      <button onClick={() => setHistoryStudent(s)} className="text-purple-700 hover:text-purple-900 font-medium text-xs transition">History</button>
+                      <button onClick={() => setLinkStudent(s)} className="text-stone hover:text-brand-dark font-medium text-xs transition" title="Link this student's earlier record">Link</button>
                       {isAdmin && <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>}
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                       <button onClick={() => handleDownloadIDCard(s.id)}
@@ -2918,14 +3063,18 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                           'bg-red-100 text-red-800'
                         }`}>{b.status}</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                    <div className="grid grid-cols-4 gap-2 text-xs mb-2">
                       <div>
                         <div className="text-stone">Term Cost</div>
                         <div className="font-medium">{b.term.term_cost.toLocaleString()}</div>
                       </div>
                       <div>
-                        <div className="text-stone">Total Fees</div>
+                        <div className="text-stone">Term Fees</div>
                         <div className="font-medium">{b.total_fees.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-stone">Brought Forward</div>
+                        <div className="font-medium">{b.carryover ? b.carryover.toLocaleString() : '—'}</div>
                       </div>
                       <div>
                         <div className="text-stone">Level</div>
@@ -3244,7 +3393,8 @@ function BillingTab() {
                 <th className="px-4 py-3 text-left">Student</th>
                 <th className="px-4 py-3 text-left">Admission No.</th>
                 <th className="px-4 py-3 text-left">Term</th>
-                <th className="px-4 py-3 text-right">Total Fees</th>
+                <th className="px-4 py-3 text-right">Term Fees</th>
+                <th className="px-4 py-3 text-right">B/F</th>
                 <th className="px-4 py-3 text-right">Paid</th>
                 <th className="px-4 py-3 text-right">Balance</th>
                 <th className="px-4 py-3 text-left">Status</th>
@@ -3252,9 +3402,9 @@ function BillingTab() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">Loading...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-stone">Loading...</td></tr>
               ) : balances.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-stone">No billing records found</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-stone">No billing records found</td></tr>
               ) : (
                 balances.map((b: any) => (
                   <tr key={b.id} className="border-t border-stone/10 hover:bg-stone/5">
@@ -3267,6 +3417,7 @@ function BillingTab() {
                     <td className="px-4 py-3 text-stone">{b.student.admission_no}</td>
                     <td className="px-4 py-3 text-stone">{b.term.name}</td>
                     <td className="px-4 py-3 text-right font-medium">KES {b.total_fees?.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-stone" title="Balance brought forward from earlier terms">{b.previous_balance_carryover ? `KES ${b.previous_balance_carryover.toLocaleString()}` : '—'}</td>
                     <td className="px-4 py-3 text-right text-green-600">KES {b.amount_paid?.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right font-medium text-red-600">KES {b.balance?.toLocaleString()}</td>
                     <td className="px-4 py-3">
