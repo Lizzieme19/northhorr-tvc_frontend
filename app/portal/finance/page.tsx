@@ -6,6 +6,8 @@ import api from '@/lib/api';
 import { financeApi, feeTypesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
+import TermInfo from '@/components/TermInfo';
+import { termLabel } from '@/lib/terms';
 import { toast } from 'sonner';
 
 export default function FinanceDashboard() {
@@ -387,10 +389,11 @@ export default function FinanceDashboard() {
                         <option value="">Select term</option>
                         {studentTerms.map((b: any) => (
                           <option key={b.term.id} value={b.term.id}>
-                            {b.term.name} ({b.term.academic_year}) — Balance: KES {b.balance.toLocaleString()}
+                            {termLabel(b.term, `Balance: KES ${b.balance.toLocaleString()}`)}
                           </option>
                         ))}
                       </select>
+                      <TermInfo term={studentTerms.find((b: any) => b.term.id === recordPaymentTermId)?.term} />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Amount Received (KES) *</label>
@@ -459,9 +462,10 @@ export default function FinanceDashboard() {
                 >
                   <option value="">Select a term</option>
                   {terms.map((t: any) => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.academic_year})</option>
+                    <option key={t.id} value={t.id}>{termLabel(t)}</option>
                   ))}
                 </select>
+                <TermInfo term={terms.find((t: any) => t.id === allocatingTermId)} />
               </div>
 
               {loadingBreakdown && <div className="text-center py-6 text-stone text-sm">Loading breakdown…</div>}
@@ -603,7 +607,7 @@ export default function FinanceDashboard() {
                     >
                       <option value="">All Terms</option>
                       {terms.map((term: any) => (
-                        <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                        <option key={term.id} value={term.id}>{termLabel(term)}</option>
                       ))}
                     </select>
                   </div>

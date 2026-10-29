@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { financeApi } from '@/lib/services';
 import { toast } from 'sonner';
+import { termLabel } from '@/lib/terms';
 
 type ReportType = 'fees' | 'students';
 
@@ -195,7 +196,7 @@ export default function ReportsExport({ onClose, types = ['fees', 'students'], i
             <label className={labelCls}>Term</label>
             <select value={filters.term_id} onChange={e => set('term_id', e.target.value)} className={inputCls}>
               <option value="">All terms</option>
-              {(options?.terms || []).map((t: any) => <option key={t.id} value={t.id}>{t.name} ({t.academic_year})</option>)}
+              {(options?.terms || []).map((t: any) => <option key={t.id} value={t.id}>{termLabel(t)}</option>)}
             </select>
           </div>
 

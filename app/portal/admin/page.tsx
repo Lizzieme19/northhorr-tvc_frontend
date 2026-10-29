@@ -8,6 +8,8 @@ import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
 import { StudentDocumentsModal, BulkIssueDocumentsModal } from '@/components/StudentDocuments';
 import { StudentHistoryModal, LinkRecordModal } from '@/components/StudentHistory';
+import TermInfo from '@/components/TermInfo';
+import { termLabel } from '@/lib/terms';
 import { toast } from 'sonner';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -1467,11 +1469,10 @@ export default function AdminDashboard() {
                     >
                       <option value="">Select a term</option>
                       {availableTerms.map((term: any) => (
-                        <option key={term.id} value={term.id}>
-                          {term.name} - {term.academic_year} ({term.is_active ? 'Active' : 'Inactive'})
-                        </option>
+                        <option key={term.id} value={term.id}>{termLabel(term)}</option>
                       ))}
                     </select>
+                    <TermInfo term={availableTerms.find((t: any) => t.id === progressionForm.new_term_id)} />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">
@@ -3102,7 +3103,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                   >
                     <option value="">Select term to record payment</option>
                     {feeSummary.termBreakdown.filter((b: any) => b.balance > 0).map((b: any) => (
-                      <option key={b.term.id} value={b.term.id}>{b.term.name} — Balance: KES {b.balance.toLocaleString()}</option>
+                      <option key={b.term.id} value={b.term.id}>{termLabel(b.term, `Balance: KES ${b.balance.toLocaleString()}`)}</option>
                     ))}
                   </select>
                   <input
@@ -3155,9 +3156,10 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                 >
                   <option value="">Select Term</option>
                   {terms.map((term: any) => (
-                    <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                    <option key={term.id} value={term.id}>{termLabel(term)}</option>
                   ))}
                 </select>
+                <TermInfo term={terms.find((t: any) => t.id === selectedTermId)} />
               </div>
               <button
                 onClick={handleAssignTerm}
@@ -3193,9 +3195,10 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                 >
                   <option value="">Select Term</option>
                   {terms.map((term: any) => (
-                    <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                    <option key={term.id} value={term.id}>{termLabel(term)}</option>
                   ))}
                 </select>
+                <TermInfo term={terms.find((t: any) => t.id === bulkTermId)} />
               </div>
               <button
                 onClick={handleBulkAssignTerm}
@@ -3231,9 +3234,10 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                 >
                   <option value="">Select Term</option>
                   {terms.map((term: any) => (
-                    <option key={term.id} value={term.id}>{term.name} ({term.academic_year})</option>
+                    <option key={term.id} value={term.id}>{termLabel(term)}</option>
                   ))}
                 </select>
+                <TermInfo term={terms.find((t: any) => t.id === bulkPaymentTermId)} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">Select Fee Type</label>
@@ -3363,7 +3367,7 @@ function BillingTab() {
             >
               <option value="">All Terms</option>
               {terms.map((t: any) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.academic_year})</option>
+                <option key={t.id} value={t.id}>{termLabel(t)}</option>
               ))}
             </select>
           </div>

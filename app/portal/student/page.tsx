@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import ChangePassword from '@/components/ChangePassword';
 import { downloadStudentDocument } from '@/components/StudentDocuments';
 import { StudentHistoryPanel } from '@/components/StudentHistory';
+import { termDates, termFee, termState } from '@/lib/terms';
 import { studentDocumentsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
@@ -775,7 +776,9 @@ export default function StudentDashboard() {
                       <div key={term.id} className="flex items-center justify-between text-sm py-2 border-b border-stone/10 last:border-0">
                         <div>
                           <div className="font-medium text-brand-dark">{term.name}</div>
-                          <div className="text-xs text-stone">{term.academic_year} • {new Date(term.start_date).toLocaleDateString()} - {new Date(term.end_date).toLocaleDateString()}</div>
+                          <div className="text-xs text-stone">
+                            {[term.academic_year, term.intake ? `${term.intake.charAt(0)}${term.intake.slice(1).toLowerCase()} intake` : '', termDates(term), termFee(term) && `Fee ${termFee(term)}`, termState(term)].filter(Boolean).join(' • ')}
+                          </div>
                         </div>
                         <button
                           onClick={() => handleEnrollTerm(term.id)}
