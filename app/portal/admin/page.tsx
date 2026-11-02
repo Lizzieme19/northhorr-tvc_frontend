@@ -2182,6 +2182,10 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [studentFilterOptions, setStudentFilterOptions] = useState<any>(null);
   const debouncedStudentSearch = useDebounced(search);
   const [showImport, setShowImport] = useState(false);
+  const [bulkTermMode, setBulkTermMode] = useState<'assign' | 'move' | 'remove'>('assign');
+  const [bulkMoveToTermId, setBulkMoveToTermId] = useState('');
+  const [bulkTermResult, setBulkTermResult] = useState<any>(null);
+  const [bulkTermBusy, setBulkTermBusy] = useState(false);
   const [feesStudent, setFeesStudent] = useState<any>(null);
   const [assignedTerms, setAssignedTerms] = useState<any[]>([]);
   const [movingTermId, setMovingTermId] = useState<string | null>(null);
@@ -2365,6 +2369,35 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
     }
   };
 
+  // Remove (or move) the chosen term for every selected student. Students with payments in the term are skipped and listed.
+  const handleBulkTermChange = async () => {
+    if (selectedStudentIds.length === 0) { toast.warning('Please select at least one student'); return; }
+    if (!bulkTermId) { toast.warning(bulkTermMode === 'move' ? 'Choose the term they are in now' : 'Choose the term to remove'); return; }
+    if (bulkTermMode === 'move' && !bulkMoveToTermId) { toast.warning('Choose the correct term to move them to'); return; }
+    setBulkTermBusy(true);
+    try {
+      const r = bulkTermMode === 'move'
+        ? await api.post('/students/bulk-reassign-term', { studentIds: selectedStudentIds, fromTermId: bulkTermId, toTermId: bulkMoveToTermId })
+        : await api.post('/students/bulk-remove-term', { studentIds: selectedStudentIds, termId: bulkTermId });
+      setBulkTermResult({ ...r.data, mode: bulkTermMode });
+      await refreshStudents();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Could not update the students');
+    } finally {
+      setBulkTermBusy(false);
+    }
+  };
+
+  const closeBulkTermModal = () => {
+    setShowBulkTermModal(false);
+    setBulkTermId('');
+    setBulkMoveToTermId('');
+    setBulkTermMode('assign');
+    // keep the selection when some students were skipped, so the rest can be handled
+    if (!bulkTermResult?.errors?.length) setSelectedStudentIds([]);
+    setBulkTermResult(null);
+  };
+
   const handleBulkAssignTerm = async () => {
     if (selectedStudentIds.length === 0) {
       toast.warning('Please select at least one student');
@@ -2534,7 +2567,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                 onClick={() => setShowBulkTermModal(true)}
                 className="px-4 py-2 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition text-sm"
               >
-                Assign Term ({selectedStudentIds.length})
+                Terms ({selectedStudentIds.length})
               </button>
               <button
                 onClick={() => setShowBulkDocs(true)}
@@ -3188,41 +3221,107 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
         </div>
       )}
 
-      {/* Bulk Term Assignment Modal */}
+      {/* Bulk Term Modal: assign, move or remove */}
       {showBulkTermModal && (
-        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
-            <h2 className="font-display text-xl text-brand-dark mb-1">Bulk Assign Term</h2>
-            <p className="text-sm text-stone mb-6">Assign {selectedStudentIds.length} students to a term</p>
-            <div className="space-y-4">
+        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl my-auto">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Terms for {selectedStudentIds.length} student{selectedStudentIds.length === 1 ? '' : 's'}</h2>
+
+            {bulkTermResult ? (
               <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1">Select Term</label>
-                <select
-                  value={bulkTermId}
-                  onChange={e => setBulkTermId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                >
-                  <option value="">Select Term</option>
-                  {terms.map((term: any) => (
-                    <option key={term.id} value={term.id}>{termLabel(term)}</option>
-                  ))}
-                </select>
-                <TermInfo term={terms.find((t: any) => t.id === bulkTermId)} />
+                <div className="grid grid-cols-2 gap-3 my-5 text-center">
+                  <div className="bg-green-50 rounded-xl p-3"><div className="text-2xl font-bold text-green-700">{bulkTermResult.summary.successful}</div><div className="text-xs text-stone">{bulkTermResult.mode === 'move' ? 'moved' : 'removed'}</div></div>
+                  <div className="bg-amber-50 rounded-xl p-3"><div className="text-2xl font-bold text-amber-700">{bulkTermResult.summary.failed}</div><div className="text-xs text-stone">skipped</div></div>
+                </div>
+                {bulkTermResult.errors.length > 0 && (
+                  <div className="mb-4 text-xs bg-amber-50 border border-amber-200 rounded-xl p-3 max-h-48 overflow-y-auto">
+                    <div className="font-semibold text-amber-800 mb-1">Skipped, with the reason</div>
+                    <ul className="space-y-1 text-amber-900">
+                      {bulkTermResult.errors.map((e: any) => <li key={e.studentId}><span className="font-mono">{e.admission_no}</span>: {e.error}</li>)}
+                    </ul>
+                  </div>
+                )}
+                <button onClick={closeBulkTermModal} className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">Done</button>
               </div>
-              <button
-                onClick={handleBulkAssignTerm}
-                disabled={assigningBulkTerm}
-                className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
-              >
-                {assigningBulkTerm ? 'Assigning...' : `Assign Term to ${selectedStudentIds.length} Students`}
-              </button>
-              <button
-                onClick={() => { setShowBulkTermModal(false); setBulkTermId(''); setSelectedStudentIds([]); }}
-                className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
-              >
-                Cancel
-              </button>
-            </div>
+            ) : (
+              <>
+                <div className="flex gap-1 bg-cream-deep rounded-xl p-1 text-sm my-4">
+                  {([['assign', 'Assign'], ['move', 'Move'], ['remove', 'Remove']] as const).map(([m, label]) => (
+                    <button key={m} onClick={() => { setBulkTermMode(m); setBulkTermId(''); setBulkMoveToTermId(''); }}
+                      className={`flex-1 px-3 py-1.5 rounded-lg font-medium transition ${bulkTermMode === m ? 'bg-white shadow text-brand' : 'text-stone hover:text-brand-dark'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">
+                      {bulkTermMode === 'assign' ? 'Select Term' : bulkTermMode === 'move' ? 'Term they are in now (the wrong one)' : 'Term to remove'}
+                    </label>
+                    <select
+                      value={bulkTermId}
+                      onChange={e => setBulkTermId(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                    >
+                      <option value="">Select Term</option>
+                      {terms.map((term: any) => (
+                        <option key={term.id} value={term.id}>{termLabel(term)}</option>
+                      ))}
+                    </select>
+                    <TermInfo term={terms.find((t: any) => t.id === bulkTermId)} />
+                  </div>
+
+                  {bulkTermMode === 'move' && (
+                    <div>
+                      <label className="block text-sm font-medium text-brand-dark mb-1">Move them to (the correct term)</label>
+                      <select
+                        value={bulkMoveToTermId}
+                        onChange={e => setBulkMoveToTermId(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                      >
+                        <option value="">Select Term</option>
+                        {terms.filter((t: any) => t.id !== bulkTermId).map((term: any) => (
+                          <option key={term.id} value={term.id}>{termLabel(term)}</option>
+                        ))}
+                      </select>
+                      <TermInfo term={terms.find((t: any) => t.id === bulkMoveToTermId)} />
+                      <p className="text-xs text-stone mt-2">Payments move with the student and the fees are recalculated. Students already in the new term are skipped.</p>
+                    </div>
+                  )}
+
+                  {bulkTermMode === 'remove' && (
+                    <p className="text-xs text-stone bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                      Removes the assignment and its fee. Students who have paid anything in that term are skipped (move them instead). Students not in that term are skipped.
+                    </p>
+                  )}
+
+                  {bulkTermMode === 'assign' ? (
+                    <button
+                      onClick={handleBulkAssignTerm}
+                      disabled={assigningBulkTerm}
+                      className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+                    >
+                      {assigningBulkTerm ? 'Assigning...' : `Assign Term to ${selectedStudentIds.length} Students`}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleBulkTermChange}
+                      disabled={bulkTermBusy}
+                      className={`w-full py-2.5 rounded-xl font-semibold transition disabled:opacity-50 ${bulkTermMode === 'remove' ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-brand text-cream hover:bg-brand-dark'}`}
+                    >
+                      {bulkTermBusy ? 'Working…' : bulkTermMode === 'remove' ? `Remove Term from ${selectedStudentIds.length} Students` : `Move ${selectedStudentIds.length} Students`}
+                    </button>
+                  )}
+                  <button
+                    onClick={closeBulkTermModal}
+                    className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
