@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { feeCorrectionsApi, feeTypesApi, termsApi } from '@/lib/services';
 import { termLabel } from '@/lib/terms';
 import { toast } from 'sonner';
@@ -261,7 +262,7 @@ export default function StudentFeesModal({
 
                     {canCorrect && (
                       <div className="mt-3 pt-2 border-t border-stone/10 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                        <button onClick={() => open({ type: 'override', term: b }, { total_fees: String(b.total_fees) })} className="text-brand hover:underline font-medium">Change this term&apos;s fee</button>
+                        <button onClick={() => open({ type: 'override', term: b }, { total_fees: String(b.total_fees) })} className="text-brand hover:underline font-medium">Change fee for this student</button>
                         {b.fee_override != null && <button onClick={() => clearOverride(b)} className="text-stone hover:underline">Use calculated fee</button>}
                         <button onClick={() => open({ type: 'reassign', term: b })} className="text-brand hover:underline font-medium">Wrong term? Move</button>
                         {b.payment_count === 0 && <button onClick={() => open({ type: 'remove', term: b })} className="text-red-600 hover:underline font-medium">Remove</button>}
@@ -294,9 +295,11 @@ export default function StudentFeesModal({
         <button onClick={onClose} className="mt-6 w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">Close</button>
       </div>
 
-      {/* ── Correction dialogs ── */}
-      {dialog && (
-        <div className="fixed inset-0 z-[60] bg-brand-dark/50 flex items-center justify-center p-4" onClick={close}>
+      {/* ── Correction dialogs ──
+          Rendered on document.body: inside this window (which has a blur effect) a fixed popup would be
+          positioned against the scrolled content and end up off screen. */}
+      {dialog && createPortal(
+        <div className="fixed inset-0 z-[70] bg-brand-dark/50 flex items-center justify-center p-4 overflow-y-auto" onClick={close}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             {dialog.type === 'pay' && (
               <>
@@ -349,8 +352,13 @@ export default function StudentFeesModal({
             )}
             {dialog.type === 'override' && (
               <>
-                <h3 className="font-display text-lg text-brand-dark mb-1">Change this term&apos;s fee</h3>
-                <p className="text-sm text-stone mb-4">{dialog.term.term.name}. This student&apos;s fee is fixed at the amount you enter, whatever the term fee is later changed to.</p>
+                <h3 className="font-display text-lg text-brand-dark mb-1">Change fee for this student</h3>
+                <p className="text-sm text-stone mb-2">{student.admission_no} — {student.application?.surname} {student.application?.other_names}</p>
+                <p className="text-sm text-stone mb-2"><strong>{termLabel(dialog.term.term)}</strong></p>
+                <p className="text-xs text-stone bg-cream-deep rounded-xl px-3 py-2 mb-4">
+                  Applies to <strong>this student only</strong>, for this one term. The term&apos;s standard fee and other students are not changed, and this student&apos;s fee stays fixed even if the term fee is changed later.
+                  Terms after this one for this student follow automatically. To change the fee for everyone in a term, use the Terms tab.
+                </p>
                 <div className="space-y-3">
                   <div><label className={labelCls}>Fee for this term (KES)</label><input type="number" min="0" step="0.01" value={form.total_fees} onChange={e => setForm({ ...form, total_fees: e.target.value })} className={inputCls} /></div>
                   <div><label className={labelCls}>Reason *</label><input value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="e.g. Bursary agreed" className={inputCls} /></div>
@@ -360,7 +368,7 @@ export default function StudentFeesModal({
             {dialog.type === 'reassign' && (
               <>
                 <h3 className="font-display text-lg text-brand-dark mb-1">Move to the correct term</h3>
-                <p className="text-sm text-stone mb-4">Currently <strong>{dialog.term.term.name}</strong>. Payments move with it and every figure after it is recalculated.</p>
+                <p className="text-sm text-stone mb-4">Currently <strong>{termLabel(dialog.term.term)}</strong>. Payments move with it and every figure after it is recalculated.</p>
                 <div className="space-y-3">
                   <div>
                     <label className={labelCls}>Correct term</label>
@@ -376,7 +384,7 @@ export default function StudentFeesModal({
             )}
             {dialog.type === 'remove' && (
               <>
-                <h3 className="font-display text-lg text-brand-dark mb-1">Remove {dialog.term.term.name}?</h3>
+                <h3 className="font-display text-lg text-brand-dark mb-1">Remove {termLabel(dialog.term.term)}?</h3>
                 <p className="text-sm text-stone mb-4">The student was assigned to this term by mistake and nothing was paid against it. The assignment and its fee are removed.</p>
                 <label className={labelCls}>Reason (optional)</label>
                 <input value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} className={inputCls} />
@@ -389,7 +397,8 @@ export default function StudentFeesModal({
               <button onClick={close} disabled={saving} className="px-5 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">Cancel</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

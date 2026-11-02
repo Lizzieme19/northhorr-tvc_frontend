@@ -31,6 +31,15 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 // Registrars handle student affairs: applications, students, departments/courses and progression — never finance or system admin
+// How a fee type is billed. Older fee types have no setting and follow their earlier term-based tick boxes.
+const feeBilling = (ft: any): 'NOT_BILLED' | 'ONCE' | 'EVERY_TERM' =>
+  ft.billing || (ft.term_based ? (ft.added_to_term_fee ? 'EVERY_TERM' : 'NOT_BILLED') : 'ONCE');
+const BILLING_LABEL: Record<string, string> = {
+  NOT_BILLED: 'Not billed (payment category only)',
+  ONCE: 'Billed once (first term)',
+  EVERY_TERM: 'Billed every term, on top of the term fee',
+};
+
 const REGISTRAR_TABS = ['overview', 'applications', 'students', 'courses', 'term-progression'];
 
 export default function AdminDashboard() {
@@ -82,7 +91,7 @@ export default function AdminDashboard() {
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
-  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '' });
+  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '', added_to_term_fee: false, billing: 'NOT_BILLED' });
   const [editingFeeType, setEditingFeeType] = useState<any>(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
@@ -391,7 +400,7 @@ export default function AdminDashboard() {
         setFeeTypes(prev => [...prev, response.data.fee_type]);
         toast.success('Fee type created successfully');
       }
-      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '' });
+      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '', added_to_term_fee: false, billing: 'NOT_BILLED' });
       setEditingFeeType(null);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to save fee type');
@@ -414,6 +423,8 @@ export default function AdminDashboard() {
       level: ft.level || '',
       term_based: ft.term_based,
       applicant_type: ft.applicant_type || '',
+      added_to_term_fee: ft.added_to_term_fee || false,
+      billing: feeBilling(ft),
     });
   };
 
@@ -918,6 +929,21 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">How is it billed?</label>
+                  <select
+                    value={feeTypeForm.billing}
+                    onChange={e => setFeeTypeForm({ ...feeTypeForm, billing: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  >
+                    {Object.entries(BILLING_LABEL).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                  </select>
+                  <p className="text-xs text-stone mt-1.5">
+                    {feeTypeForm.billing === 'NOT_BILLED' && 'Nothing is added to a student\'s bill. The fee type is only used to split payments on Allocate Funds. The term fee is set on the Terms tab.'}
+                    {feeTypeForm.billing === 'ONCE' && 'Added to the bill one time, in the student\'s first term (for example admission or student ID).'}
+                    {feeTypeForm.billing === 'EVERY_TERM' && 'Added to every term\'s bill in addition to the term fee set on the Terms tab.'}
+                  </p>
+                </div>
+                <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Charged to</label>
                   <select
                     value={feeTypeForm.applicant_type}
@@ -942,16 +968,6 @@ export default function AdminDashboard() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={feeTypeForm.term_based}
-                      onChange={e => setFeeTypeForm({ ...feeTypeForm, term_based: e.target.checked })}
-                      className="w-4 h-4 rounded border-stone/25"
-                    />
-                    <span className="text-sm text-brand-dark">Charged every term</span>
-                  </label>
-                  <p className="basis-full text-xs text-stone -mt-2">Unticked, the fee is charged once, in the student&apos;s first term.</p>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
                       checked={feeTypeForm.is_disabled}
                       onChange={e => setFeeTypeForm({ ...feeTypeForm, is_disabled: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
@@ -971,7 +987,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => {
                       setEditingFeeType(null);
-                      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '' });
+                      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '', added_to_term_fee: false, billing: 'NOT_BILLED' });
                     }}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
                   >
@@ -992,7 +1008,7 @@ export default function AdminDashboard() {
                     <div key={ft.id} className={`flex items-center justify-between p-4 rounded-xl border ${ft.is_active ? 'bg-cream-deep/50 border-stone/10' : 'bg-stone/50 border-stone/20 opacity-60'}`}>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-brand-dark truncate">{ft.name}</div>
-                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} • {ft.term_based ? 'Every term' : 'Once'}{ft.applicant_type ? ` • ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ''}</div>
+                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} • {{ NOT_BILLED: 'Not billed', ONCE: 'Billed once', EVERY_TERM: 'Billed every term' }[feeBilling(ft)]}{ft.applicant_type ? ` • ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ''}</div>
                         <div className="text-xs text-stone mt-1">{ft.is_required ? 'Required' : 'Optional'} • {ft.is_active ? 'Active' : 'Disabled'}</div>
                       </div>
                       <div className="flex gap-2 ml-4">
