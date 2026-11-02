@@ -7,7 +7,11 @@ import { financeApi, feeTypesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
 import TermInfo from '@/components/TermInfo';
+import StudentFeesModal from '@/components/StudentFeesModal';
 import { termLabel } from '@/lib/terms';
+import Pagination from '@/components/Pagination';
+import { FilterPanel, FilterSelect, FilterSearch } from '@/components/ListFilters';
+import { useDebounced } from '@/lib/hooks';
 import { toast } from 'sonner';
 
 export default function FinanceDashboard() {
@@ -17,16 +21,25 @@ export default function FinanceDashboard() {
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState('');
-  const [feeCleared, setFeeCleared] = useState('');
+  const EMPTY_FILTERS = { search: '', department_id: '', course_id: '', level: '', intake: '', year: '', term_id: '', fee_status: '', outstanding_only: false, helb: '' };
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filterOptions, setFilterOptions] = useState<any>(null);
+  const debouncedSearch = useDebounced(filters.search);
+  const [billingPage, setBillingPage] = useState(1);
+  const [billingPageSize, setBillingPageSize] = useState(25);
   const [processing, setProcessing] = useState<string | null>(null);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [showReports, setShowReports] = useState(false);
+  const [feesStudent, setFeesStudent] = useState<any>(null);
   const [showBillingDashboard, setShowBillingDashboard] = useState(false);
   const [billingData, setBillingData] = useState<any>(null);
   const [billingTermId, setBillingTermId] = useState('');
   const [billingStatus, setBillingStatus] = useState('');
+  const [billingDept, setBillingDept] = useState('');
+  const [billingCourse, setBillingCourse] = useState('');
+  const [billingSearch, setBillingSearch] = useState('');
   const [loadingBilling, setLoadingBilling] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
 
@@ -58,22 +71,32 @@ export default function FinanceDashboard() {
     api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => {});
   }, []);
 
+  // Only send the filters that are set
+  const listParams = () => {
+    const params: any = { page, limit: pageSize };
+    Object.entries({ ...filters, search: debouncedSearch }).forEach(([k, v]) => {
+      if (v !== '' && v !== false) params[k] = String(v);
+    });
+    return params;
+  };
+  const activeFilterCount = Object.values(filters).filter(v => v !== '' && v !== false).length;
+  const setFilter = (key: keyof typeof EMPTY_FILTERS, value: any) => { setFilters(f => ({ ...f, [key]: value })); setPage(1); };
+
   useEffect(() => {
-    const params: any = { page, limit: 15 };
-    if (search) params.search = search;
-    if (feeCleared !== '') params.fee_cleared = feeCleared;
-    financeApi.getFeeRecords().then(r => {
+    financeApi.getReportFilters().then(r => setFilterOptions(r.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    financeApi.getFeeRecords(listParams()).then(r => {
       setStudents(r.data.students);
       setTotal(r.data.pagination.total);
-    }).catch(() => {});
-  }, [page, search, feeCleared]);
+    }).catch(() => { toast.error('Failed to load students'); });
+  }, [page, pageSize, debouncedSearch, filters.department_id, filters.course_id, filters.level, filters.intake, filters.year, filters.term_id, filters.fee_status, filters.outstanding_only, filters.helb]);
 
   const refreshStudents = async () => {
-    const params: any = { page, limit: 15 };
-    if (search) params.search = search;
-    if (feeCleared !== '') params.fee_cleared = feeCleared;
-    const r = await financeApi.getFeeRecords(params);
+    const r = await financeApi.getFeeRecords(listParams());
     setStudents(r.data.students);
+    setTotal(r.data.pagination.total);
     financeApi.getReports().then(r => setSummary(r.data));
   };
 
@@ -201,12 +224,16 @@ export default function FinanceDashboard() {
     }
   };
 
-  const handleLoadBillingDashboard = async () => {
+  const handleLoadBillingDashboard = async (pageToLoad = 1, size = billingPageSize) => {
     setLoadingBilling(true);
     try {
-      const params: any = { page: 1, limit: 50 };
+      setBillingPage(pageToLoad);
+      const params: any = { page: pageToLoad, limit: size };
       if (billingTermId) params.termId = billingTermId;
       if (billingStatus) params.status = billingStatus;
+      if (billingDept) params.department_id = billingDept;
+      if (billingCourse) params.course_id = billingCourse;
+      if (billingSearch.trim()) params.search = billingSearch.trim();
       const r = await api.get('/fees/billing/dashboard', { params });
       setBillingData(r.data);
       setShowBillingDashboard(true);
@@ -282,22 +309,57 @@ export default function FinanceDashboard() {
               ⬇ Download Reports
             </button>
             <button
-              onClick={() => setShowBillingDashboard(true)}
+              onClick={() => { setShowBillingDashboard(true); handleLoadBillingDashboard(1); }}
               className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
             >
               Billing Dashboard
             </button>
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Search admission no, name…"
-              className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
-            <select value={feeCleared} onChange={e => { setFeeCleared(e.target.value); setPage(1); }}
-              className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand">
-              <option value="">All Students</option>
-              <option value="true">Cleared Basic Fees</option>
-              <option value="false">Pending Fees</option>
-            </select>
           </div>
         </div>
+
+        <FilterPanel active={activeFilterCount} onClear={() => { setFilters(EMPTY_FILTERS); setPage(1); }}>
+          <FilterSearch className="sm:col-span-2" value={filters.search} onChange={v => setFilter('search', v)} placeholder="Admission no, name, phone, ID number, email…" />
+          <FilterSelect label="Department" value={filters.department_id} onChange={v => { setFilters(f => ({ ...f, department_id: v, course_id: '' })); setPage(1); }}>
+            <option value="">All departments</option>
+            {(filterOptions?.departments || []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Course" value={filters.course_id} onChange={v => setFilter('course_id', v)}>
+            <option value="">All courses</option>
+            {(filterOptions?.courses || []).filter((c: any) => !filters.department_id || c.department_id === filters.department_id).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Level" value={filters.level} onChange={v => setFilter('level', v)}>
+            <option value="">All levels</option>
+            {(filterOptions?.levels || []).map((l: string) => <option key={l} value={l}>{l}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Intake" value={filters.intake} onChange={v => setFilter('intake', v)}>
+            <option value="">All intakes</option>
+            {(filterOptions?.intakes || []).map((i: string) => <option key={i} value={i}>{i.charAt(0) + i.slice(1).toLowerCase()}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Year" value={filters.year} onChange={v => setFilter('year', v)}>
+            <option value="">All years</option>
+            {(filterOptions?.years || []).map((y: number) => <option key={y} value={y}>{y}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Term" value={filters.term_id} onChange={v => setFilter('term_id', v)} className="sm:col-span-2">
+            <option value="">All terms</option>
+            {(filterOptions?.terms || []).map((t: any) => <option key={t.id} value={t.id}>{termLabel(t)}</option>)}
+          </FilterSelect>
+          <FilterSelect label="Fee status" value={filters.fee_status} onChange={v => setFilter('fee_status', v)}>
+            <option value="">Any</option>
+            <option value="PAID">Fully paid</option>
+            <option value="PARTIAL">Part-paid</option>
+            <option value="PENDING">Not paid</option>
+            <option value="OVERDUE">Overdue</option>
+          </FilterSelect>
+          <FilterSelect label="HELB" value={filters.helb} onChange={v => setFilter('helb', v)}>
+            <option value="">All</option>
+            <option value="true">Applied</option>
+            <option value="false">Not applied</option>
+          </FilterSelect>
+          <label className="flex items-center gap-2 text-sm text-brand-dark sm:pt-5">
+            <input type="checkbox" checked={filters.outstanding_only} onChange={e => setFilter('outstanding_only', e.target.checked)} className="h-4 w-4 accent-brand" />
+            Owes money only
+          </label>
+        </FilterPanel>
 
         <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -331,10 +393,21 @@ export default function FinanceDashboard() {
                       <td className="px-4 py-3 text-right font-medium">KES {currentBalance?.total_fees?.toLocaleString() ?? '—'}</td>
                       <td className="px-4 py-3 text-right text-stone" title="Balance brought forward from earlier terms">{currentBalance?.previous_balance_carryover ? `KES ${currentBalance.previous_balance_carryover.toLocaleString()}` : '—'}</td>
                       <td className="px-4 py-3 text-right text-green-600 font-medium">KES {currentBalance?.amount_paid?.toLocaleString() ?? '—'}</td>
-                      <td className="px-4 py-3 text-right text-red-600 font-medium">KES {currentBalance?.balance?.toLocaleString() ?? '—'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="text-red-600 font-medium">KES {currentBalance?.balance?.toLocaleString() ?? '—'}</div>
+                        {s.fee_summary && s.student_balances?.length > 1 && (
+                          <div className="text-[11px] text-stone" title="Billed minus paid across all terms">Owes overall: KES {s.fee_summary.outstanding.toLocaleString()}</div>
+                        )}
+                      </td>
                       <td className="px-4 py-3">{currentBalance ? statusBadge(currentBalance.status) : <span className="text-xs text-stone">No term</span>}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => setFeesStudent(s)}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-brand/30 text-brand hover:bg-brand/5 transition font-medium"
+                          >
+                            📒 Fees
+                          </button>
                           <button
                             onClick={() => openRecordPayment(s)}
                             className="text-xs px-3 py-1.5 rounded-lg bg-brand text-cream hover:bg-brand-dark transition font-medium"
@@ -355,14 +428,17 @@ export default function FinanceDashboard() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
-            <span>Page {page} of {Math.max(1, Math.ceil(total / 15))}</span>
-            <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
-              <button disabled={page >= Math.ceil(total / 15)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
-            </div>
-          </div>
+          <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1); }} />
         </div>
+
+        {feesStudent && (
+          <StudentFeesModal
+            student={feesStudent}
+            onClose={() => setFeesStudent(null)}
+            onChanged={refreshStudents}
+            onRecordPayment={(st) => { setFeesStudent(null); openRecordPayment(st); }}
+          />
+        )}
 
         {showReports && <ReportsExport onClose={() => setShowReports(false)} types={['fees']} />}
 
@@ -597,7 +673,7 @@ export default function FinanceDashboard() {
 
               <div className="space-y-6">
                 {/* Filters */}
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                   <div className="flex-1">
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Filter by Term</label>
                     <select
@@ -624,9 +700,41 @@ export default function FinanceDashboard() {
                       <option value="PENDING">Pending</option>
                     </select>
                   </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department</label>
+                    <select
+                      value={billingDept}
+                      onChange={e => { setBillingDept(e.target.value); setBillingCourse(''); }}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                    >
+                      <option value="">All departments</option>
+                      {(filterOptions?.departments || []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Course</label>
+                    <select
+                      value={billingCourse}
+                      onChange={e => setBillingCourse(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                    >
+                      <option value="">All courses</option>
+                      {(filterOptions?.courses || []).filter((c: any) => !billingDept || c.department_id === billingDept).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Search</label>
+                    <input
+                      value={billingSearch}
+                      onChange={e => setBillingSearch(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleLoadBillingDashboard(1); }}
+                      placeholder="Name or admission no"
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
+                    />
+                  </div>
                   <div className="flex items-end">
                     <button
-                      onClick={handleLoadBillingDashboard}
+                      onClick={() => handleLoadBillingDashboard(1)}
                       disabled={loadingBilling}
                       className="px-6 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
                     >
@@ -707,6 +815,14 @@ export default function FinanceDashboard() {
                         </tbody>
                       </table>
                     </div>
+                    <Pagination
+                      page={billingPage}
+                      pageSize={billingPageSize}
+                      total={billingData.pagination?.total || 0}
+                      onPage={p => handleLoadBillingDashboard(p)}
+                      onPageSize={n => { setBillingPageSize(n); handleLoadBillingDashboard(1, n); }}
+                      sizes={[25, 50, 100]}
+                    />
                   </div>
                 )}
 

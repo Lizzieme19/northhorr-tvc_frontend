@@ -46,6 +46,21 @@ export const studentsApi = {
     });
   },
   generateIdCard: (id: string) => api.get(`/students/${id}/id-card`),
+  getTerms: (id: string) => api.get(`/students/${id}/terms`),
+  // Bulk import from CSV / XLS / XLSX. The preview checks the file and creates nothing.
+  importTemplate: () => api.get('/students/import/template', { responseType: 'blob' }),
+  importPreview: (file: File, allowSimilar = false) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('allow_similar', String(allowSimilar));
+    return api.post('/students/import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  importStudents: (file: File, allowSimilar = false) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('allow_similar', String(allowSimilar));
+    return api.post('/students/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 10 * 60 * 1000 });
+  },
   // Fold an older record of the same person into this one (keeps balances, payments, documents and history)
   merge: (id: string, mergeStudentId: string) => api.post(`/students/${id}/merge`, { merge_student_id: mergeStudentId }),
 };
@@ -235,6 +250,26 @@ export const termsApi = {
   delete: (id: string) => api.delete(`/terms/${id}`),
   enrollStudent: (termId: string, studentId: string) => api.post(`/terms/${termId}/enroll/${studentId}`),
   unenrollStudent: (termId: string, studentId: string) => api.delete(`/terms/${termId}/enroll/${studentId}`),
+  // What changing the term fee would do to students already billed (nothing is saved)
+  feeImpact: (id: string, termCost: number) => api.get(`/terms/${id}/fee-impact`, { params: { term_cost: termCost } }),
+};
+
+// Fee corrections (Admin / Finance)
+export const feeCorrectionsApi = {
+  getSummary: (studentId: string) => api.get(`/fees/students/${studentId}/summary`),
+  getHistory: (studentId: string) => api.get(`/fees/students/${studentId}/history`),
+  recordPayment: (studentId: string, termId: string, amount: number, notes?: string) =>
+    api.post(`/fees/students/${studentId}/terms/${termId}/payment`, { amount, notes: notes || undefined }),
+  editPayment: (id: string, data: any) => api.patch(`/fees/records/${id}`, data),
+  voidPayment: (id: string, reason: string) => api.post(`/fees/records/${id}/void`, { reason }),
+  setTermFee: (studentId: string, termId: string, totalFees: number | null, reason: string) =>
+    api.patch(`/fees/students/${studentId}/terms/${termId}/fee`, { total_fees: totalFees, reason }),
+  reassignTerm: (studentId: string, termId: string, toTermId: string, reason?: string) =>
+    api.post(`/students/${studentId}/terms/${termId}/reassign`, { to_term_id: toTermId, reason }),
+  removeTerm: (studentId: string, termId: string, reason?: string) =>
+    api.delete(`/students/${studentId}/terms/${termId}`, { params: { reason } }),
+  // apply=false only reports what would change
+  reconcile: (data: { student_id?: string; term_id?: string; apply?: boolean }) => api.post('/fees/reconcile', data),
 };
 
 // Term Progression

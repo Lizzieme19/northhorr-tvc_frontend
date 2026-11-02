@@ -3,13 +3,21 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi, termProgressionApi } from '@/lib/services';
+import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi, termProgressionApi, financeApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
 import { StudentDocumentsModal, BulkIssueDocumentsModal } from '@/components/StudentDocuments';
 import { StudentHistoryModal, LinkRecordModal } from '@/components/StudentHistory';
+import Pagination from '@/components/Pagination';
+import { FilterPanel, FilterSelect, FilterSearch, FilterDate } from '@/components/ListFilters';
+import { useDebounced } from '@/lib/hooks';
+import StudentPicker from '@/components/StudentPicker';
+import StudentFeesModal from '@/components/StudentFeesModal';
+import ReconcileFees from '@/components/ReconcileFees';
+import StudentImportModal from '@/components/StudentImportModal';
 import TermInfo from '@/components/TermInfo';
 import { termLabel } from '@/lib/terms';
+import { feeCorrectionsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
 interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
@@ -37,6 +45,12 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'settings'>('overview');
+  const EMPTY_APP_FILTERS = { department_id: '', course_id: '', type: '', level_applied: '', date_from: '', date_to: '' };
+  const [appFilters, setAppFilters] = useState(EMPTY_APP_FILTERS);
+  const [appPageSize, setAppPageSize] = useState(15);
+  const [appFilterOptions, setAppFilterOptions] = useState<any>(null);
+  const debouncedAppSearch = useDebounced(search);
+  const [termImpact, setTermImpact] = useState<any>(null);
   const [approving, setApproving] = useState<string | null>(null);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -68,7 +82,7 @@ export default function AdminDashboard() {
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
-  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '' });
   const [editingFeeType, setEditingFeeType] = useState<any>(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
@@ -78,9 +92,9 @@ export default function AdminDashboard() {
   const [progressionForm, setProgressionForm] = useState({ student_id: '', new_term_id: '', new_level: '', new_intake: '', new_year: '', notes: '' });
   const [lookupStudentId, setLookupStudentId] = useState('');
   const [studentBalances, setStudentBalances] = useState<any[]>([]);
-  const [availableStudents, setAvailableStudents] = useState<any[]>([]);
+  const [progressionStudent, setProgressionStudent] = useState<any>(null);
+  const [lookupStudent, setLookupStudent] = useState<any>(null);
   const [availableTerms, setAvailableTerms] = useState<any[]>([]);
-  const [studentSearch, setStudentSearch] = useState('');
   const [promotionHistory, setPromotionHistory] = useState<any[]>([]);
   const [promotionHistoryLoading, setPromotionHistoryLoading] = useState(false);
   const [promotionHistoryFilter, setPromotionHistoryFilter] = useState({ level: '', academic_year: '' });
@@ -111,7 +125,6 @@ export default function AdminDashboard() {
       termsApi.getAll().then(r => setTerms(r.data.terms || [])).catch(() => setTerms([]));
     }
     if (tab === 'term-progression') {
-      studentsApi.getAll({ page: 1, limit: 1000 }).then(r => setAvailableStudents(r.data?.students || [])).catch(() => setAvailableStudents([]));
       termsApi.getAll().then(r => setAvailableTerms(r.data.terms || [])).catch(() => setAvailableTerms([]));
       // Load promotion history
       setPromotionHistoryLoading(true);
@@ -124,15 +137,30 @@ export default function AdminDashboard() {
     if (isAdmin) feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
   }, [tab, isAdmin]);
 
-  useEffect(() => {
-    const params: any = { page, limit: 15 };
+  // Only send the filters that are set
+  const applicationParams = () => {
+    const params: any = { page, limit: appPageSize };
     if (statusFilter) params.status = statusFilter;
-    if (search) params.search = search;
-    applicationsApi.getAll(params).then(r => {
+    if (debouncedAppSearch) params.search = debouncedAppSearch;
+    Object.entries(appFilters).forEach(([k, v]) => { if (v) params[k] = v; });
+    return params;
+  };
+  const refreshApplications = () =>
+    applicationsApi.getAll(applicationParams()).then(r => {
       setApplications(r.data.applications);
       setAppTotal(r.data.pagination.total);
+      return r;
     }).catch(() => { });
-  }, [page, statusFilter, search, tab]);
+
+  useEffect(() => {
+    refreshApplications();
+  }, [page, appPageSize, statusFilter, debouncedAppSearch, appFilters.department_id, appFilters.course_id, appFilters.type, appFilters.level_applied, appFilters.date_from, appFilters.date_to, tab]);
+
+  useEffect(() => {
+    financeApi.getReportFilters().then(r => setAppFilterOptions(r.data)).catch(() => { });
+  }, []);
+  const setAppFilter = (key: keyof typeof EMPTY_APP_FILTERS, value: string) => { setAppFilters(f => ({ ...f, [key]: value })); setPage(1); };
+  const appFilterCount = Object.values(appFilters).filter(Boolean).length + (statusFilter ? 1 : 0) + (search ? 1 : 0);
 
   useEffect(() => {
     if (selectedApp) {
@@ -164,7 +192,7 @@ export default function AdminDashboard() {
   // Pre-fill the intake and year of the new stage from the chosen term (or the student's current ones)
   const withStageDefaults = (f: any) => {
     const term = availableTerms.find((t: any) => t.id === f.new_term_id);
-    const stu = availableStudents.find((x: any) => x.id === f.student_id);
+    const stu = progressionStudent && progressionStudent.id === f.student_id ? progressionStudent : null;
     const termIntake = ['JANUARY', 'MAY', 'SEPTEMBER'].includes(term?.intake) ? term.intake : '';
     return {
       ...f,
@@ -333,9 +361,8 @@ export default function AdminDashboard() {
         doc_medical: null,
       });
 
-      const updated = await applicationsApi.getAll({ page, limit: 15, search, status: statusFilter });
-      setApplications(updated.data.applications);
-      setSelectedApp(updated.data.applications.find((a: Application) => a.id === selectedApp.id) || null);
+      const updated: any = await refreshApplications();
+      setSelectedApp(updated?.data?.applications?.find((a: Application) => a.id === selectedApp.id) || null);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to update application');
     } finally {
@@ -355,13 +382,16 @@ export default function AdminDashboard() {
       if (editingFeeType) {
         await feeTypesApi.update(editingFeeType.id, data);
         setFeeTypes(prev => prev.map(ft => ft.id === editingFeeType.id ? { ...ft, ...data } : ft));
-        toast.success('Fee type updated successfully');
+        toast.success('Fee type updated. Existing student balances change only when you recalculate them.', {
+          duration: 9000,
+          action: { label: 'Recalculate', onClick: () => setTab('billing') },
+        });
       } else {
         const response = await feeTypesApi.create(data);
         setFeeTypes(prev => [...prev, response.data.fee_type]);
         toast.success('Fee type created successfully');
       }
-      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '' });
       setEditingFeeType(null);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to save fee type');
@@ -383,6 +413,7 @@ export default function AdminDashboard() {
       course_id: ft.course_id || '',
       level: ft.level || '',
       term_based: ft.term_based,
+      applicant_type: ft.applicant_type || '',
     });
   };
 
@@ -407,20 +438,15 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleTermSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Saves the term. applyToExisting: also recalculate students already billed for this term.
+  const saveTermData = async (data: any, applyToExisting: boolean) => {
     setSavingTerm(true);
     try {
-      const data = {
-        ...termForm,
-        start_date: new Date(termForm.start_date).toISOString(),
-        end_date: new Date(termForm.end_date).toISOString(),
-        term_cost: parseFloat(termForm.term_cost) || 0,
-      };
       if (editingTerm) {
-        await termsApi.update(editingTerm.id, data);
+        const r = await termsApi.update(editingTerm.id, { ...data, apply_to_existing: applyToExisting });
         setTerms(prev => prev.map(t => t.id === editingTerm.id ? { ...t, ...data } : t));
-        toast.success('Term updated successfully');
+        const impact = r.data?.impact;
+        toast.success(impact ? `Term updated. ${impact.students_changed} student${impact.students_changed === 1 ? '' : 's'} recalculated.` : 'Term updated successfully');
       } else {
         const response = await termsApi.create(data);
         setTerms(prev => [...prev, response.data.term]);
@@ -428,11 +454,39 @@ export default function AdminDashboard() {
       }
       setTermForm({ name: '', start_date: '', end_date: '', academic_year: '', intake: '', term_cost: '', is_active: true });
       setEditingTerm(null);
+      setTermImpact(null);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to save term');
     } finally {
       setSavingTerm(false);
     }
+  };
+
+  const handleTermSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = {
+      ...termForm,
+      start_date: new Date(termForm.start_date).toISOString(),
+      end_date: new Date(termForm.end_date).toISOString(),
+      term_cost: parseFloat(termForm.term_cost) || 0,
+    };
+    // A changed term fee: show what it would do to students already billed before saving anything
+    if (editingTerm && data.term_cost !== (editingTerm.term_cost || 0)) {
+      setSavingTerm(true);
+      try {
+        const r = await termsApi.feeImpact(editingTerm.id, data.term_cost);
+        if (r.data.students_in_term > 0) {
+          setTermImpact({ data, ...r.data });
+          return;
+        }
+      } catch {
+        toast.error('Could not work out the effect of the change. Nothing was saved.');
+        return;
+      } finally {
+        setSavingTerm(false);
+      }
+    }
+    await saveTermData(data, false);
   };
 
   const handleTermEdit = (t: any) => {
@@ -582,20 +636,40 @@ export default function AdminDashboard() {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h1 className="font-display text-2xl text-brand-dark">Applications ({appTotal})</h1>
-              <div className="flex gap-2">
-                <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Search name, email, ref…"
-                  className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-48" />
-                <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-                  className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand">
-                  <option value="">All Status</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="UNDER_REVIEW">Under Review</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
-              </div>
             </div>
+
+            <FilterPanel
+              active={appFilterCount}
+              onClear={() => { setAppFilters(EMPTY_APP_FILTERS); setStatusFilter(''); setSearch(''); setPage(1); }}
+            >
+              <FilterSearch className="sm:col-span-2" value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Name, email, phone, reference…" />
+              <FilterSelect label="Status" value={statusFilter} onChange={v => { setStatusFilter(v); setPage(1); }}>
+                <option value="">All statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="UNDER_REVIEW">Under review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </FilterSelect>
+              <FilterSelect label="Entry type" value={appFilters.type} onChange={v => setAppFilter('type', v)}>
+                <option value="">All</option>
+                <option value="DIRECT">Direct</option>
+                <option value="KUCCPS">KUCCPS</option>
+              </FilterSelect>
+              <FilterSelect label="Department" value={appFilters.department_id} onChange={v => { setAppFilters(f => ({ ...f, department_id: v, course_id: '' })); setPage(1); }}>
+                <option value="">All departments</option>
+                {(appFilterOptions?.departments || []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </FilterSelect>
+              <FilterSelect label="Course" value={appFilters.course_id} onChange={v => setAppFilter('course_id', v)}>
+                <option value="">All courses</option>
+                {(appFilterOptions?.courses || []).filter((c: any) => !appFilters.department_id || c.department_id === appFilters.department_id).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </FilterSelect>
+              <FilterSelect label="Level applied" value={appFilters.level_applied} onChange={v => setAppFilter('level_applied', v)}>
+                <option value="">All levels</option>
+                {(appFilterOptions?.levels || []).map((l: string) => <option key={l} value={l}>{l}</option>)}
+              </FilterSelect>
+              <FilterDate label="Applied from" value={appFilters.date_from} onChange={v => setAppFilter('date_from', v)} />
+              <FilterDate label="Applied to" value={appFilters.date_to} onChange={v => setAppFilter('date_to', v)} />
+            </FilterPanel>
 
             <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
@@ -635,14 +709,7 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
-              {/* Pagination */}
-              <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
-                <span>Page {page} of {Math.ceil(appTotal / 15)}</span>
-                <div className="flex gap-2">
-                  <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
-                  <button disabled={page >= Math.ceil(appTotal / 15)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
-                </div>
-              </div>
+              <Pagination page={page} pageSize={appPageSize} total={appTotal} onPage={setPage} onPageSize={n => { setAppPageSize(n); setPage(1); }} />
             </div>
           </div>
         )}
@@ -833,7 +900,7 @@ export default function AdminDashboard() {
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     >
                       <option value="">Select course...</option>
-                      {/* Will populate with courses */}
+                      {(appFilterOptions?.courses || []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                 )}
@@ -846,13 +913,23 @@ export default function AdminDashboard() {
                       className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
                     >
                       <option value="">Select level...</option>
-                      <option value="Certificate">Certificate</option>
-                      <option value="Diploma">Diploma</option>
-                      <option value="Artisan">Artisan</option>
+                      {['Level 3', 'Level 4', 'Level 5', 'Level 6'].map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </div>
                 )}
-                <div className="flex gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-brand-dark mb-1.5">Charged to</label>
+                  <select
+                    value={feeTypeForm.applicant_type}
+                    onChange={e => setFeeTypeForm({ ...feeTypeForm, applicant_type: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                  >
+                    <option value="">All students</option>
+                    <option value="KUCCPS">KUCCPS-placed students only</option>
+                    <option value="DIRECT">Direct-entry students only</option>
+                  </select>
+                </div>
+                <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -869,8 +946,9 @@ export default function AdminDashboard() {
                       onChange={e => setFeeTypeForm({ ...feeTypeForm, term_based: e.target.checked })}
                       className="w-4 h-4 rounded border-stone/25"
                     />
-                    <span className="text-sm text-brand-dark">Term-based</span>
+                    <span className="text-sm text-brand-dark">Charged every term</span>
                   </label>
+                  <p className="basis-full text-xs text-stone -mt-2">Unticked, the fee is charged once, in the student&apos;s first term.</p>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -893,7 +971,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => {
                       setEditingFeeType(null);
-                      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false });
+                      setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '' });
                     }}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
                   >
@@ -914,7 +992,7 @@ export default function AdminDashboard() {
                     <div key={ft.id} className={`flex items-center justify-between p-4 rounded-xl border ${ft.is_active ? 'bg-cream-deep/50 border-stone/10' : 'bg-stone/50 border-stone/20 opacity-60'}`}>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-brand-dark truncate">{ft.name}</div>
-                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} {ft.term_based && '• Term-based'}</div>
+                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} • {ft.term_based ? 'Every term' : 'Once'}{ft.applicant_type ? ` • ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ''}</div>
                         <div className="text-xs text-stone mt-1">{ft.is_required ? 'Required' : 'Optional'} • {ft.is_active ? 'Active' : 'Disabled'}</div>
                       </div>
                       <div className="flex gap-2 ml-4">
@@ -1390,7 +1468,7 @@ export default function AdminDashboard() {
 
                 {/* Promotion warning when level changes */}
                 {progressionForm.new_level && (() => {
-                  const sel = availableStudents.find((s: any) => s.id === progressionForm.student_id);
+                  const sel = progressionStudent;
                   return sel && progressionForm.new_level !== sel.level ? (
                     <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
                       <span className="font-bold">⚠️ Level promotion detected.</span> A new admission number will be auto-generated
@@ -1402,6 +1480,7 @@ export default function AdminDashboard() {
 
                 <form onSubmit={async (e) => {
                   e.preventDefault();
+                  if (!progressionForm.student_id) { toast.warning('Please choose a student'); return; }
                   try {
                     const response = await termProgressionApi.admitToTerm({
                       student_id: progressionForm.student_id,
@@ -1419,6 +1498,7 @@ export default function AdminDashboard() {
                       toast.success('Student admitted to new term successfully!');
                     }
                     setProgressionForm({ student_id: '', new_term_id: '', new_level: '', new_intake: '', new_year: '', notes: '' });
+                    setProgressionStudent(null);
                     // Refresh promotion history
                     termProgressionApi.getAllPromotions()
                       .then(r => setPromotionHistory(r.data?.progressions || []))
@@ -1429,35 +1509,13 @@ export default function AdminDashboard() {
                 }} className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Student *</label>
-                    <input
-                      type="text"
-                      value={studentSearch}
-                      onChange={e => setStudentSearch(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm mb-2"
-                      placeholder="Search by admission no or name..."
+                    <StudentPicker
+                      value={progressionStudent}
+                      onChange={stu => {
+                        setProgressionStudent(stu);
+                        setProgressionForm({ ...progressionForm, student_id: stu?.id || '', new_intake: '', new_year: '' });
+                      }}
                     />
-                    <select
-                      required
-                      value={progressionForm.student_id}
-                      onChange={e => setProgressionForm(withStageDefaults({ ...progressionForm, student_id: e.target.value, new_intake: '', new_year: '' }))}
-                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    >
-                      <option value="">Select a student</option>
-                      {availableStudents
-                        .filter((student: any) => {
-                          const searchLower = studentSearch.toLowerCase();
-                          return (
-                            student.admission_no?.toLowerCase().includes(searchLower) ||
-                            student.application?.surname?.toLowerCase().includes(searchLower) ||
-                            student.application?.other_names?.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((student: any) => (
-                          <option key={student.id} value={student.id}>
-                            {student.admission_no} - {student.application?.surname} {student.application?.other_names} ({student.level})
-                          </option>
-                        ))}
-                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">New Term *</label>
@@ -1542,44 +1600,20 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Search Student</label>
-                    <input
-                      type="text"
-                      value={studentSearch}
-                      onChange={e => setStudentSearch(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm mb-2"
-                      placeholder="Search by admission no or name..."
-                    />
-                    <select
-                      value={lookupStudentId}
-                      onChange={async (e) => {
-                        const id = e.target.value;
-                        setLookupStudentId(id);
-                        if (!id) { setStudentBalances([]); return; }
+                    <StudentPicker
+                      value={lookupStudent}
+                      onChange={async (stu) => {
+                        setLookupStudent(stu);
+                        setLookupStudentId(stu?.id || '');
+                        if (!stu) { setStudentBalances([]); return; }
                         try {
-                          const response = await termProgressionApi.getBalances(id);
+                          const response = await termProgressionApi.getBalances(stu.id);
                           setStudentBalances(response.data || []);
                         } catch (err: any) {
                           toast.error(err?.response?.data?.error || 'Failed to fetch balances');
                         }
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                    >
-                      <option value="">Select a student</option>
-                      {availableStudents
-                        .filter((s: any) => {
-                          const q = studentSearch.toLowerCase();
-                          return (
-                            s.admission_no?.toLowerCase().includes(q) ||
-                            s.application?.surname?.toLowerCase().includes(q) ||
-                            s.application?.other_names?.toLowerCase().includes(q)
-                          );
-                        })
-                        .map((s: any) => (
-                          <option key={s.id} value={s.id}>
-                            {s.admission_no} — {s.application?.surname} {s.application?.other_names}
-                          </option>
-                        ))}
-                    </select>
+                    />
                   </div>
                   <div className="space-y-3 max-h-[400px] overflow-y-auto">
                     {studentBalances.length === 0 ? (
@@ -1715,6 +1749,55 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Term fee change: what it does to students already billed */}
+      {termImpact && (
+        <div className="fixed inset-0 bg-brand-dark/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl my-auto">
+            <h2 className="font-display text-xl text-brand-dark mb-1">Change the {termImpact.term.name} fee?</h2>
+            <p className="text-sm text-stone mb-4">
+              From <strong>KES {termImpact.term.current_cost.toLocaleString()}</strong> to <strong>KES {termImpact.term.new_cost.toLocaleString()}</strong>.
+              {' '}{termImpact.students_in_term} student{termImpact.students_in_term === 1 ? ' is' : 's are'} already billed for this term.
+            </p>
+            <div className="grid grid-cols-3 gap-3 mb-4 text-center">
+              <div className="bg-cream-deep rounded-xl p-3">
+                <div className="text-lg font-bold text-brand-dark">{termImpact.impact.students_changed}</div>
+                <div className="text-xs text-stone">students change</div>
+              </div>
+              <div className="bg-cream-deep rounded-xl p-3">
+                <div className={`text-lg font-bold ${termImpact.impact.fees_change >= 0 ? 'text-brand-dark' : 'text-green-700'}`}>{termImpact.impact.fees_change >= 0 ? '+' : ''}{termImpact.impact.fees_change.toLocaleString()}</div>
+                <div className="text-xs text-stone">KES billed</div>
+              </div>
+              <div className="bg-cream-deep rounded-xl p-3">
+                <div className={`text-lg font-bold ${termImpact.impact.outstanding_change > 0 ? 'text-red-600' : 'text-green-700'}`}>{termImpact.impact.outstanding_change >= 0 ? '+' : ''}{termImpact.impact.outstanding_change.toLocaleString()}</div>
+                <div className="text-xs text-stone">KES owing</div>
+              </div>
+            </div>
+            <ul className="text-xs text-stone space-y-1 mb-5 list-disc pl-5">
+              <li>Payments are never changed, only what each student owes.</li>
+              <li>Later terms follow automatically, because they bring the earlier balance forward.</li>
+              <li>A student whose fee was fixed manually keeps their fixed fee.</li>
+            </ul>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                disabled={savingTerm}
+                onClick={() => saveTermData(termImpact.data, true)}
+                className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50"
+              >
+                {savingTerm ? 'Updating…' : 'Update everyone'}
+              </button>
+              <button
+                disabled={savingTerm}
+                onClick={() => saveTermData(termImpact.data, false)}
+                className="flex-1 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition disabled:opacity-50 text-sm"
+              >
+                Only new assignments
+              </button>
+              <button disabled={savingTerm} onClick={() => setTermImpact(null)} className="px-4 py-2.5 text-stone hover:text-brand-dark transition text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {historyFor && <StudentHistoryModal student={historyFor} onClose={() => setHistoryFor(null)} />}
 
@@ -2076,16 +2159,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
-  const [currentCsvFile, setCurrentCsvFile] = useState<File | null>(null);
-  const [importingCurrent, setImportingCurrent] = useState(false);
-  const [importCurrentResult, setImportCurrentResult] = useState<any>(null);
-  const [showFeeModal, setShowFeeModal] = useState(false);
-  const [feeSummary, setFeeSummary] = useState<any>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentNotes, setPaymentNotes] = useState('');
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
-  const [selectedPaymentTermId, setSelectedPaymentTermId] = useState('');
-  const [recordingPayment, setRecordingPayment] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
   const [showTermAssignModal, setShowTermAssignModal] = useState(false);
   const [assigningTerm, setAssigningTerm] = useState(false);
@@ -2103,18 +2177,37 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [showReports, setShowReports] = useState(false);
   const [docsStudent, setDocsStudent] = useState<any>(null);
+  const [pageSize, setPageSize] = useState(15);
+  const [studentFilters, setStudentFilters] = useState<any>({ department_id: '', course_id: '', level: '', intake: '', year: '', status: '', term_id: '', has_term: '', helb: '' });
+  const [studentFilterOptions, setStudentFilterOptions] = useState<any>(null);
+  const debouncedStudentSearch = useDebounced(search);
+  const [showImport, setShowImport] = useState(false);
+  const [feesStudent, setFeesStudent] = useState<any>(null);
+  const [assignedTerms, setAssignedTerms] = useState<any[]>([]);
+  const [movingTermId, setMovingTermId] = useState<string | null>(null);
+  const [moveToTermId, setMoveToTermId] = useState('');
   const [historyStudent, setHistoryStudent] = useState<any>(null);
   const [linkStudent, setLinkStudent] = useState<any>(null);
   const [showBulkDocs, setShowBulkDocs] = useState(false);
 
+  // Only send the filters that are set
+  const studentParams = () => {
+    const params: any = { page, limit: pageSize };
+    Object.entries({ ...studentFilters, search: debouncedStudentSearch }).forEach(([k, v]) => { if (v !== '') params[k] = v; });
+    return params;
+  };
   const refreshStudents = () =>
-    studentsApi.getAll({ page, limit: 15, search }).then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); }).catch(() => { });
+    studentsApi.getAll(studentParams()).then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); }).catch(() => { });
+  const setStudentFilter = (key: string, value: string) => { setStudentFilters((f: any) => ({ ...f, [key]: value })); setPage(1); };
+  const studentFilterCount = Object.values(studentFilters).filter(v => v !== '').length;
 
   useEffect(() => {
-    studentsApi.getAll({ page, limit: 15, search })
-      .then(r => { setStudents(r.data.students); setTotal(r.data.pagination.total); })
-      .catch(() => { });
-  }, [page, search]);
+    refreshStudents();
+  }, [page, pageSize, debouncedStudentSearch, studentFilters.department_id, studentFilters.course_id, studentFilters.level, studentFilters.intake, studentFilters.year, studentFilters.status, studentFilters.term_id, studentFilters.has_term, studentFilters.helb]);
+
+  useEffect(() => {
+    financeApi.getReportFilters().then(r => setStudentFilterOptions(r.data)).catch(() => { });
+  }, []);
 
   useEffect(() => {
     api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => { });
@@ -2148,70 +2241,11 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
     try {
       const r = await applicationsApi.importKuccps(csvFile);
       setImportResult(r.data);
-      const updated = await studentsApi.getAll({ page, limit: 15, search });
-      setStudents(updated.data.students);
-      setTotal(updated.data.pagination.total);
+      await refreshStudents();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Import failed');
     } finally { setImporting(false); }
   };
-
-  const handleCurrentStudentsImport = async () => {
-    if (!currentCsvFile) return;
-    setImportingCurrent(true);
-    try {
-      const formData = new FormData();
-      formData.append('csv_file', currentCsvFile);
-      const r = await api.post('/students/import/csv', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setImportCurrentResult(r.data);
-      const updated = await studentsApi.getAll({ page, limit: 15, search });
-      setStudents(updated.data.students);
-      setTotal(updated.data.pagination.total);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Current students import failed');
-    } finally { setImportingCurrent(false); }
-  };
-
-  const handleViewFeeSummary = async (studentId: string) => {
-    try {
-      const r = await api.get(`/fees/students/${studentId}/summary`);
-      setFeeSummary(r.data);
-      setShowFeeModal(true);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to fetch fee summary');
-    }
-  };
-
-  const handleRecordPayment = async (studentId: string, termId: string) => {
-    if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
-      toast.warning('Please enter a valid payment amount');
-      return;
-    }
-    if (!selectedPaymentTermId) {
-      toast.warning('Please select a term to pay');
-      return;
-    }
-    setRecordingPayment(true);
-    try {
-      await api.post(`/fees/students/${studentId}/terms/${selectedPaymentTermId}/payment`, {
-        amount: parseFloat(paymentAmount),
-        notes: paymentNotes,
-      });
-      toast.success('Payment recorded successfully');
-      setPaymentAmount('');
-      setPaymentNotes('');
-      setSelectedFeeTypeId('');
-      setSelectedPaymentTermId('');
-      handleViewFeeSummary(studentId);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'Failed to record payment');
-    } finally {
-      setRecordingPayment(false);
-    }
-  };
-
 
   // ── Delete student + Duplicates ──────────────────────────────────────
   const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -2262,11 +2296,50 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
           try {
             await api.delete(`/students/${student.id}`);
             toast.success(`${name} deleted successfully.`);
-            const updated = await studentsApi.getAll({ page, limit: 15, search });
-            setStudents(updated.data.students);
+            await refreshStudents();
             if (showDuplicates) handleFindDuplicates();
           } catch (e: any) {
             toast.error(e?.response?.data?.error || 'Failed to delete student');
+          }
+        },
+      },
+    });
+  };
+
+  // Terms the student is already in, so a wrong assignment can be moved or removed
+  const loadAssignedTerms = (studentId: string) =>
+    studentsApi.getTerms(studentId).then(r => setAssignedTerms(r.data.terms || [])).catch(() => setAssignedTerms([]));
+
+  useEffect(() => {
+    setMovingTermId(null);
+    if (showTermAssignModal && selectedStudent) loadAssignedTerms(selectedStudent.id);
+    else setAssignedTerms([]);
+  }, [showTermAssignModal, selectedStudent?.id]);
+
+  const handleMoveAssignedTerm = async (a: any) => {
+    try {
+      await feeCorrectionsApi.reassignTerm(selectedStudent.id, a.term.id, moveToTermId);
+      toast.success('Moved to the correct term. Fees were recalculated.');
+      setMovingTermId(null);
+      await loadAssignedTerms(selectedStudent.id);
+      await refreshStudents();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Could not move the term');
+    }
+  };
+
+  const handleRemoveAssignedTerm = (a: any) => {
+    toast(`Remove ${a.term.name} from ${selectedStudent.admission_no}?`, {
+      action: {
+        label: 'Remove',
+        onClick: async () => {
+          try {
+            await feeCorrectionsApi.removeTerm(selectedStudent.id, a.term.id);
+            toast.success('Term assignment removed');
+            await loadAssignedTerms(selectedStudent.id);
+            await refreshStudents();
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || 'Could not remove the term');
           }
         },
       },
@@ -2284,8 +2357,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       toast.success('Term assigned successfully!');
       setShowTermAssignModal(false);
       setSelectedTermId('');
-      const updated = await studentsApi.getAll({ page, limit: 15, search });
-      setStudents(updated.data.students);
+      await refreshStudents();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Failed to assign term');
     } finally {
@@ -2312,8 +2384,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       setShowBulkTermModal(false);
       setSelectedStudentIds([]);
       setBulkTermId('');
-      const updated = await studentsApi.getAll({ page, limit: 15, search });
-      setStudents(updated.data.students);
+      await refreshStudents();
     } catch (err: any) {
       toast.error(err?.response?.data?.error || 'Failed to bulk assign term');
     } finally {
@@ -2431,8 +2502,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
         });
       }
 
-      const updated = await studentsApi.getAll({ page, limit: 15, search });
-      setStudents(updated.data.students);
+      await refreshStudents();
       setSelectedStudent(null);
       setProfilePhoto(null);
       setDocFiles({
@@ -2458,9 +2528,6 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-display text-2xl text-brand-dark">Students ({total})</h1>
         <div className="flex gap-3">
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search admission no, name…"
-            className="px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-56" />
           {selectedStudentIds.length > 0 && (
             <>
               <button
@@ -2499,6 +2566,8 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
         </div>
       </div>
 
+      {showImport && <StudentImportModal onClose={() => setShowImport(false)} onDone={refreshStudents} />}
+      {feesStudent && <StudentFeesModal student={feesStudent} onClose={() => setFeesStudent(null)} onChanged={refreshStudents} />}
       {historyStudent && <StudentHistoryModal student={historyStudent} onClose={() => setHistoryStudent(null)} />}
       {linkStudent && <LinkRecordModal student={linkStudent} onClose={() => setLinkStudent(null)} onDone={() => { refreshStudents(); setShowDuplicates(false); }} />}
       {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
@@ -2579,38 +2648,62 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
           )}
         </div>
 
-        {/* Current Students Import */}
+        {/* Student import: CSV, XLS or XLSX */}
         <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-          <h2 className="font-display text-lg text-brand-dark mb-2">Current Students Import</h2>
-          <p className="text-sm text-stone mb-4">Upload a CSV with columns: admission_no, surname, other_names, course, level</p>
-          <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
-            <input type="file" accept=".csv" className="hidden" onChange={e => setCurrentCsvFile(e.target.files?.[0] || null)} />
-            <div className="text-3xl mb-2">📄</div>
-            <div className="text-sm font-medium text-brand-dark">{currentCsvFile ? currentCsvFile.name : 'Click to upload CSV'}</div>
-          </label>
-          <button onClick={handleCurrentStudentsImport} disabled={!currentCsvFile || importingCurrent}
-            className="mt-4 w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50">
-            {importingCurrent ? 'Importing…' : 'Import Current Students'}
+          <h2 className="font-display text-lg text-brand-dark mb-2">Import Students</h2>
+          <p className="text-sm text-stone mb-4">Add many students from a CSV, XLS or XLSX file. The file is checked first and you confirm before anything is created. New students get their own temporary password.</p>
+          <div className="text-3xl mb-4">📊</div>
+          <button onClick={() => setShowImport(true)}
+            className="w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
+            Import from file…
           </button>
-          {importCurrentResult && (
-            <div className="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-sm max-h-48 overflow-y-auto">
-              <div className="font-semibold text-blue-800">Processed: {importCurrentResult.summary?.total}</div>
-              <div className="text-green-700">Successful: {importCurrentResult.summary?.successful}</div>
-              <div className="text-red-600">Failed: {importCurrentResult.summary?.failed}</div>
-              {importCurrentResult.errors && importCurrentResult.errors.length > 0 && (
-                <div className="mt-2 text-xs text-red-700">
-                  <div className="font-semibold mb-1">Errors:</div>
-                  <ul className="list-disc pl-4">
-                    {importCurrentResult.errors.map((err: any, i: number) => (
-                      <li key={i}>Row {err.rowNumber}: {err.error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
+
+      <FilterPanel
+        active={studentFilterCount + (search ? 1 : 0)}
+        onClear={() => { setStudentFilters({ department_id: '', course_id: '', level: '', intake: '', year: '', status: '', term_id: '', has_term: '', helb: '' }); setSearch(''); setPage(1); }}
+      >
+        <FilterSearch className="sm:col-span-2" value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Admission no, name, phone, ID number, email…" />
+        <FilterSelect label="Department" value={studentFilters.department_id} onChange={v => { setStudentFilters((f: any) => ({ ...f, department_id: v, course_id: '' })); setPage(1); }}>
+          <option value="">All departments</option>
+          {(studentFilterOptions?.departments || []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Course" value={studentFilters.course_id} onChange={v => setStudentFilter('course_id', v)}>
+          <option value="">All courses</option>
+          {(studentFilterOptions?.courses || []).filter((c: any) => !studentFilters.department_id || c.department_id === studentFilters.department_id).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Level" value={studentFilters.level} onChange={v => setStudentFilter('level', v)}>
+          <option value="">All levels</option>
+          {(studentFilterOptions?.levels || []).map((l: string) => <option key={l} value={l}>{l}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Intake" value={studentFilters.intake} onChange={v => setStudentFilter('intake', v)}>
+          <option value="">All intakes</option>
+          {(studentFilterOptions?.intakes || []).map((i: string) => <option key={i} value={i}>{i.charAt(0) + i.slice(1).toLowerCase()}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Year" value={studentFilters.year} onChange={v => setStudentFilter('year', v)}>
+          <option value="">All years</option>
+          {(studentFilterOptions?.years || []).map((y: number) => <option key={y} value={y}>{y}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Status" value={studentFilters.status} onChange={v => setStudentFilter('status', v)}>
+          <option value="">All statuses</option>
+          {(studentFilterOptions?.student_statuses || []).map((st: string) => <option key={st} value={st}>{st.charAt(0) + st.slice(1).toLowerCase()}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Term" value={studentFilters.term_id} onChange={v => setStudentFilter('term_id', v)} className="sm:col-span-2">
+          <option value="">All terms</option>
+          {(studentFilterOptions?.terms || []).map((t: any) => <option key={t.id} value={t.id}>{termLabel(t)}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Term assignment" value={studentFilters.has_term} onChange={v => setStudentFilter('has_term', v)}>
+          <option value="">Any</option>
+          <option value="true">Assigned to a term</option>
+          <option value="false">No term yet</option>
+        </FilterSelect>
+        <FilterSelect label="HELB" value={studentFilters.helb} onChange={v => setStudentFilter('helb', v)}>
+          <option value="">All</option>
+          <option value="true">Applied</option>
+          <option value="false">Not applied</option>
+        </FilterSelect>
+      </FilterPanel>
 
       <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -2685,7 +2778,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
                       <button onClick={() => setHistoryStudent(s)} className="text-purple-700 hover:text-purple-900 font-medium text-xs transition">History</button>
                       <button onClick={() => setLinkStudent(s)} className="text-stone hover:text-brand-dark font-medium text-xs transition" title="Link this student's earlier record">Link</button>
-                      {isAdmin && <button onClick={() => handleViewFeeSummary(s.id)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>}
+                      {isAdmin && <button onClick={() => setFeesStudent(s)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>}
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                       <button onClick={() => handleDownloadIDCard(s.id)}
                         disabled={downloadingIDCard === s.id || !s.profile_picture_url}
@@ -2704,13 +2797,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
-          <span>Page {page} of {Math.ceil(total / 15)}</span>
-          <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
-            <button disabled={page >= Math.ceil(total / 15)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
-          </div>
-        </div>
+        <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1); }} />
       </div>
 
       {/* Student Profile Edit Modal */}
@@ -3027,125 +3114,47 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
         </div>
       )}
 
-      {/* Fee Summary Modal */}
-      {showFeeModal && feeSummary && (
-        <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
-          <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
-            <h2 className="font-display text-xl text-brand-dark mb-1">Fee Summary</h2>
-            <p className="text-sm text-stone mb-4">{feeSummary.student.admission_no} — Level {feeSummary.student.level}</p>
-
-            <div className="flex-1 overflow-y-auto mb-5 pr-2 space-y-4">
-              <div className="grid grid-cols-3 gap-4 p-4 bg-cream-deep rounded-xl">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-brand-dark">{feeSummary.summary.totalFees.toLocaleString()}</div>
-                  <div className="text-xs text-stone">Total Fees</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{feeSummary.summary.totalPaid.toLocaleString()}</div>
-                  <div className="text-xs text-stone">Total Paid</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">{feeSummary.summary.totalBalance.toLocaleString()}</div>
-                  <div className="text-xs text-stone">Total Balance</div>
-                </div>
-              </div>
-
-              <h3 className="font-semibold text-brand-dark">Term Breakdown</h3>
-              <div className="space-y-3">
-                {feeSummary.termBreakdown.map((b: any) => (
-                  <div key={b.term.id} className="p-4 border border-stone/10 rounded-xl bg-white">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="font-medium text-brand-dark">{b.term.name}</div>
-                        <div className="text-xs text-stone">{b.term.academic_year} {b.term.intake ? `• ${b.term.intake}` : ''}</div>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.status === 'PAID' ? 'bg-green-100 text-green-800' :
-                        b.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>{b.status}</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 text-xs mb-2">
-                      <div>
-                        <div className="text-stone">Term Cost</div>
-                        <div className="font-medium">{b.term.term_cost.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-stone">Term Fees</div>
-                        <div className="font-medium">{b.total_fees.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-stone">Brought Forward</div>
-                        <div className="font-medium">{b.carryover ? b.carryover.toLocaleString() : '—'}</div>
-                      </div>
-                      <div>
-                        <div className="text-stone">Level</div>
-                        <div className="font-medium">{b.level}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-stone/10">
-                      <div className="text-xs text-stone">{b.payment_count} payment(s)</div>
-                      <div className="text-right">
-                        <div className="text-sm font-semibold text-green-600">{b.amount_paid.toLocaleString()} paid</div>
-                        <div className="text-sm font-semibold text-red-600">{b.balance.toLocaleString()} balance</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <h3 className="font-semibold text-brand-dark">Record Payment</h3>
-              {feeSummary.termBreakdown.length > 0 && feeSummary.termBreakdown.some((b: any) => b.balance > 0) && (
-                <div className="space-y-3">
-                  <select
-                    value={selectedPaymentTermId}
-                    onChange={e => { setSelectedPaymentTermId(e.target.value); }}
-                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                  >
-                    <option value="">Select term to record payment</option>
-                    {feeSummary.termBreakdown.filter((b: any) => b.balance > 0).map((b: any) => (
-                      <option key={b.term.id} value={b.term.id}>{termLabel(b.term, `Balance: KES ${b.balance.toLocaleString()}`)}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={e => setPaymentAmount(e.target.value)}
-                    placeholder="Amount received (KES)"
-                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={paymentNotes}
-                    onChange={e => setPaymentNotes(e.target.value)}
-                    placeholder="Payment notes (optional)"
-                    className="w-full px-3 py-2 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
-                  />
-                  <p className="text-xs text-stone">💡 Tip: The Finance Officer can allocate this payment to specific fee types from the Finance Portal.</p>
-                  <button
-                    onClick={() => handleRecordPayment(feeSummary.student.id, feeSummary.termBreakdown[0].term.id)}
-                    disabled={recordingPayment}
-                    className="w-full py-2.5 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50"
-                  >
-                    {recordingPayment ? 'Recording...' : 'Record Payment'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <button onClick={() => { setShowFeeModal(false); setFeeSummary(null); }} className="w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-
       {/* Term Assignment Modal */}
       {showTermAssignModal && selectedStudent && (
         <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
           <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="font-display text-xl text-brand-dark mb-1">Assign Term</h2>
-            <p className="text-sm text-stone mb-6">Assign {selectedStudent.admission_no} to a term</p>
+            <p className="text-sm text-stone mb-4">Assign {selectedStudent.admission_no} to a term</p>
+
+            {/* Terms already assigned — fix a wrong one */}
+            {assignedTerms.length > 0 && (
+              <div className="mb-5">
+                <div className="text-xs font-semibold text-brand-dark uppercase tracking-wide mb-2">Already assigned</div>
+                <div className="space-y-2">
+                  {assignedTerms.map((a: any) => (
+                    <div key={a.term.id} className="border border-stone/15 rounded-xl p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs text-brand-dark font-medium">{termLabel(a.term)}</div>
+                        {movingTermId !== a.term.id && (
+                          <div className="flex gap-3 text-xs shrink-0">
+                            <button onClick={() => { setMovingTermId(a.term.id); setMoveToTermId(''); }} className="text-brand hover:underline font-medium">Wrong term? Move</button>
+                            <button onClick={() => handleRemoveAssignedTerm(a)} className="text-red-600 hover:underline font-medium">Remove</button>
+                          </div>
+                        )}
+                      </div>
+                      {movingTermId === a.term.id && (
+                        <div className="mt-2 space-y-2">
+                          <select value={moveToTermId} onChange={e => setMoveToTermId(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-stone/25 text-xs focus:outline-none focus:border-brand">
+                            <option value="">Move to the correct term…</option>
+                            {terms.filter((t: any) => !assignedTerms.some((x: any) => x.term.id === t.id)).map((t: any) => <option key={t.id} value={t.id}>{termLabel(t)}</option>)}
+                          </select>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleMoveAssignedTerm(a)} disabled={!moveToTermId} className="flex-1 py-1.5 rounded-lg bg-brand text-cream text-xs font-semibold disabled:opacity-50">Move</button>
+                            <button onClick={() => setMovingTermId(null)} className="px-3 py-1.5 rounded-lg border border-stone/25 text-xs text-stone">Cancel</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-brand-dark mb-1">Select Term</label>
@@ -3286,27 +3295,35 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
 function BillingTab() {
   const [balances, setBalances] = useState<any[]>([]);
   const [terms, setTerms] = useState<any[]>([]);
-  const [selectedTermId, setSelectedTermId] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const isAdmin = useAuth().user?.role === 'ADMIN';
+  const [showReconcile, setShowReconcile] = useState(false);
+  const EMPTY = { termId: '', status: '', department_id: '', course_id: '', level: '', intake: '', search: '' };
+  const [bf, setBf] = useState(EMPTY);
+  const [options, setOptions] = useState<any>(null);
+  const debouncedSearch = useDebounced(bf.search);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => { });
+    financeApi.getReportFilters().then(r => setOptions(r.data)).catch(() => { });
   }, []);
 
   useEffect(() => {
     fetchBillingData();
-  }, [selectedTermId, selectedStatus, page]);
+  }, [bf.termId, bf.status, bf.department_id, bf.course_id, bf.level, bf.intake, debouncedSearch, page, pageSize]);
+
+  const setFilter = (key: keyof typeof EMPTY, value: string) => { setBf(f => ({ ...f, [key]: value })); setPage(1); };
+  const activeCount = Object.values(bf).filter(Boolean).length;
 
   const fetchBillingData = async () => {
     setLoading(true);
     try {
-      const params: any = { page, limit: 50 };
-      if (selectedTermId) params.termId = selectedTermId;
-      if (selectedStatus) params.status = selectedStatus;
+      const params: any = { page, limit: pageSize };
+      Object.entries({ ...bf, search: debouncedSearch }).forEach(([k, v]) => { if (v) params[k] = v; });
 
       const r = await api.get('/fees/billing/dashboard', { params });
       setBalances(r.data.balances);
@@ -3331,7 +3348,13 @@ function BillingTab() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl text-brand-dark mb-6">Billing Dashboard</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <h1 className="font-display text-2xl text-brand-dark">Billing Dashboard</h1>
+        <button onClick={() => setShowReconcile(true)} className="px-4 py-2 rounded-xl border border-brand/30 text-brand font-semibold hover:bg-brand/5 transition text-sm">
+          🔧 Check fee balances
+        </button>
+      </div>
+      {showReconcile && <ReconcileFees terms={terms} canApply={isAdmin} onClose={() => setShowReconcile(false)} onApplied={fetchBillingData} />}
 
       {/* Summary Cards */}
       {summary && (
@@ -3356,37 +3379,36 @@ function BillingTab() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl p-4 border border-stone/10 shadow-sm mb-6">
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label className="block text-sm font-medium text-brand-dark mb-1">Term</label>
-            <select
-              value={selectedTermId}
-              onChange={e => setSelectedTermId(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-stone/25 focus:outline-none focus:border-brand text-sm"
-            >
-              <option value="">All Terms</option>
-              {terms.map((t: any) => (
-                <option key={t.id} value={t.id}>{termLabel(t)}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-brand-dark mb-1">Status</label>
-            <select
-              value={selectedStatus}
-              onChange={e => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-stone/25 focus:outline-none focus:border-brand text-sm"
-            >
-              <option value="">All Statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="PARTIAL">Partial</option>
-              <option value="PAID">Paid</option>
-              <option value="OVERDUE">Overdue</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <FilterPanel active={activeCount} onClear={() => { setBf(EMPTY); setPage(1); }}>
+        <FilterSearch className="sm:col-span-2" value={bf.search} onChange={v => setFilter('search', v)} placeholder="Student name, admission no, phone…" />
+        <FilterSelect label="Term" value={bf.termId} onChange={v => setFilter('termId', v)} className="sm:col-span-2">
+          <option value="">All terms</option>
+          {terms.map((t: any) => <option key={t.id} value={t.id}>{termLabel(t)}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Status" value={bf.status} onChange={v => setFilter('status', v)}>
+          <option value="">All statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="PARTIAL">Partial</option>
+          <option value="PAID">Paid</option>
+          <option value="OVERDUE">Overdue</option>
+        </FilterSelect>
+        <FilterSelect label="Department" value={bf.department_id} onChange={v => { setBf(f => ({ ...f, department_id: v, course_id: '' })); setPage(1); }}>
+          <option value="">All departments</option>
+          {(options?.departments || []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Course" value={bf.course_id} onChange={v => setFilter('course_id', v)}>
+          <option value="">All courses</option>
+          {(options?.courses || []).filter((c: any) => !bf.department_id || c.department_id === bf.department_id).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Level" value={bf.level} onChange={v => setFilter('level', v)}>
+          <option value="">All levels</option>
+          {(options?.levels || []).map((l: string) => <option key={l} value={l}>{l}</option>)}
+        </FilterSelect>
+        <FilterSelect label="Intake" value={bf.intake} onChange={v => setFilter('intake', v)}>
+          <option value="">All intakes</option>
+          {(options?.intakes || []).map((i: string) => <option key={i} value={i}>{i.charAt(0) + i.slice(1).toLowerCase()}</option>)}
+        </FilterSelect>
+      </FilterPanel>
 
       {/* Balances Table */}
       <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
@@ -3433,13 +3455,7 @@ function BillingTab() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
-          <span>Page {page} of {Math.ceil(total / 50)}</span>
-          <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
-            <button disabled={page >= Math.ceil(total / 50)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
-          </div>
-        </div>
+        <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1); }} sizes={[25, 50, 100]} />
       </div>
     </div>
   );
@@ -3779,6 +3795,7 @@ function UsersTab() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [pageSize, setPageSize] = useState(20);
   const [updating, setUpdating] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [staffForm, setStaffForm] = useState({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '', phone: '' });
@@ -3796,7 +3813,7 @@ function UsersTab() {
   }, []);
 
   useEffect(() => {
-    const params: any = { page, limit: 20, exclude_students: 'true' };
+    const params: any = { page, limit: pageSize, exclude_students: 'true' };
     if (roleFilter) params.role = roleFilter;
     if (search) params.search = search;
     api.get('/auth/users', { params }).then(r => {
@@ -3807,7 +3824,7 @@ function UsersTab() {
       console.error('Failed to fetch users:', err);
       toast.error('Failed to load users. Please check your connection.');
     });
-  }, [page, roleFilter, search]);
+  }, [page, pageSize, roleFilter, search]);
 
   const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
     setUpdating(userId);
@@ -3857,7 +3874,7 @@ function UsersTab() {
       setStaffMsg('✅ Staff account created successfully!');
       setStaffForm({ email: '', password: '', first_name: '', last_name: '', role: 'DEPT_HEAD', department_id: '', phone: '' });
       setShowCreateForm(false);
-      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search, exclude_students: 'true' } });
+      const updated = await api.get('/auth/users', { params: { page, limit: pageSize, role: roleFilter, search, exclude_students: 'true' } });
       setUsers(updated.data.users);
       setTotal(updated.data.pagination?.total ?? updated.data.users.length);
     } catch (err: any) {
@@ -3901,7 +3918,7 @@ function UsersTab() {
       }
       await api.patch(`/auth/users/${editingUser.id}`, updateData);
       setEditMsg('✅ User updated successfully!');
-      const updated = await api.get('/auth/users', { params: { page, limit: 20, role: roleFilter, search, exclude_students: 'true' } });
+      const updated = await api.get('/auth/users', { params: { page, limit: pageSize, role: roleFilter, search, exclude_students: 'true' } });
       setUsers(updated.data.users);
       setTotal(updated.data.pagination?.total ?? updated.data.users.length);
       setTimeout(() => {
@@ -4144,13 +4161,7 @@ function UsersTab() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
-          <span>Page {page} of {Math.ceil(total / 20)}</span>
-          <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
-            <button disabled={page >= Math.ceil(total / 20)} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
-          </div>
-        </div>
+        <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1); }} sizes={[20, 50, 100]} />
       </div>
     </div>
   );
@@ -4171,6 +4182,7 @@ function CoursesTab() {
   const [courses, setCourses] = useState<any[]>([]);
   const [courseTotal, setCourseTotal] = useState(0);
   const [coursePage, setCoursePage] = useState(1);
+  const [coursePageSize, setCoursePageSize] = useState(15);
   const [courseSearch, setCourseSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
 
@@ -4211,7 +4223,7 @@ function CoursesTab() {
   };
 
   const fetchCourses = () => {
-    coursesApi.getAll({ page: coursePage, limit: 15, search: courseSearch, department_id: deptFilter })
+    coursesApi.getAll({ page: coursePage, limit: coursePageSize, search: courseSearch, department_id: deptFilter })
       .then(r => {
         setCourses(r.data.courses);
         setCourseTotal(r.data.pagination.total);
@@ -4224,7 +4236,7 @@ function CoursesTab() {
 
   useEffect(() => {
     fetchCourses();
-  }, [coursePage, courseSearch, deptFilter]);
+  }, [coursePage, coursePageSize, courseSearch, deptFilter]);
 
   const handleDeptSubmit = async (e: any) => {
     e.preventDefault();
@@ -4407,14 +4419,7 @@ function CoursesTab() {
                 </tbody>
               </table>
             </div>
-            {/* Pagination */}
-            <div className="px-4 py-3 border-t border-stone/10 flex items-center justify-between text-sm text-stone">
-              <span>Page {coursePage} of {Math.ceil(courseTotal / 15) || 1}</span>
-              <div className="flex gap-2">
-                <button disabled={coursePage === 1} onClick={() => setCoursePage(p => p - 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">← Prev</button>
-                <button disabled={coursePage >= Math.ceil(courseTotal / 15)} onClick={() => setCoursePage(p => p + 1)} className="px-3 py-1 rounded-lg border border-stone/25 disabled:opacity-40 hover:border-brand transition">Next →</button>
-              </div>
-            </div>
+            <Pagination page={coursePage} pageSize={coursePageSize} total={courseTotal} onPage={setCoursePage} onPageSize={n => { setCoursePageSize(n); setCoursePage(1); }} />
           </div>
         </div>
       )}
