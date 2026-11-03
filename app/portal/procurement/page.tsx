@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi, invoicesApi } from '@/lib/services';
+import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi, invoicesApi, assetsApi } from '@/lib/services';
+import AssetRegister from '@/components/AssetRegister';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
@@ -10,7 +11,8 @@ export default function ProcurementDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [tab, setTab] = useState<'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'inventory' | 'invoices'>('suppliers');
+  const [tab, setTab] = useState<'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'assets' | 'inventory' | 'invoices'>('suppliers');
+  const [assetCount, setAssetCount] = useState<number | null>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [rfqs, setRfqs] = useState<any[]>([]);
@@ -48,6 +50,7 @@ export default function ProcurementDashboard() {
     lposApi.getAll().then(r => setLpos(r.data?.lpos || [])).catch(() => setLpos([]));
     grnsApi.getAll().then(r => setGrns(r.data?.grns || [])).catch(() => setGrns([]));
     inventoryApi.getAll().then(r => setInventory(r.data?.items || [])).catch(() => setInventory([]));
+    assetsApi.summary().then(r => setAssetCount(r.data.total_active)).catch(() => {});
     departmentsApi.getAll().then(r => setDepartments(Array.isArray(r.data) ? r.data : [])).catch(() => setDepartments([]));
     invoicesApi.getAll().then(r => setInvoices(r.data?.invoices || [])).catch(() => setInvoices([]));
   }, []);
@@ -389,6 +392,7 @@ export default function ProcurementDashboard() {
           { key: 'rfqs', label: `📋 RFQs (${rfqs.length})` },
           { key: 'lpos', label: `📄 LPOs (${lpos.length})` },
           { key: 'grns', label: `✅ GRNs (${grns.length})` },
+          { key: 'assets', label: `🏷️ Assets${assetCount !== null ? ` (${assetCount})` : ''}` },
           { key: 'inventory', label: `📦 Inventory (${inventory.length})` },
           { key: 'invoices', label: `🧾 Invoices (${invoices.length})` },
         ].map(t => (
@@ -408,6 +412,7 @@ export default function ProcurementDashboard() {
           </div>
         )}
 
+        {tab === 'assets' ? <AssetRegister /> : (
         <div className="bg-white rounded-2xl border border-stone/10 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-xl text-brand-dark capitalize">{tab}</h2>
@@ -692,6 +697,7 @@ export default function ProcurementDashboard() {
             </div>
           )}
         </div>
+        )}
       </main>
 
       {/* Create/Edit Modal */}

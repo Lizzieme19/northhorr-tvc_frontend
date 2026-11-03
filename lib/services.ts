@@ -183,12 +183,34 @@ export const inventoryApi = {
 export const assetsApi = {
   getAll: (params?: any) => api.get('/assets', { params }),
   getById: (id: string) => api.get(`/assets/${id}`),
+  summary: () => api.get('/assets/summary'),
+  options: () => api.get('/assets/options'),
+  // numbering already used for an item type, and the next tag
+  tagOptions: (params: { asset_class: string; category?: string }) => api.get('/assets/tag-options', { params }),
   create: (data: any) => api.post('/assets', data),
   update: (id: string, data: any) => api.patch(`/assets/${id}`, data),
   depreciate: (id: string) => api.post(`/assets/${id}/depreciate`),
   recordMaintenance: (id: string, data: any) => api.post(`/assets/${id}/maintenance`, data),
   dispose: (id: string, data: any) => api.patch(`/assets/${id}/dispose`, data),
   delete: (id: string) => api.delete(`/assets/${id}`),
+  // locations
+  locations: () => api.get('/assets/locations'),
+  createLocation: (name: string) => api.post('/assets/locations', { name }),
+  renameLocation: (id: string, name: string) => api.patch(`/assets/locations/${id}`, { name }),
+  mergeLocation: (id: string, intoId: string) => api.post(`/assets/locations/${id}/merge`, { into_id: intoId }),
+  deleteLocation: (id: string) => api.delete(`/assets/locations/${id}`),
+  // import from the asset registers workbook; the preview checks it and creates nothing
+  importPreview: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/assets/import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  importWorkbook: (file: File, includeStock = true) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('include_stock', String(includeStock));
+    return api.post('/assets/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 10 * 60 * 1000 });
+  },
 };
 
 export const budgetsApi = {
