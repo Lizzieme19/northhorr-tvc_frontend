@@ -71,6 +71,9 @@ export const financeApi = {
   createFeeRecord: (studentId: string, data: any) => api.patch(`/finance/students/${studentId}/fees`, data),
   getReports: () => api.get('/finance/summary'),
   getReportFilters: () => api.get('/finance/reports/filters'),
+  // Fee analytics: computed from term bills and recorded payments
+  getAnalytics: (params?: any) => api.get('/finance/analytics', { params }),
+  getAnalyticsHealth: () => api.get('/finance/analytics/health'),
   // Excel downloads — returned as a Blob
   exportFeesReport: (params?: any) => api.get('/finance/reports/fees/export', { params, responseType: 'blob' }),
   exportStudentsReport: (params?: any) => api.get('/finance/reports/students/export', { params, responseType: 'blob' }),

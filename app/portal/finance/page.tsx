@@ -8,6 +8,7 @@ import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
 import TermInfo from '@/components/TermInfo';
 import StudentFeesModal from '@/components/StudentFeesModal';
+import FinanceAnalytics from '@/components/FinanceAnalytics';
 import { termLabel } from '@/lib/terms';
 import Pagination from '@/components/Pagination';
 import { FilterPanel, FilterSelect, FilterSearch } from '@/components/ListFilters';
@@ -17,7 +18,7 @@ import { toast } from 'sonner';
 export default function FinanceDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
-  const [summary, setSummary] = useState<any>(null);
+  const [analyticsKey, setAnalyticsKey] = useState(0);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [page, setPage] = useState(1);
@@ -66,7 +67,6 @@ export default function FinanceDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    financeApi.getReports().then(r => setSummary(r.data)).catch(() => {});
     feeTypesApi.getAll({ is_active: 'true' }).then(r => setFeeTypes(r.data.fee_types || [])).catch(() => {});
     api.get('/terms').then(r => setTerms(r.data.terms || [])).catch(() => {});
   }, []);
@@ -97,7 +97,7 @@ export default function FinanceDashboard() {
     const r = await financeApi.getFeeRecords(listParams());
     setStudents(r.data.students);
     setTotal(r.data.pagination.total);
-    financeApi.getReports().then(r => setSummary(r.data));
+    setAnalyticsKey(k => k + 1);
   };
 
   // ── Record Payment modal ──
@@ -280,23 +280,8 @@ export default function FinanceDashboard() {
         )}
 
         <h1 className="font-display text-2xl text-brand-dark mb-6">Fee Overview</h1>
-        
-        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-          {[
-            { label: 'Total Enrolled', value: summary?.totalStudents ?? '—', icon: '🎓' },
-            { label: 'Admission Paid', value: summary?.admissionPaid ?? '—', icon: '✅' },
-            { label: 'Student IDs Paid', value: summary?.studentIdPaid ?? '—', icon: '🪪' },
-            { label: 'Tuition Paid', value: summary?.tuitionPaid ?? '—', icon: '💰' },
-            { label: 'Total Collected', value: `KES ${(summary?.totalCollected ?? 0).toLocaleString()}`, icon: '🏦' },
-          ].map(card => (
-            <div key={card.label} className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-              <div className="flex justify-between items-start mb-2">
-                <div className="text-sm text-stone">{card.label}</div>
-                <div className="text-xl">{card.icon}</div>
-              </div>
-              <div className="font-display text-2xl font-bold text-brand-dark">{card.value}</div>
-            </div>
-          ))}
+        <div className="mb-10">
+          <FinanceAnalytics refreshKey={analyticsKey} />
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
