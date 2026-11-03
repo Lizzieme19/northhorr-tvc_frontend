@@ -17,6 +17,7 @@ import ReconcileFees from '@/components/ReconcileFees';
 import StudentImportModal from '@/components/StudentImportModal';
 import TermInfo from '@/components/TermInfo';
 import { termLabel } from '@/lib/terms';
+import { feeBilling, BILLING_LABEL } from '@/lib/feeTypes';
 import { feeCorrectionsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
@@ -31,15 +32,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 // Registrars handle student affairs: applications, students, departments/courses and progression — never finance or system admin
-// How a fee type is billed. Older fee types have no setting and follow their earlier term-based tick boxes.
-const feeBilling = (ft: any): 'NOT_BILLED' | 'ONCE' | 'EVERY_TERM' =>
-  ft.billing || (ft.term_based ? (ft.added_to_term_fee ? 'EVERY_TERM' : 'NOT_BILLED') : 'ONCE');
-const BILLING_LABEL: Record<string, string> = {
-  NOT_BILLED: 'Not billed (payment category only)',
-  ONCE: 'Billed once (first term)',
-  EVERY_TERM: 'Billed every term, on top of the term fee',
-};
-
 const REGISTRAR_TABS = ['overview', 'applications', 'students', 'courses', 'term-progression'];
 
 export default function AdminDashboard() {

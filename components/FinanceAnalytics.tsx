@@ -240,7 +240,7 @@ function HBars({ rows, valueFmt = kes, emptyText = 'Nothing to show for this sel
 
 // ── Segmented bar: one whole split into a few parts ──
 type Seg = { key: string; name: string; value: number; color: string; icon: string };
-function SegmentedBar({ segs, total, unit }: { segs: Seg[]; total: number; unit: string }) {
+function SegmentedBar({ segs, total, unit, onSelect }: { segs: Seg[]; total: number; unit: string; onSelect?: (key: string) => void }) {
   const { tip, show, focus, hide } = useTip();
   const shown = segs.filter(s => s.value > 0);
   if (total <= 0) return <p className="text-sm text-stone py-4 text-center">No students are billed in this selection.</p>;
@@ -254,7 +254,10 @@ function SegmentedBar({ segs, total, unit }: { segs: Seg[]; total: number; unit:
             <div
               key={s.key}
               tabIndex={0}
-              className="flex items-center justify-start px-2 text-xs font-semibold overflow-hidden whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+              role={onSelect ? 'button' : undefined}
+              onClick={onSelect ? () => onSelect(s.key) : undefined}
+              onKeyDown={onSelect ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(s.key); } } : undefined}
+              className={`flex items-center justify-start px-2 text-xs font-semibold overflow-hidden whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${onSelect ? 'cursor-pointer hover:brightness-110' : ''}`}
               style={{ width: `${share}%`, background: s.color, color: inkOn(s.color), borderRadius: 4 }}
               onPointerMove={e => show(e, s.name, describe(s))}
               onPointerLeave={hide}
@@ -269,10 +272,17 @@ function SegmentedBar({ segs, total, unit }: { segs: Seg[]; total: number; unit:
       </div>
       <ul className="flex flex-wrap gap-x-5 gap-y-1.5 mt-3 text-xs text-stone">
         {segs.map(s => (
-          <li key={s.key} className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} aria-hidden />
-            <span aria-hidden>{s.icon}</span>
-            <span>{s.name}</span>
+          <li key={s.key}>
+            <button
+              type="button"
+              disabled={!onSelect}
+              onClick={() => onSelect?.(s.key)}
+              className={`flex items-center gap-1.5 ${onSelect ? 'hover:text-brand-dark hover:underline' : 'cursor-default'}`}
+            >
+              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} aria-hidden />
+              <span aria-hidden>{s.icon}</span>
+              <span>{s.name}</span>
+            </button>
           </li>
         ))}
       </ul>
@@ -372,7 +382,9 @@ const PRESETS = [
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 // refreshKey: change it to reload (for example after a payment is recorded)
-export default function FinanceAnalytics({ canApplyFixes = false, refreshKey = 0 }: { canApplyFixes?: boolean; refreshKey?: number }) {
+type OpenStudents = (filters: { search?: string; fee_status?: string; term_id?: string; department_id?: string; course_id?: string }) => void;
+
+export default function FinanceAnalytics({ canApplyFixes = false, refreshKey = 0, onOpenStudents }: { canApplyFixes?: boolean; refreshKey?: number; onOpenStudents?: OpenStudents }) {
   const [options, setOptions] = useState<any>(null);
   const [preset, setPreset] = useState('all');
   const [custom, setCustom] = useState({ from: '', to: '' });
@@ -429,6 +441,22 @@ export default function FinanceAnalytics({ canApplyFixes = false, refreshKey = 0
   ] : [];
   const studentTotal = segs.reduce((a, x) => a + x.value, 0);
   const owingStudents = s ? s.counts.part_paid + s.counts.not_paid : 0;
+
+  // Jumping to the student list keeps the term / department / course already chosen here
+  const scope = () => ({
+    ...(f.term_id && { term_id: f.term_id }),
+    ...(f.department_id && { department_id: f.department_id }),
+    ...(f.course_id && { course_id: f.course_id }),
+  });
+  const STATUS_FILTER: Record<string, string> = { fully_paid: 'PAID', part_paid: 'PARTIAL', not_paid: 'PENDING' };
+  const openByStatus = (key: string) => onOpenStudents?.({ ...scope(), fee_status: STATUS_FILTER[key] });
+  const openStudent = (admissionNo: string) => onOpenStudents?.({ search: admissionNo });
+  const rowProps = (admissionNo: string) => onOpenStudents ? {
+    tabIndex: 0, role: 'link', title: 'Open this student',
+    className: 'cursor-pointer hover:bg-cream-deep/60 focus-visible:bg-cream-deep/60 outline-none',
+    onClick: () => openStudent(admissionNo),
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') openStudent(admissionNo); },
+  } : {};
 
   const select = 'px-3 py-2 rounded-xl border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand w-full';
   const label = 'block text-[11px] font-semibold text-stone uppercase tracking-wide mb-1';
@@ -506,7 +534,9 @@ export default function FinanceAnalytics({ canApplyFixes = false, refreshKey = 0
             <div className="grid gap-4 lg:grid-cols-3 mb-5">
               <div className="bg-white rounded-2xl border border-stone/10 shadow-sm p-6 lg:row-span-1">
                 <div className="text-sm text-stone">Outstanding</div>
-                <div className="font-display font-semibold text-brand-dark leading-none mt-2" style={{ fontSize: 'clamp(2.25rem, 5vw, 3.25rem)' }}>{kes(s.outstanding)}</div>
+                <div className="font-display font-semibold text-brand-dark leading-none mt-2 whitespace-nowrap" style={{ fontSize: 'clamp(2rem, 4.2vw, 3rem)' }}>
+                  <span className="text-lg font-medium text-stone mr-2 align-baseline">KES</span>{Math.round(s.outstanding).toLocaleString()}
+                </div>
                 <div className="text-sm text-stone mt-3">
                   owed by <strong className="text-brand-dark">{owingStudents.toLocaleString()}</strong> student{owingStudents === 1 ? '' : 's'}
                   {owingStudents > 0 && <> · average <strong className="text-brand-dark">{kes(s.average_owing)}</strong></>}
@@ -532,7 +562,8 @@ export default function FinanceAnalytics({ canApplyFixes = false, refreshKey = 0
               className="mb-5"
               title="Students by payment status"
               subtitle={`${studentTotal.toLocaleString()} billed student${studentTotal === 1 ? '' : 's'}${s.students_not_billed ? ` · ${s.students_not_billed} more not yet billed for any term` : ''}`}
-              chart={<SegmentedBar segs={segs} total={studentTotal} unit="students" />}
+              right={onOpenStudents && <button onClick={() => onOpenStudents(scope())} className="text-xs text-brand font-medium hover:underline">View students →</button>}
+              chart={<SegmentedBar segs={segs} total={studentTotal} unit="students" onSelect={onOpenStudents ? (k => (STATUS_FILTER[k] ? openByStatus(k) : undefined)) : undefined} />}
               table={<Table head={<><Th>Status</Th><Th right>Students</Th><Th right>Share</Th></>}>{segs.map(x => <tr key={x.key}><Td>{x.icon} {x.name}</Td><Td right>{x.value.toLocaleString()}</Td><Td right>{studentTotal ? pct((x.value / studentTotal) * 100) : '—'}</Td></tr>)}</Table>}
             />
 
@@ -598,11 +629,11 @@ export default function FinanceAnalytics({ canApplyFixes = false, refreshKey = 0
             <div className="grid gap-5 lg:grid-cols-2 mb-2 items-start">
               <Card
                 title="Biggest balances"
-                subtitle="The ten students who owe the most"
+                subtitle={onOpenStudents ? 'The ten students who owe the most. Click one to open them.' : 'The ten students who owe the most'}
                 chart={data.top_debtors.length === 0 ? <p className="text-sm text-stone py-6 text-center">Nobody owes anything in this selection.</p> : (
                   <Table head={<><Th>Student</Th><Th right>Paid</Th><Th right>Owes</Th><Th>Last paid</Th></>}>
                     {data.top_debtors.map((d: any) => (
-                      <tr key={d.student_id}>
+                      <tr key={d.student_id} {...rowProps(d.admission_no)}>
                         <Td><div className="font-medium">{d.name}</div><div className="font-mono text-xs text-stone">{d.admission_no}</div><div className="text-xs text-stone">{d.level}</div></Td>
                         <Td right>{kes(d.paid)}</Td>
                         <Td right><span className="font-semibold">{kes(d.owing)}</span></Td>
@@ -618,7 +649,7 @@ export default function FinanceAnalytics({ canApplyFixes = false, refreshKey = 0
                 chart={data.recent_payments.length === 0 ? <p className="text-sm text-stone py-6 text-center">No payments in this selection.</p> : (
                   <Table head={<><Th>Student</Th><Th>Paid for</Th><Th right>Amount</Th></>}>
                     {data.recent_payments.map((p: any) => (
-                      <tr key={p.id}>
+                      <tr key={p.id} {...rowProps(p.admission_no)}>
                         <Td><div className="font-medium">{p.student}</div><div className="font-mono text-xs text-stone">{p.admission_no} · {day(p.paid_at)}</div></Td>
                         <Td><div>{p.fee_type || <span className="text-stone">Not allocated</span>}</div><div className="text-xs text-stone">{p.term || ''}</div></Td>
                         <Td right>{kes(p.amount)}</Td>

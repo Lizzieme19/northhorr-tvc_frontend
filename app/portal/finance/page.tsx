@@ -9,16 +9,93 @@ import ReportsExport from '@/components/ReportsExport';
 import TermInfo from '@/components/TermInfo';
 import StudentFeesModal from '@/components/StudentFeesModal';
 import FinanceAnalytics from '@/components/FinanceAnalytics';
+import { feeBilling, BILLING_SHORT } from '@/lib/feeTypes';
+import { termDates, termFee, termState } from '@/lib/terms';
 import { termLabel } from '@/lib/terms';
 import Pagination from '@/components/Pagination';
 import { FilterPanel, FilterSelect, FilterSearch } from '@/components/ListFilters';
 import { useDebounced } from '@/lib/hooks';
 import { toast } from 'sonner';
 
+type TabId = 'overview' | 'students' | 'billing' | 'fee-structure';
+const TABS: { id: TabId; label: string; icon: string; hint: string }[] = [
+  { id: 'overview', label: 'Overview', icon: '📊', hint: 'Totals, trends and who owes what' },
+  { id: 'students', label: 'Students & fees', icon: '🎓', hint: 'Find a student, record payments, fix fees' },
+  { id: 'billing', label: 'Billing', icon: '💳', hint: 'Every term bill, with filters' },
+  { id: 'fee-structure', label: 'Fee structure', icon: '🧾', hint: 'Term fees and fee types' },
+];
+
+// Read-only reference: what each term costs and how each fee type is billed
+function FeeStructure({ terms, feeTypes }: { terms: any[]; feeTypes: any[] }) {
+  const sorted = [...terms].sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+  const STATE_STYLE: Record<string, string> = { 'In session': 'bg-green-100 text-green-800', Upcoming: 'bg-blue-100 text-blue-800', Ended: 'bg-stone/15 text-stone' };
+  return (
+    <div className="space-y-8">
+      <p className="text-sm text-stone bg-white rounded-2xl border border-stone/10 px-5 py-3">
+        This is for reference. Term fees and fee types are changed by an Admin, and a change to a term fee updates every student billed for that term.
+      </p>
+
+      <section>
+        <h2 className="font-display text-xl text-brand-dark mb-3">Term fees</h2>
+        <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
+              <tr><th className="px-4 py-3 text-left">Term</th><th className="px-4 py-3 text-left">Dates</th><th className="px-4 py-3 text-left">Intake</th><th className="px-4 py-3 text-right">Term fee</th><th className="px-4 py-3 text-right">Students billed</th><th className="px-4 py-3 text-left">State</th></tr>
+            </thead>
+            <tbody className="divide-y divide-stone/10">
+              {sorted.map(t => {
+                const st = termState(t);
+                return (
+                  <tr key={t.id}>
+                    <td className="px-4 py-3"><div className="font-medium text-brand-dark">{t.name}</div><div className="text-xs text-stone">{t.academic_year}</div></td>
+                    <td className="px-4 py-3 text-stone">{termDates(t)}</td>
+                    <td className="px-4 py-3 text-stone">{t.intake ? t.intake.charAt(0) + t.intake.slice(1).toLowerCase() : '—'}</td>
+                    <td className="px-4 py-3 text-right font-medium tabular-nums whitespace-nowrap">{termFee(t) || 'Not set'}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{t._count?.student_balances ?? '—'}</td>
+                    <td className="px-4 py-3">{st && <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATE_STYLE[st]}`}>{st}</span>}</td>
+                  </tr>
+                );
+              })}
+              {sorted.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-stone">No terms yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="font-display text-xl text-brand-dark mb-3">Fee types</h2>
+        <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
+              <tr><th className="px-4 py-3 text-left">Fee type</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-left">How it is billed</th><th className="px-4 py-3 text-left">Charged to</th></tr>
+            </thead>
+            <tbody className="divide-y divide-stone/10">
+              {feeTypes.map(ft => (
+                <tr key={ft.id}>
+                  <td className="px-4 py-3"><div className="font-medium text-brand-dark">{ft.name}</div><div className="font-mono text-xs text-stone">{ft.code}</div></td>
+                  <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">KES {ft.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${feeBilling(ft) === 'NOT_BILLED' ? 'bg-stone/15 text-stone' : 'bg-brand/10 text-brand'}`}>{BILLING_SHORT[feeBilling(ft)]}</span></td>
+                  <td className="px-4 py-3 text-stone">
+                    {ft.applies_to === 'SPECIFIC_COURSE' ? 'One course' : ft.applies_to === 'SPECIFIC_LEVEL' ? ft.level || 'One level' : 'All students'}
+                    {ft.applicant_type ? ` · ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ''}
+                  </td>
+                </tr>
+              ))}
+              {feeTypes.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-stone">No fee types yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function FinanceDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
   const [analyticsKey, setAnalyticsKey] = useState(0);
+  const [tab, setTabState] = useState<TabId>('overview');
+  const [quickSearch, setQuickSearch] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [page, setPage] = useState(1);
@@ -34,7 +111,6 @@ export default function FinanceDashboard() {
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [showReports, setShowReports] = useState(false);
   const [feesStudent, setFeesStudent] = useState<any>(null);
-  const [showBillingDashboard, setShowBillingDashboard] = useState(false);
   const [billingData, setBillingData] = useState<any>(null);
   const [billingTermId, setBillingTermId] = useState('');
   const [billingStatus, setBillingStatus] = useState('');
@@ -61,6 +137,22 @@ export default function FinanceDashboard() {
   const [allocationInputs, setAllocationInputs] = useState<Record<string, string>>({});
   const [submittingAllocation, setSubmittingAllocation] = useState(false);
   const [allocationNotes, setAllocationNotes] = useState('');
+
+  useEffect(() => {
+    const read = () => {
+      const h = window.location.hash.replace('#', '');
+      if (TABS.some(t => t.id === h)) setTabState(h as TabId);
+    };
+    read();
+    window.addEventListener('hashchange', read);
+    return () => window.removeEventListener('hashchange', read);
+  }, []);
+
+  const goTab = (id: TabId) => {
+    if (window.location.hash !== `#${id}`) window.location.hash = id;
+    setTabState(id);
+    window.scrollTo({ top: 0 });
+  };
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'FINANCE')) router.replace('/login');
@@ -92,6 +184,13 @@ export default function FinanceDashboard() {
       setTotal(r.data.pagination.total);
     }).catch(() => { toast.error('Failed to load students'); });
   }, [page, pageSize, debouncedSearch, filters.department_id, filters.course_id, filters.level, filters.intake, filters.year, filters.term_id, filters.fee_status, filters.outstanding_only, filters.helb]);
+
+  // From anywhere in the portal: go to the student list with these filters applied
+  const openStudents = (f: Partial<typeof EMPTY_FILTERS>) => {
+    setFilters({ ...EMPTY_FILTERS, ...f });
+    setPage(1);
+    goTab('students');
+  };
 
   const refreshStudents = async () => {
     const r = await financeApi.getFeeRecords(listParams());
@@ -236,13 +335,16 @@ export default function FinanceDashboard() {
       if (billingSearch.trim()) params.search = billingSearch.trim();
       const r = await api.get('/fees/billing/dashboard', { params });
       setBillingData(r.data);
-      setShowBillingDashboard(true);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to load billing dashboard');
     } finally {
       setLoadingBilling(false);
     }
   };
+
+  useEffect(() => {
+    if (tab === 'billing' && !billingData) handleLoadBillingDashboard(1);
+  }, [tab]);
 
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
@@ -257,18 +359,59 @@ export default function FinanceDashboard() {
 
   return (
     <div className="min-h-screen bg-cream-deep">
-      <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          <span className="font-display font-semibold hidden sm:block">Finance Portal</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
-          <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">FINANCE</span>
-          <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
-          <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
-        </div>
-      </header>
+      {/* Header and navigation stay at the top while scrolling */}
+      <div className="sticky top-0 z-50 shadow-lg">
+        <header className="bg-brand-dark text-cream px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
+            <span className="font-display font-semibold hidden sm:block">Finance Portal</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
+            <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">FINANCE</span>
+            <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
+            <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
+          </div>
+        </header>
+
+        <nav className="bg-white border-b border-stone/15" aria-label="Finance sections">
+          <div className="max-w-7xl mx-auto px-6 flex items-center gap-4">
+            <div className="flex gap-1 overflow-x-auto flex-1" role="tablist">
+              {TABS.map(t => (
+                <button
+                  key={t.id}
+                  role="tab"
+                  aria-selected={tab === t.id}
+                  title={t.hint}
+                  onClick={() => goTab(t.id)}
+                  className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${tab === t.id ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}
+                >
+                  <span className="mr-1.5" aria-hidden>{t.icon}</span>{t.label}
+                </button>
+              ))}
+            </div>
+            {/* Jump straight to a student from any tab */}
+            <form
+              onSubmit={e => { e.preventDefault(); if (quickSearch.trim()) { openStudents({ search: quickSearch.trim() }); setQuickSearch(''); } }}
+              className="hidden md:block"
+            >
+              <input
+                value={quickSearch}
+                onChange={e => setQuickSearch(e.target.value)}
+                placeholder="Find a student…"
+                aria-label="Find a student by admission number or name"
+                className="w-48 lg:w-60 px-3 py-1.5 rounded-xl border border-stone/25 bg-cream-deep/50 text-sm focus:outline-none focus:border-brand focus:bg-white"
+              />
+            </form>
+            <button
+              onClick={() => setShowReports(true)}
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm"
+            >
+              ⬇ Reports
+            </button>
+          </div>
+        </nav>
+      </div>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {showPasswordChange && (
@@ -279,27 +422,24 @@ export default function FinanceDashboard() {
           </div>
         )}
 
-        <h1 className="font-display text-2xl text-brand-dark mb-6">Fee Overview</h1>
-        <div className="mb-10">
-          <FinanceAnalytics refreshKey={analyticsKey} />
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <h2 className="font-display text-xl text-brand-dark">Fee Clearance List</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowReports(true)}
-              className="px-4 py-2 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm"
-            >
-              ⬇ Download Reports
-            </button>
-            <button
-              onClick={() => { setShowBillingDashboard(true); handleLoadBillingDashboard(1); }}
-              className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
-            >
-              Billing Dashboard
-            </button>
+        {tab === 'overview' && (
+          <div>
+            <h1 className="font-display text-2xl text-brand-dark mb-6">Fee Overview</h1>
+            <FinanceAnalytics refreshKey={analyticsKey} onOpenStudents={openStudents} />
           </div>
+        )}
+
+        {tab === 'fee-structure' && (
+          <div>
+            <h1 className="font-display text-2xl text-brand-dark mb-6">Fee Structure</h1>
+            <FeeStructure terms={terms} feeTypes={feeTypes} />
+          </div>
+        )}
+
+        {tab === 'students' && (
+        <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h1 className="font-display text-2xl text-brand-dark">Students &amp; Fees <span className="text-stone text-base font-normal">({total.toLocaleString()})</span></h1>
         </div>
 
         <FilterPanel active={activeFilterCount} onClear={() => { setFilters(EMPTY_FILTERS); setPage(1); }}>
@@ -415,6 +555,9 @@ export default function FinanceDashboard() {
           </div>
           <Pagination page={page} pageSize={pageSize} total={total} onPage={setPage} onPageSize={n => { setPageSize(n); setPage(1); }} />
         </div>
+
+        </div>
+        )}
 
         {feesStudent && (
           <StudentFeesModal
@@ -647,14 +790,10 @@ export default function FinanceDashboard() {
           </div>
         )}
 
-        {/* ── Billing Dashboard Modal ── */}
-        {showBillingDashboard && (
-          <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
-            <div className="bg-white rounded-3xl p-8 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-display text-2xl text-brand-dark">Billing Dashboard</h2>
-                <button onClick={() => setShowBillingDashboard(false)} className="text-stone hover:text-brand transition">✕</button>
-              </div>
+        {/* ── Billing ── */}
+        {tab === 'billing' && (
+          <div>
+            <h1 className="font-display text-2xl text-brand-dark mb-6">Billing</h1>
 
               <div className="space-y-6">
                 {/* Filters */}
@@ -728,26 +867,31 @@ export default function FinanceDashboard() {
                   </div>
                 </div>
 
-                {/* Summary Cards */}
-                {billingData && (
-                  <div className="grid sm:grid-cols-4 gap-4">
-                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                      <div className="text-sm text-stone mb-1">Total Students</div>
-                      <div className="font-display text-2xl font-bold text-brand-dark">{billingData.totalStudents || 0}</div>
+                {/* Summary: the totals follow the filters above */}
+                {billingData?.summary && (
+                  <>
+                    <div className="grid sm:grid-cols-4 gap-4">
+                      <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                        <div className="text-sm text-stone mb-1">Term bills</div>
+                        <div className="font-display text-2xl font-bold text-brand-dark">{(billingData.pagination?.total || 0).toLocaleString()}</div>
+                      </div>
+                      <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                        <div className="text-sm text-stone mb-1">Billed</div>
+                        <div className="font-display text-xl font-bold text-brand-dark">KES {Math.round(billingData.summary.totalFees || 0).toLocaleString()}</div>
+                      </div>
+                      <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                        <div className="text-sm text-stone mb-1">Paid</div>
+                        <div className="font-display text-xl font-bold text-green-600">KES {Math.round(billingData.summary.totalPaid || 0).toLocaleString()}</div>
+                      </div>
+                      <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                        <div className="text-sm text-stone mb-1">Owing</div>
+                        <div className="font-display text-xl font-bold text-red-500">KES {Math.round(billingData.summary.totalBalance || 0).toLocaleString()}</div>
+                      </div>
                     </div>
-                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                      <div className="text-sm text-stone mb-1">Total Fees</div>
-                      <div className="font-display text-xl font-bold text-brand-dark">KES {(billingData.totalFees || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                      <div className="text-sm text-stone mb-1">Total Paid</div>
-                      <div className="font-display text-xl font-bold text-green-600">KES {(billingData.totalPaid || 0).toLocaleString()}</div>
-                    </div>
-                    <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                      <div className="text-sm text-stone mb-1">Total Balance</div>
-                      <div className="font-display text-xl font-bold text-red-500">KES {(billingData.totalBalance || 0).toLocaleString()}</div>
-                    </div>
-                  </div>
+                    <p className="text-xs text-stone -mt-3">
+                      {billingTermId ? 'For one term, owing includes what was brought forward into it.' : 'Across terms, owing is billed minus paid, so debt brought forward is counted once.'}
+                    </p>
+                  </>
                 )}
 
                 {/* Student Balances Table */}
@@ -786,7 +930,6 @@ export default function FinanceDashboard() {
                                 {balance.student && (
                                   <button
                                     onClick={() => {
-                                      setShowBillingDashboard(false);
                                       openAllocateFunds(balance.student, balance.term_id);
                                     }}
                                     className="text-xs px-2 py-1 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white transition"
@@ -811,14 +954,7 @@ export default function FinanceDashboard() {
                   </div>
                 )}
 
-                <button
-                  onClick={() => setShowBillingDashboard(false)}
-                  className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition"
-                >
-                  Close
-                </button>
               </div>
-            </div>
           </div>
         )}
       </main>
