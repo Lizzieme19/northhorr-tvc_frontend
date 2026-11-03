@@ -12,7 +12,7 @@ const input = 'w-full px-3 py-2.5 rounded-xl border border-stone/25 bg-white tex
 const label = 'block text-xs font-semibold text-brand-dark mb-1';
 
 // Dialogs sit on the page itself, centred, whatever the scroll position
-function Shell({ title, subtitle, onClose, children, wide = false }: { title: string; subtitle?: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Shell({ title, subtitle, onClose, children, wide = false }: { title: string; subtitle?: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean }) {
   return (
     <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-4 py-6 overflow-y-auto" onClick={onClose}>
       <div className={`bg-white rounded-3xl p-6 sm:p-8 w-full ${wide ? 'max-w-4xl' : 'max-w-2xl'} shadow-2xl my-auto`} onClick={e => e.stopPropagation()}>
@@ -253,6 +253,8 @@ export function AssetDetailDialog({ assetId, onClose, onEdit, onChanged }: { ass
           {row('Source of funds', a.source_of_funds)}
           {row('PV number', a.pv_number)}
           {row('Delivered / installed', dateOf(a.delivery_date))}
+          {a.grn_no && row('Bought on', `${a.lpo_no || 'LPO'}${a.supplier_name ? `, ${a.supplier_name}` : ''}`)}
+          {a.grn_no && row('Received on', a.grn_no)}
           {a.imported_from && row('Imported from', a.imported_from)}
         </dl>
       </div>
@@ -497,6 +499,123 @@ export function LocationsDialog({ onClose, onChanged }: { onClose: () => void; o
         {locations.length === 0 && <div className="px-4 py-8 text-center text-sm text-stone">No locations yet.</div>}
       </div>
       <button onClick={onClose} className="mt-4 w-full py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">Close</button>
+    </Shell>
+  );
+}
+
+
+// ── Items received on a verified GRN, waiting to be tagged ────────────────────
+// Tag numbers are permanent, so a person confirms the quantity and adds serial numbers and locations first.
+export function ToTagDialog({ options, onClose, onChanged }: { options: any; onClose: () => void; onChanged: () => void }) {
+  const [lines, setLines] = useState<any[] | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [count, setCount] = useState(1);
+  const [serials, setSerials] = useState<string[]>([]);
+  const [shared, setShared] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+
+  const load = () => assetsApi.toTag().then(r => setLines(r.data.lines)).catch(() => { toast.error('Could not load the items waiting to be tagged'); onClose(); });
+  useEffect(() => { load(); }, []);
+
+  const start = (l: any) => {
+    setOpen(l.id); setCount(l.remaining); setSerials([]); setShared({ tag_prefix: l.tag_options?.[0]?.prefix || '' });
+  };
+  const setSerial = (i: number, v: string) => setSerials(s => { const n = [...s]; n[i] = v; return n; });
+
+  const submit = async (l: any) => {
+    setSaving(true);
+    try {
+      const body: any = {
+        units: Array.from({ length: count }, (_, i) => ({ serial_number: serials[i] || '' })),
+        shared: Object.fromEntries(Object.entries(shared).filter(([, v]) => v !== '' && v != null)),
+      };
+      const r = await assetsApi.registerReceived(l.id, body);
+      toast.success(r.data.message);
+      setOpen(null); onChanged(); await load();
+    } catch (e: any) { toast.error(e?.response?.data?.error || 'Could not tag the items'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <Shell title="Ready to tag" onClose={onClose} wide subtitle="Received on verified GRNs. Confirm how many to tag and add serial numbers; each item gets the next tag number, and its cost, date, supplier and LPO are filled in from the purchase.">
+      {!lines ? <p className="py-10 text-center text-sm text-stone">Loading…</p> : lines.length === 0 ? (
+        <p className="py-10 text-center text-sm text-stone">Nothing is waiting. Assets bought through procurement appear here once their GRN is verified.</p>
+      ) : (
+        <div className="space-y-3 mt-3">
+          {lines.map(l => {
+            const prefixes = l.tag_options || [];
+            const pick = prefixes.find((p: any) => p.prefix === shared.tag_prefix) || prefixes[0];
+            return (
+              <div key={l.id} className="rounded-xl border border-stone/15 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-brand-dark">{l.item_name} <span className="text-stone font-normal text-sm">· {l.remaining} to tag{l.tagged > 0 ? ` (${l.tagged} of ${l.accepted} done)` : ''}</span></div>
+                    <div className="text-xs text-stone mt-0.5">{l.grn_no} · {l.lpo_no}{l.supplier ? ` · ${l.supplier}` : ''} · {money(l.unit_price)} each · next tag <span className="font-mono">{prefixes[0]?.next_tag}</span></div>
+                  </div>
+                  {open !== l.id && <button onClick={() => start(l)} className="px-4 py-2 rounded-xl bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition">Tag these</button>}
+                </div>
+
+                {open === l.id && (
+                  <div className="mt-4 border-t border-stone/10 pt-4">
+                    <div className="grid sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className={label}>How many to tag now</label>
+                        <input type="number" min={1} max={l.remaining} value={count} onChange={e => setCount(Math.max(1, Math.min(l.remaining, parseInt(e.target.value) || 1)))} className={input} />
+                      </div>
+                      <div>
+                        <label className={label}>Where they are</label>
+                        <select value={shared.location_id || ''} onChange={e => setShared({ ...shared, location_id: e.target.value, original_location_id: e.target.value })} className={input}>
+                          <option value="">Not placed yet</option>
+                          {(options?.locations || []).map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={label}>Condition</label>
+                        <select value={shared.condition || ''} onChange={e => setShared({ ...shared, condition: e.target.value })} className={input}>
+                          <option value="">Not recorded</option>
+                          {(options?.conditions || []).map((c: string) => <option key={c} value={c}>{CONDITION_LABEL[c] || c}</option>)}
+                        </select>
+                      </div>
+                      <div><label className={label}>Make &amp; model</label><input value={shared.make_model || ''} onChange={e => setShared({ ...shared, make_model: e.target.value })} className={input} /></div>
+                      <div><label className={label}>Source of funds</label><input value={shared.source_of_funds || ''} onChange={e => setShared({ ...shared, source_of_funds: e.target.value })} placeholder="e.g. MOE" className={input} /></div>
+                      <div><label className={label}>Depreciation rate (% a year)</label><input type="number" min={0} value={shared.depreciation_rate || ''} onChange={e => setShared({ ...shared, depreciation_rate: e.target.value })} className={input} /></div>
+                      <div><label className={label}>Responsible officer</label><input value={shared.responsible_officer || ''} onChange={e => setShared({ ...shared, responsible_officer: e.target.value })} className={input} /></div>
+                      <div><label className={label}>PV number</label><input value={shared.pv_number || ''} onChange={e => setShared({ ...shared, pv_number: e.target.value })} className={input} /></div>
+                      {prefixes.length > 1 && (
+                        <div>
+                          <label className={label}>Tag series</label>
+                          <select value={shared.tag_prefix || ''} onChange={e => setShared({ ...shared, tag_prefix: e.target.value })} className={input}>
+                            {prefixes.map((p: any) => <option key={p.prefix} value={p.prefix}>{p.prefix} (next {p.next_tag.slice(p.prefix.length)})</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4">
+                      <label className={label}>Serial numbers <span className="font-normal text-stone">(optional, one per item)</span></label>
+                      <div className="grid sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                        {Array.from({ length: Math.min(count, 60) }, (_, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="font-mono text-[11px] text-brand w-40 shrink-0 truncate">{pick ? `${pick.prefix}${String(parseInt(pick.next_tag.slice(pick.prefix.length)) + i).padStart(3, '0')}` : `#${i + 1}`}</span>
+                            <input value={serials[i] || ''} onChange={e => setSerial(i, e.target.value)} placeholder="Serial number" className={`${input} !py-1.5`} />
+                          </div>
+                        ))}
+                      </div>
+                      {count > 60 && <p className="text-xs text-stone mt-1">Serial numbers can be added later in each asset for the rest.</p>}
+                    </div>
+
+                    <div className="flex gap-3 mt-5">
+                      <button disabled={saving} onClick={() => submit(l)} className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-60">{saving ? 'Tagging…' : `Tag ${count} ${count === 1 ? 'item' : 'items'}`}</button>
+                      <button onClick={() => setOpen(null)} className="px-5 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <button onClick={onClose} className="w-full mt-5 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">Close</button>
     </Shell>
   );
 }

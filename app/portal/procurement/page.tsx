@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi, invoicesApi, assetsApi } from '@/lib/services';
 import AssetRegister from '@/components/AssetRegister';
+import { ItemKindFields, GrnLinesDialog, KindBadge, UnitInput, withUnit } from '@/components/ProcurementItemParts';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
@@ -13,6 +14,10 @@ export default function ProcurementDashboard() {
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [tab, setTab] = useState<'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'assets' | 'inventory' | 'invoices'>('suppliers');
   const [assetCount, setAssetCount] = useState<number | null>(null);
+  const [toTagCount, setToTagCount] = useState(0);
+  const [units, setUnits] = useState<string[]>([]);
+  const [assetOptions, setAssetOptions] = useState<any>(null);
+  const [grnLines, setGrnLines] = useState<string | null>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [requisitions, setRequisitions] = useState<any[]>([]);
   const [rfqs, setRfqs] = useState<any[]>([]);
@@ -49,8 +54,10 @@ export default function ProcurementDashboard() {
     rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || [])).catch(() => setRfqs([]));
     lposApi.getAll().then(r => setLpos(r.data?.lpos || [])).catch(() => setLpos([]));
     grnsApi.getAll().then(r => setGrns(r.data?.grns || [])).catch(() => setGrns([]));
-    inventoryApi.getAll().then(r => setInventory(r.data?.items || [])).catch(() => setInventory([]));
-    assetsApi.summary().then(r => setAssetCount(r.data.total_active)).catch(() => {});
+    inventoryApi.getAll({ limit: 2000 }).then(r => setInventory(r.data?.items || [])).catch(() => setInventory([]));
+    assetsApi.summary().then(r => { setAssetCount(r.data.total_active); setToTagCount(r.data.to_tag || 0); }).catch(() => {});
+    inventoryApi.units().then(r => setUnits(r.data?.units || [])).catch(() => {});
+    assetsApi.options().then(r => setAssetOptions(r.data)).catch(() => {});
     departmentsApi.getAll().then(r => setDepartments(Array.isArray(r.data) ? r.data : [])).catch(() => setDepartments([]));
     invoicesApi.getAll().then(r => setInvoices(r.data?.invoices || [])).catch(() => setInvoices([]));
   }, []);
@@ -132,7 +139,14 @@ export default function ProcurementDashboard() {
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
-    setFormData(item);
+    // a requisition is edited through its (first) line
+    const line = tab === 'requisitions' && item.items?.[0] ? item.items[0] : null;
+    setFormData(line ? {
+      ...item, ...line, id: item.id,
+      inventory_item_id: line.item_type === 'CONSUMABLE' ? (line.inventory_item_id || 'NEW') : '',
+      unit_of_measure: line.unit_of_measure || '',
+      asset_class: line.asset_class || '',
+    } : item);
     setShowModal(true);
   };
 
@@ -149,7 +163,7 @@ export default function ProcurementDashboard() {
             if (tab === 'rfqs') rfqsApi.getAll().then(r => setRfqs(r.data?.rfqs || []));
             if (tab === 'lpos') lposApi.getAll().then(r => setLpos(r.data?.lpos || []));
             if (tab === 'grns') grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
-            if (tab === 'inventory') inventoryApi.getAll().then(r => setInventory(r.data?.items || []));
+            if (tab === 'inventory') inventoryApi.getAll({ limit: 2000 }).then(r => setInventory(r.data?.items || []));
             toast.success(`${itemName.charAt(0).toUpperCase() + itemName.slice(1)} deleted successfully`);
           } catch (err: any) {
             toast.error(err?.response?.data?.error || 'Failed to delete');
@@ -186,8 +200,14 @@ export default function ProcurementDashboard() {
             quantity: parseInt(formData.quantity),
             unit_price: parseFloat(formData.unit_price),
             specifications: formData.specifications,
+            item_type: formData.item_type,
+            unit_of_measure: formData.item_type === 'CONSUMABLE' ? (formData.unit_of_measure || null) : null,
+            inventory_item_id: formData.item_type === 'CONSUMABLE' && formData.inventory_item_id !== 'NEW' ? formData.inventory_item_id : null,
+            asset_class: formData.item_type === 'ASSET' ? formData.asset_class : null,
+            asset_category: formData.item_type === 'ASSET' ? formData.item_name : null,
           }],
         };
+        if (!formData.item_type) { toast.error('Say whether you are buying a consumable or an asset'); setSubmitting(false); return; }
         if (editingItem) {
           await requisitionsApi.update(editingItem.id, requisitionData);
         } else {
@@ -243,7 +263,8 @@ export default function ProcurementDashboard() {
         } else {
           await inventoryApi.create(formData);
         }
-        inventoryApi.getAll().then(r => setInventory(r.data?.items || []));
+        inventoryApi.getAll({ limit: 2000 }).then(r => setInventory(r.data?.items || []));
+        inventoryApi.units().then(r => setUnits(r.data?.units || [])).catch(() => {});
       }
       setShowModal(false);
       setFormData({});
@@ -360,9 +381,16 @@ export default function ProcurementDashboard() {
 
   const handleVerifyGRN = async (id: string, status: string) => {
     try {
-      await grnsApi.verify(id, { status });
+      const r = await grnsApi.verify(id, { status });
       grnsApi.getAll().then(r => setGrns(r.data?.grns || []));
-      toast.success(`GRN ${status.toLowerCase()} successfully`);
+      inventoryApi.getAll({ limit: 2000 }).then(r => setInventory(r.data?.items || [])).catch(() => {});
+      assetsApi.summary().then(r => { setAssetCount(r.data.total_active); setToTagCount(r.data.to_tag || 0); }).catch(() => {});
+      const got = r.data?.received;
+      const parts = got ? [
+        got.stock_lines ? `${got.stock_lines} stock line${got.stock_lines > 1 ? 's' : ''} added to Inventory` : '',
+        got.assets_to_tag ? `${got.assets_to_tag} asset${got.assets_to_tag > 1 ? 's' : ''} ready to tag in Assets` : '',
+      ].filter(Boolean) : [];
+      toast.success(status === 'VERIFIED' ? `GRN verified${parts.length ? `: ${parts.join(', ')}` : ''}` : 'GRN rejected');
     } catch (err: any) {
       toast.error(err?.response?.data?.error || `Failed to ${status.toLowerCase()} GRN`);
     }
@@ -392,7 +420,7 @@ export default function ProcurementDashboard() {
           { key: 'rfqs', label: `📋 RFQs (${rfqs.length})` },
           { key: 'lpos', label: `📄 LPOs (${lpos.length})` },
           { key: 'grns', label: `✅ GRNs (${grns.length})` },
-          { key: 'assets', label: `🏷️ Assets${assetCount !== null ? ` (${assetCount})` : ''}` },
+          { key: 'assets', label: `🏷️ Assets${assetCount !== null ? ` (${assetCount})` : ''}${toTagCount > 0 ? ` · ${toTagCount} to tag` : ''}` },
           { key: 'inventory', label: `📦 Inventory (${inventory.length})` },
           { key: 'invoices', label: `🧾 Invoices (${invoices.length})` },
         ].map(t => (
@@ -489,8 +517,8 @@ export default function ProcurementDashboard() {
                               <tbody className="divide-y divide-stone/5">
                                 {r.items.map((item: any) => (
                                   <tr key={item.id}>
-                                    <td className="px-3 py-2 font-medium text-brand-dark">{item.item_name}{item.description && <span className="text-stone font-normal"> — {item.description}</span>}</td>
-                                    <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                    <td className="px-3 py-2 font-medium text-brand-dark">{item.item_name} <KindBadge type={item.item_type} />{item.description && <span className="text-stone font-normal"> — {item.description}</span>}</td>
+                                    <td className="px-3 py-2 text-right">{withUnit(item.quantity, item.unit_of_measure)}</td>
                                     <td className="px-3 py-2 text-right">KES {item.unit_price?.toLocaleString() || '—'}</td>
                                     <td className="px-3 py-2 text-right font-medium">KES {item.total_price?.toLocaleString() || '—'}</td>
                                   </tr>
@@ -642,7 +670,8 @@ export default function ProcurementDashboard() {
                     <div>
                       <div className="font-semibold text-brand-dark">{g.grn_no}</div>
                       <div className="text-sm text-stone">{g.lpo?.lpo_no} • {g.lpo?.supplier?.name}</div>
-                      <div className="text-sm text-stone">{g.items?.length || 0} items</div>
+                      <div className="text-sm text-stone">{g.items?.length || 0} line{g.items?.length === 1 ? '' : 's'}: {(g.items || []).map((i: any) => `${withUnit(i.quantity_accepted, i.unit_of_measure)} ${i.item_name}`).join(', ')}</div>
+                      {g.status === 'PENDING' && (g.items || []).some((i: any) => !i.item_type) && <div className="text-xs text-amber-700 mt-0.5">Some lines still need to be marked as consumable or asset before this can be verified.</div>}
                       <div className="text-xs mt-1">
                         <span className={`px-2 py-0.5 rounded-full ${g.status === 'VERIFIED' ? 'bg-green-100 text-green-800' : g.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
                           {g.status}
@@ -650,6 +679,7 @@ export default function ProcurementDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <button onClick={() => setGrnLines(g.id)} className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm hover:bg-blue-200 transition">{g.status === 'PENDING' ? 'Review lines' : 'Lines'}</button>
                       {g.status === 'PENDING' && (
                         <button onClick={() => handleVerifyGRN(g.id, 'VERIFIED')} className="px-3 py-1 rounded-lg bg-green-100 text-green-800 text-sm hover:bg-green-200 transition">Verify</button>
                       )}
@@ -676,7 +706,7 @@ export default function ProcurementDashboard() {
                   <div key={i.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-brand-dark">{i.name || i.item_name}</div>
-                      <div className="text-sm text-stone">Stock: {i.current_stock || i.quantity} • Location: {i.location}</div>
+                      <div className="text-sm text-stone">Stock: {withUnit(i.current_stock ?? i.quantity, i.unit_of_measure)}{i.location ? ` • Location: ${i.location}` : ''}{!i.unit_of_measure && <span className="ml-2 text-xs text-amber-700">no unit of measure</span>}</div>
                       <div className="text-xs mt-1">
                         <span className={`px-2 py-0.5 rounded-full ${(i.current_stock || i.quantity) > i.reorder_level ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                           {(i.current_stock || i.quantity) > i.reorder_level ? 'In Stock' : 'Low Stock'}
@@ -740,13 +770,7 @@ export default function ProcurementDashboard() {
                       {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name (from Inventory) *</label>
-                    <select name="item_name" required value={formData.item_name || ''} onChange={(e) => setFormData({...formData, item_name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                      <option value="">Select Inventory Item</option>
-                      {inventory.map(i => <option key={i.id} value={i.name || i.item_name}>{i.name || i.item_name}</option>)}
-                    </select>
-                  </div>
+                  <ItemKindFields form={formData} set={(patch) => setFormData((f: any) => ({ ...f, ...patch }))} inventory={inventory} units={units} assetOptions={assetOptions} />
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
                     <input name="description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
@@ -883,25 +907,45 @@ export default function ProcurementDashboard() {
                 <>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Code *</label>
-                      <input name="item_code" required value={formData.item_code || ''} onChange={(e) => setFormData({...formData, item_code: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
-                    </div>
-                    <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Name *</label>
                       <input name="name" required value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
                     </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Item Code {!editingItem && <span className="font-normal text-stone">(optional, made for you)</span>}</label>
+                      <input name="item_code" disabled={!!editingItem} value={formData.item_code || ''} onChange={(e) => setFormData({...formData, item_code: e.target.value})} placeholder="STK-0001" className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Current Stock</label>
-                    <input name="current_stock" type="number" value={formData.current_stock || ''} onChange={(e) => setFormData({...formData, current_stock: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Unit of measure <span className="font-normal text-stone">(optional)</span></label>
+                      <UnitInput id="inv-units" value={formData.unit_of_measure || ''} onChange={(v) => setFormData({...formData, unit_of_measure: v})} units={units} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Category</label>
+                      <input name="category" value={formData.category || ''} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Location *</label>
-                    <input name="location" required value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {!editingItem && (
+                      <div>
+                        <label className="block text-sm font-semibold text-brand-dark mb-1.5">Opening stock {formData.unit_of_measure ? `(${formData.unit_of_measure})` : ''}</label>
+                        <input name="current_stock" type="number" min={0} value={formData.current_stock || ''} onChange={(e) => setFormData({...formData, current_stock: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Unit cost (KES)</label>
+                      <input name="unit_cost" type="number" min={0} value={formData.unit_cost ?? ''} onChange={(e) => setFormData({...formData, unit_cost: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Reorder Level</label>
-                    <input name="reorder_level" type="number" value={formData.reorder_level || ''} onChange={(e) => setFormData({...formData, reorder_level: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Location</label>
+                      <input name="location" value={formData.location || ''} onChange={(e) => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Reorder level {formData.unit_of_measure ? `(${formData.unit_of_measure})` : ''}</label>
+                      <input name="reorder_level" type="number" min={0} value={formData.reorder_level || ''} onChange={(e) => setFormData({...formData, reorder_level: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    </div>
                   </div>
                 </>
               )}
@@ -1168,6 +1212,10 @@ export default function ProcurementDashboard() {
             </form>
           </div>
         </div>
+      )}
+      {grnLines && (
+        <GrnLinesDialog grnId={grnLines} units={units} assetOptions={assetOptions} onClose={() => setGrnLines(null)}
+          onChanged={() => grnsApi.getAll().then(r => setGrns(r.data?.grns || [])).catch(() => {})} />
       )}
     </div>
   );

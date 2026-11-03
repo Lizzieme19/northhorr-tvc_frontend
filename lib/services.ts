@@ -168,6 +168,7 @@ export const grnsApi = {
   create: (data: any) => api.post('/grns', data),
   update: (id: string, data: any) => api.patch(`/grns/${id}`, data),
   verify: (id: string, data: any) => api.patch(`/grns/${id}/verify`, data),
+  updateItem: (id: string, itemId: string, data: any) => api.patch(`/grns/${id}/items/${itemId}`, data),
   getPdfUrl: (id: string) => `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/grns/${id}/pdf`,
 };
 
@@ -177,6 +178,7 @@ export const inventoryApi = {
   create: (data: any) => api.post('/inventory', data),
   update: (id: string, data: any) => api.patch(`/inventory/${id}`, data),
   adjustStock: (id: string, data: any) => api.post(`/inventory/${id}/adjust`, data),
+  units: () => api.get('/inventory/units'),
   delete: (id: string) => api.delete(`/inventory/${id}`),
 };
 
@@ -194,6 +196,8 @@ export const assetsApi = {
   dispose: (id: string, data: any) => api.patch(`/assets/${id}/dispose`, data),
   delete: (id: string) => api.delete(`/assets/${id}`),
   // locations
+  toTag: () => api.get('/assets/to-tag'),
+  registerReceived: (itemId: string, data: any) => api.post(`/assets/to-tag/${itemId}`, data),
   locations: () => api.get('/assets/locations'),
   createLocation: (name: string) => api.post('/assets/locations', { name }),
   renameLocation: (id: string, name: string) => api.patch(`/assets/locations/${id}`, { name }),

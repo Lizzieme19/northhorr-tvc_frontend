@@ -4,7 +4,7 @@ import { assetsApi } from '@/lib/services';
 import { useDebounced } from '@/lib/hooks';
 import Pagination from '@/components/Pagination';
 import { FilterPanel, FilterSearch, FilterSelect } from '@/components/ListFilters';
-import { AssetFormDialog, AssetDetailDialog, AssetImportDialog, LocationsDialog, CONDITION_LABEL, money } from '@/components/AssetDialogs';
+import { AssetFormDialog, AssetDetailDialog, AssetImportDialog, LocationsDialog, ToTagDialog, CONDITION_LABEL, money } from '@/components/AssetDialogs';
 import { toast } from 'sonner';
 
 const EMPTY = { search: '', category: '', location_id: '', condition: '', status: 'ACTIVE', needs_valuation: false, attention: false };
@@ -42,7 +42,7 @@ export default function AssetRegister() {
   const [pageSize, setPageSize] = useState(25);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [dialog, setDialog] = useState<null | { type: 'form'; asset?: any } | { type: 'detail'; id: string } | { type: 'import' } | { type: 'locations' }>(null);
+  const [dialog, setDialog] = useState<null | { type: 'form'; asset?: any } | { type: 'detail'; id: string } | { type: 'import' } | { type: 'locations' } | { type: 'totag' }>(null);
 
   const loadMeta = () => {
     assetsApi.summary().then(r => setSummary(r.data)).catch(() => { });
@@ -84,6 +84,13 @@ export default function AssetRegister() {
           <button onClick={() => setDialog({ type: 'form' })} className="px-4 py-2 rounded-xl bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition">+ Register asset</button>
         </div>
       </div>
+
+      {summary?.to_tag > 0 && (
+        <button onClick={() => setDialog({ type: 'totag' })} className="w-full text-left mb-5 flex items-center justify-between gap-3 rounded-2xl border border-gold/50 bg-gold/10 px-5 py-4 hover:bg-gold/15 transition">
+          <span><span className="font-semibold text-brand-dark">{summary.to_tag} item{summary.to_tag === 1 ? '' : 's'} received and ready to tag</span><span className="block text-xs text-stone">Bought through procurement and verified on a GRN. Give them tag numbers, serial numbers and a location.</span></span>
+          <span className="text-sm font-semibold text-brand whitespace-nowrap">Tag them →</span>
+        </button>
+      )}
 
       {empty ? (
         <div className="bg-white rounded-2xl border border-stone/10 shadow-sm p-10 text-center">
@@ -195,6 +202,7 @@ export default function AssetRegister() {
       {dialog?.type === 'form' && <AssetFormDialog asset={dialog.asset} options={options} defaultClass={assetClass || undefined} onClose={() => setDialog(null)} onSaved={refresh} />}
       {dialog?.type === 'detail' && <AssetDetailDialog assetId={dialog.id} onClose={() => setDialog(null)} onEdit={a => setDialog({ type: 'form', asset: a })} onChanged={refresh} />}
       {dialog?.type === 'import' && <AssetImportDialog onClose={() => setDialog(null)} onDone={refresh} />}
+      {dialog?.type === 'totag' && <ToTagDialog options={options} onClose={() => setDialog(null)} onChanged={refresh} />}
       {dialog?.type === 'locations' && <LocationsDialog onClose={() => setDialog(null)} onChanged={refresh} />}
     </div>
   );
