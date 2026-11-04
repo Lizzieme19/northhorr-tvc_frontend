@@ -3166,7 +3166,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
             {assignedTerms.length > 0 && (
               <div className="mb-5">
                 <div className="text-xs font-semibold text-brand-dark uppercase tracking-wide mb-2">Already assigned</div>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                   {assignedTerms.map((a: any) => (
                     <div key={a.term.id} className="border border-stone/15 rounded-xl p-3">
                       <div className="flex items-center justify-between gap-2">

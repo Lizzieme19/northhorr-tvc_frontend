@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { SiteChrome } from "@/components/layout/SiteChrome";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "sonner";
 
@@ -47,9 +46,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-cream text-foreground">
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <SiteChrome>{children}</SiteChrome>
         </AuthProvider>
 
         <Toaster position="top-center" toastOptions={{ duration: 5000 }} />

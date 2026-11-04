@@ -77,3 +77,14 @@ h1, h2, h3, h4, h5, h6 {
   background-image: radial-gradient(rgba(31,111,74,0.12) 1px, transparent 1px);
   background-size: 20px 20px;
 }
+
+/* Pop-ups: when one is taller than the screen it scrolls, and its top is never cut off.
+   (Centering a tall box in a flex container hides its top edge, so it is centred with auto margins instead.) */
+.fixed.inset-0.flex.items-center.justify-center {
+  align-items: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.fixed.inset-0.flex.items-center.justify-center > * {
+  margin-block: auto;
+}
