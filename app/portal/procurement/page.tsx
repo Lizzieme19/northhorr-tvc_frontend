@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { suppliersApi, requisitionsApi, rfqsApi, lposApi, grnsApi, inventoryApi, departmentsApi, invoicesApi, assetsApi } from '@/lib/services';
 import AssetRegister from '@/components/AssetRegister';
-import { ItemKindFields, GrnLinesDialog, KindBadge, UnitInput, withUnit } from '@/components/ProcurementItemParts';
+import { GrnLinesDialog, KindBadge, UnitInput, withUnit, RequesterField, RequisitionLines, requesterOf, requesterPayload, blankLine } from '@/components/ProcurementItemParts';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
 
@@ -16,6 +16,7 @@ export default function ProcurementDashboard() {
   const [assetCount, setAssetCount] = useState<number | null>(null);
   const [toTagCount, setToTagCount] = useState(0);
   const [units, setUnits] = useState<string[]>([]);
+  const [unitNames, setUnitNames] = useState<string[]>([]);
   const [assetOptions, setAssetOptions] = useState<any>(null);
   const [grnLines, setGrnLines] = useState<string | null>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -57,6 +58,7 @@ export default function ProcurementDashboard() {
     inventoryApi.getAll({ limit: 2000 }).then(r => setInventory(r.data?.items || [])).catch(() => setInventory([]));
     assetsApi.summary().then(r => { setAssetCount(r.data.total_active); setToTagCount(r.data.to_tag || 0); }).catch(() => {});
     inventoryApi.units().then(r => setUnits(r.data?.units || [])).catch(() => {});
+    requisitionsApi.units().then(r => setUnitNames(r.data?.units || [])).catch(() => {});
     assetsApi.options().then(r => setAssetOptions(r.data)).catch(() => {});
     departmentsApi.getAll().then(r => setDepartments(Array.isArray(r.data) ? r.data : [])).catch(() => setDepartments([]));
     invoicesApi.getAll().then(r => setInvoices(r.data?.invoices || [])).catch(() => setInvoices([]));
@@ -133,20 +135,34 @@ export default function ProcurementDashboard() {
 
   const handleCreate = () => {
     setEditingItem(null);
-    setFormData({});
+    setFormData(tab === 'requisitions' ? { priority: 'MEDIUM', lines: [blankLine()] } : {});
     setShowModal(true);
   };
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
-    // a requisition is edited through its (first) line
-    const line = tab === 'requisitions' && item.items?.[0] ? item.items[0] : null;
-    setFormData(line ? {
-      ...item, ...line, id: item.id,
-      inventory_item_id: line.item_type === 'CONSUMABLE' ? (line.inventory_item_id || 'NEW') : '',
-      unit_of_measure: line.unit_of_measure || '',
-      asset_class: line.asset_class || '',
-    } : item);
+    if (tab === 'requisitions') {
+      // every line of the requisition, so none is lost when it is saved
+      const assetTypes: any[] = assetOptions?.categories || [];
+      const lines = (item.items || []).map((l: any) => ({
+        key: l.id || Math.random().toString(36).slice(2),
+        item_type: l.item_type || '',
+        inventory_item_id: l.item_type === 'CONSUMABLE' ? (l.inventory_item_id || 'NEW') : '',
+        item_name: l.item_name || '',
+        unit_of_measure: l.unit_of_measure || '',
+        asset_class: l.asset_class || '',
+        asset_new: l.item_type === 'ASSET' && !assetTypes.some(c => c.asset_class === l.asset_class && c.name === (l.asset_category || l.item_name)),
+        description: l.description || '',
+        quantity: String(l.quantity ?? ''),
+        unit_price: l.unit_price != null ? String(l.unit_price) : '',
+        specifications: l.specifications || '',
+      }));
+      setFormData({ id: item.id, priority: item.priority || 'MEDIUM', justification: item.justification || '', requester: requesterOf(item, unitNames), new_unit: item.unit_name || '', lines: lines.length ? lines : [blankLine()] });
+    } else if (tab === 'lpos') {
+      setFormData({ ...item, requester: requesterOf(item, unitNames), new_unit: item.unit_name || '' });
+    } else {
+      setFormData(item);
+    }
     setShowModal(true);
   };
 
@@ -189,31 +205,35 @@ export default function ProcurementDashboard() {
         }
         suppliersApi.getAll().then(r => setSuppliers(r.data?.suppliers || []));
       } else if (tab === 'requisitions') {
-        // Transform form data to match backend API expectations
+        const lines: any[] = formData.lines || [];
+        if (lines.length === 0) { toast.error('Add at least one item'); setSubmitting(false); return; }
+        if (lines.some(l => !l.item_type)) { toast.error('Say whether each item is a consumable or an asset'); setSubmitting(false); return; }
+        const who = requesterPayload(formData);
+        if (!who.department_id && !who.unit_name) { toast.error('Choose a department, or type the unit that needs the items'); setSubmitting(false); return; }
         const requisitionData = {
-          department_id: formData.department_id,
+          ...who,
           priority: formData.priority || 'MEDIUM',
           justification: formData.justification,
-          items: [{
-            item_name: formData.item_name,
-            description: formData.description,
-            quantity: parseInt(formData.quantity),
-            unit_price: parseFloat(formData.unit_price),
-            specifications: formData.specifications,
-            item_type: formData.item_type,
-            unit_of_measure: formData.item_type === 'CONSUMABLE' ? (formData.unit_of_measure || null) : null,
-            inventory_item_id: formData.item_type === 'CONSUMABLE' && formData.inventory_item_id !== 'NEW' ? formData.inventory_item_id : null,
-            asset_class: formData.item_type === 'ASSET' ? formData.asset_class : null,
-            asset_category: formData.item_type === 'ASSET' ? formData.item_name : null,
-          }],
+          items: lines.map(l => ({
+            item_name: l.item_name,
+            description: l.description,
+            quantity: parseInt(l.quantity),
+            unit_price: parseFloat(l.unit_price),
+            specifications: l.specifications,
+            item_type: l.item_type,
+            unit_of_measure: l.item_type === 'CONSUMABLE' ? (l.unit_of_measure || null) : null,
+            inventory_item_id: l.item_type === 'CONSUMABLE' && l.inventory_item_id !== 'NEW' ? l.inventory_item_id : null,
+            asset_class: l.item_type === 'ASSET' ? l.asset_class : null,
+            asset_category: l.item_type === 'ASSET' ? l.item_name : null,
+          })),
         };
-        if (!formData.item_type) { toast.error('Say whether you are buying a consumable or an asset'); setSubmitting(false); return; }
         if (editingItem) {
           await requisitionsApi.update(editingItem.id, requisitionData);
         } else {
           await requisitionsApi.create(requisitionData);
         }
         requisitionsApi.getAll().then(r => setRequisitions(r.data?.requisitions || []));
+        requisitionsApi.units().then(r => setUnitNames(r.data?.units || [])).catch(() => {});
       } else if (tab === 'rfqs') {
         const rfqData = {
           requisition_id: formData.requisition_id,
@@ -233,7 +253,7 @@ export default function ProcurementDashboard() {
         const lpoData = {
           rfq_id: formData.rfq_id,
           supplier_id: formData.supplier_id,
-          department_id: formData.department_id,
+          ...requesterPayload(formData),
           delivery_date: formData.delivery_date,
           payment_terms: formData.payment_terms,
           items: [], // Items will be populated from RFQ
@@ -490,7 +510,7 @@ export default function ProcurementDashboard() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-brand-dark">{r.requisition_no}</div>
-                        <div className="text-sm text-stone mt-0.5">{r.department?.name} &bull; {r.items?.length || 0} item{r.items?.length !== 1 ? 's' : ''} &bull; KES {r.total_amount?.toLocaleString()}</div>
+                        <div className="text-sm text-stone mt-0.5">{r.department?.name || r.unit_name} &bull; {r.items?.length || 0} item{r.items?.length !== 1 ? 's' : ''} &bull; KES {r.total_amount?.toLocaleString()}</div>
                         {r.requester?.email && <div className="text-xs text-stone">Requested by: {r.requester.email}</div>}
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.status === 'APPROVED' ? 'bg-green-100 text-green-800' : r.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' : r.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : r.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-stone/20 text-stone'}`}>
@@ -577,7 +597,7 @@ export default function ProcurementDashboard() {
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <div className="font-semibold text-brand-dark">{r.rfq_no || r.title}</div>
-                        <div className="text-sm text-stone">{r.requisition?.department?.name} • {r.requisition?.items?.length || 0} items</div>
+                        <div className="text-sm text-stone">{r.requisition?.department?.name || r.requisition?.unit_name} • {r.requisition?.items?.length || 0} items</div>
                         <div className="text-xs text-stone">Closing: {r.closing_date ? new Date(r.closing_date).toLocaleDateString() : 'N/A'}</div>
                       </div>
                       <div className="flex gap-2">
@@ -634,7 +654,7 @@ export default function ProcurementDashboard() {
                   <div key={l.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-brand-dark">{l.lpo_no}</div>
-                      <div className="text-sm text-stone">{l.supplier?.name} • {l.department?.name}</div>
+                      <div className="text-sm text-stone">{l.supplier?.name} • {l.department?.name || l.unit_name}</div>
                       <div className="text-sm text-stone">KES {l.total_amount?.toLocaleString()}</div>
                       <div className="text-xs mt-1">
                         <span className={`px-2 py-0.5 rounded-full ${l.status === 'ISSUED' ? 'bg-green-100 text-green-800' : l.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -733,7 +753,7 @@ export default function ProcurementDashboard() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-10">
-          <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+          <div className={`bg-white rounded-3xl p-8 w-full ${tab === 'requisitions' ? 'max-w-3xl' : 'max-w-2xl'} shadow-2xl max-h-[90vh] flex flex-col`}>
             <h2 className="font-display text-xl text-brand-dark mb-4">{editingItem ? 'Edit' : 'Create'} {tab === 'inventory' ? 'Inventory Item' : tab === 'rfqs' ? 'RFQ' : tab === 'lpos' ? 'LPO' : tab === 'grns' ? 'GRN' : tab.slice(0, -1)}</h2>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4">
               {tab === 'suppliers' && (
@@ -763,32 +783,8 @@ export default function ProcurementDashboard() {
               )}
               {tab === 'requisitions' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department *</label>
-                    <select name="department_id" required value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                      <option value="">Select Department</option>
-                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
-                  <ItemKindFields form={formData} set={(patch) => setFormData((f: any) => ({ ...f, ...patch }))} inventory={inventory} units={units} assetOptions={assetOptions} />
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Description</label>
-                    <input name="description" value={formData.description || ''} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Quantity *</label>
-                      <input name="quantity" type="number" required value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Unit Price (KES) *</label>
-                      <input name="unit_price" type="number" required value={formData.unit_price || ''} onChange={(e) => setFormData({...formData, unit_price: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Specifications</label>
-                    <textarea name="specifications" value={formData.specifications || ''} onChange={(e) => setFormData({...formData, specifications: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" rows={2} />
-                  </div>
+                  <RequesterField form={formData} set={(patch) => setFormData((f: any) => ({ ...f, ...patch }))} departments={departments} unitNames={unitNames} />
+                  <RequisitionLines lines={formData.lines || []} setLines={(l) => setFormData((f: any) => ({ ...f, lines: l }))} inventory={inventory} units={units} assetOptions={assetOptions} />
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Priority</label>
                     <select name="priority" value={formData.priority || 'MEDIUM'} onChange={(e) => setFormData({...formData, priority: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
@@ -810,7 +806,7 @@ export default function ProcurementDashboard() {
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Requisition *</label>
                     <select name="requisition_id" required value={formData.requisition_id || ''} onChange={(e) => setFormData({...formData, requisition_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
                       <option value="">Select Approved Requisition</option>
-                      {requisitions.filter(r => r.status === 'APPROVED').map(r => <option key={r.id} value={r.id}>{r.requisition_no} - {r.department?.name}</option>)}
+                      {requisitions.filter(r => r.status === 'APPROVED').map(r => <option key={r.id} value={r.id}>{r.requisition_no} - {r.department?.name || r.unit_name}</option>)}
                     </select>
                   </div>
                   <div>
@@ -857,7 +853,7 @@ export default function ProcurementDashboard() {
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">RFQ *</label>
                     <select name="rfq_id" required value={formData.rfq_id || ''} onChange={(e) => setFormData({...formData, rfq_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
                       <option value="">Select Awarded RFQ</option>
-                      {rfqs.filter(r => r.status === 'AWARDED').map(r => <option key={r.id} value={r.id}>{r.rfq_no || r.title} - {r.requisition?.department?.name}</option>)}
+                      {rfqs.filter(r => r.status === 'AWARDED').map(r => <option key={r.id} value={r.id}>{r.rfq_no || r.title} - {r.requisition?.department?.name || r.requisition?.unit_name}</option>)}
                     </select>
                   </div>
                   <div>
@@ -867,13 +863,7 @@ export default function ProcurementDashboard() {
                       {suppliers.filter(s => s.is_approved).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-brand-dark mb-1.5">Department *</label>
-                    <select name="department_id" required value={formData.department_id || ''} onChange={(e) => setFormData({...formData, department_id: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm">
-                      <option value="">Select Department</option>
-                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
+                  <RequesterField form={formData} set={(patch) => setFormData((f: any) => ({ ...f, ...patch }))} departments={departments} unitNames={unitNames} />
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Delivery Date</label>
                     <input name="delivery_date" type="date" value={formData.delivery_date || ''} onChange={(e) => setFormData({...formData, delivery_date: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />

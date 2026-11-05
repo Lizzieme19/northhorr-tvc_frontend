@@ -34,11 +34,18 @@ export function ItemKindFields({ form, set, inventory, units, assetOptions }: {
 }) {
   const type: string | undefined = form.item_type;
   const classes: any[] = assetOptions?.classes || [];
-  const known: any[] = (assetOptions?.categories || []).filter((c: any) => !form.asset_class || c.asset_class === form.asset_class);
+  const cats: any[] = assetOptions?.categories || [];
+  const assetKey = form.asset_new ? 'NEW' : (form.asset_class && form.item_name && cats.some((c: any) => c.asset_class === form.asset_class && c.name === form.item_name) ? `${form.asset_class}|${form.item_name}` : '');
+  const pickAsset = (v: string) => {
+    if (v === 'NEW') { set({ asset_new: true, asset_class: '', item_name: '' }); return; }
+    if (!v) { set({ asset_new: false, asset_class: '', item_name: '' }); return; }
+    const [cls, ...rest] = v.split('|');
+    set({ asset_new: false, asset_class: cls, item_name: rest.join('|') });
+  };
   const picked = form.inventory_item_id && form.inventory_item_id !== 'NEW' ? inventory.find(i => i.id === form.inventory_item_id) : null;
 
   const choose = (t: 'CONSUMABLE' | 'ASSET') =>
-    set({ item_type: t, inventory_item_id: '', item_name: '', unit_of_measure: '', asset_class: '', asset_category: '' });
+    set({ item_type: t, inventory_item_id: '', item_name: '', unit_of_measure: '', asset_class: '', asset_category: '', asset_new: false });
 
   const pickStock = (id: string) => {
     if (id === 'NEW') { set({ inventory_item_id: 'NEW', item_name: '', unit_of_measure: '' }); return; }
@@ -92,21 +99,39 @@ export function ItemKindFields({ form, set, inventory, units, assetOptions }: {
       )}
 
       {type === 'ASSET' && (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <>
           <div>
-            <label className={label}>Type of asset *</label>
-            <select required value={form.asset_class || ''} onChange={e => set({ asset_class: e.target.value })} className={input}>
-              <option value="">Select…</option>
-              {classes.map((c: any) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            <label className={label}>Asset item *</label>
+            <select required value={assetKey} onChange={e => pickAsset(e.target.value)} className={input}>
+              <option value="">Select an asset item</option>
+              {classes.map((c: any) => {
+                const list = cats.filter((x: any) => x.asset_class === c.key);
+                return list.length > 0 ? (
+                  <optgroup key={c.key} label={c.label}>
+                    {list.map((x: any) => <option key={`${c.key}|${x.name}`} value={`${c.key}|${x.name}`}>{x.name}{x.count > 0 ? ` (${x.count} in the register)` : ''}</option>)}
+                  </optgroup>
+                ) : null;
+              })}
+              <option value="NEW">＋ A new type of asset</option>
             </select>
+            <p className="text-xs text-stone mt-1">Choosing an existing item keeps its tag numbers in the same series.</p>
           </div>
-          <div>
-            <label className={label}>Item *</label>
-            <input required list="asset-types" value={form.item_name || ''} onChange={e => set({ item_name: e.target.value })} className={input} placeholder="e.g. Computer monitor" />
-            <datalist id="asset-types">{known.map((c: any) => <option key={`${c.asset_class}-${c.name}`} value={c.name} />)}</datalist>
-            <p className="text-xs text-stone mt-1">Pick an existing item type so tag numbers continue the same series.</p>
-          </div>
-        </div>
+          {form.asset_new && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className={label}>Type of asset *</label>
+                <select required value={form.asset_class || ''} onChange={e => set({ asset_class: e.target.value })} className={input}>
+                  <option value="">Select…</option>
+                  {classes.map((c: any) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={label}>New item name *</label>
+                <input required value={form.item_name || ''} onChange={e => set({ item_name: e.target.value })} className={input} placeholder="e.g. Document shredder" />
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -200,5 +225,84 @@ export function GrnLinesDialog({ grnId, units, assetOptions, onClose, onChanged 
       </div>
       <button onClick={onClose} className="w-full mt-5 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">Close</button>
     </Shell>
+  );
+}
+
+
+// ── Who is asking: an academic department, or a non-academic unit (Administration, Store...) ──
+// value: '' | 'd:<department id>' | 'u:<unit name>' | 'NEW' (then the unit is typed)
+export const requesterOf = (r: { department_id?: string | null; unit_name?: string | null; department?: any }, unitNames: string[]) =>
+  r.department_id ? `d:${r.department_id}` : r.unit_name ? (unitNames.some(u => u.toLowerCase() === r.unit_name!.toLowerCase()) ? `u:${r.unit_name}` : 'NEW') : '';
+
+export function RequesterField({ form, set, departments, unitNames }: { form: any; set: (patch: any) => void; departments: any[]; unitNames: string[] }) {
+  return (
+    <div>
+      <label className={label}>Department or unit *</label>
+      <select required value={form.requester || ''} onChange={e => set({ requester: e.target.value, ...(e.target.value === 'NEW' ? {} : { new_unit: '' }) })} className={input}>
+        <option value="">Select who needs the items</option>
+        <optgroup label="Academic departments">
+          {departments.map(d => <option key={d.id} value={`d:${d.id}`}>{d.name}</option>)}
+        </optgroup>
+        <optgroup label="Other units (not academic)">
+          {unitNames.map(u => <option key={u} value={`u:${u}`}>{u}</option>)}
+          <option value="NEW">＋ Another unit, type its name…</option>
+        </optgroup>
+      </select>
+      {form.requester === 'NEW' && (
+        <input required autoFocus value={form.new_unit || ''} onChange={e => set({ new_unit: e.target.value })} className={`${input} mt-2`} placeholder="e.g. Administration, Store, Library" />
+      )}
+    </div>
+  );
+}
+
+// What to send for the requester field
+export const requesterPayload = (form: any) => {
+  const r: string = form.requester || '';
+  if (r.startsWith('d:')) return { department_id: r.slice(2), unit_name: null };
+  if (r.startsWith('u:')) return { department_id: null, unit_name: r.slice(2) };
+  if (r === 'NEW') return { department_id: null, unit_name: String(form.new_unit || '').trim() };
+  return { department_id: null, unit_name: null };
+};
+
+// ── The items on a requisition: any number, each a consumable or an asset ──
+export const blankLine = () => ({ key: Math.random().toString(36).slice(2), item_type: '', inventory_item_id: '', item_name: '', unit_of_measure: '', asset_class: '', asset_new: false, description: '', quantity: '', unit_price: '', specifications: '' });
+
+export function RequisitionLines({ lines, setLines, inventory, units, assetOptions }: { lines: any[]; setLines: (l: any[]) => void; inventory: any[]; units: string[]; assetOptions: any }) {
+  const update = (i: number, patch: any) => setLines(lines.map((l, x) => (x === i ? { ...l, ...patch } : l)));
+  const total = lines.reduce((n, l) => n + (parseFloat(l.quantity) || 0) * (parseFloat(l.unit_price) || 0), 0);
+  return (
+    <div className="space-y-4">
+      {lines.map((l, i) => (
+        <div key={l.key} className="rounded-2xl border border-stone/20 bg-cream-deep/40 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-brand-dark">Item {i + 1}{l.item_name ? ` · ${l.item_name}` : ''}</span>
+            {lines.length > 1 && <button type="button" onClick={() => setLines(lines.filter((_, x) => x !== i))} className="text-xs text-red-600 font-semibold hover:underline">Remove</button>}
+          </div>
+          <ItemKindFields form={l} set={patch => update(i, patch)} inventory={inventory} units={units} assetOptions={assetOptions} />
+          <div className="grid sm:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className={label}>Quantity{l.item_type === 'CONSUMABLE' && l.unit_of_measure ? ` (${l.unit_of_measure})` : ''} *</label>
+              <input type="number" required min={1} value={l.quantity} onChange={e => update(i, { quantity: e.target.value })} className={input} />
+            </div>
+            <div>
+              <label className={label}>Unit price (KES) *</label>
+              <input type="number" required min={0} step="0.01" value={l.unit_price} onChange={e => update(i, { unit_price: e.target.value })} className={input} />
+            </div>
+            <div>
+              <label className={label}>Line total</label>
+              <div className="px-4 py-3 rounded-xl bg-white border border-stone/15 text-sm text-brand-dark font-semibold">KES {((parseFloat(l.quantity) || 0) * (parseFloat(l.unit_price) || 0)).toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+            <div><label className={label}>Description</label><input value={l.description} onChange={e => update(i, { description: e.target.value })} className={input} /></div>
+            <div><label className={label}>Specifications</label><input value={l.specifications} onChange={e => update(i, { specifications: e.target.value })} className={input} /></div>
+          </div>
+        </div>
+      ))}
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" onClick={() => setLines([...lines, blankLine()])} className="px-4 py-2.5 rounded-xl border border-brand/40 text-brand text-sm font-semibold hover:bg-brand/5 transition">＋ Add another item</button>
+        <div className="text-sm text-stone">{lines.length} item{lines.length === 1 ? '' : 's'} · Total <span className="font-semibold text-brand-dark">KES {total.toLocaleString()}</span></div>
+      </div>
+    </div>
   );
 }

@@ -28,12 +28,12 @@ export function Shell({ title, subtitle, onClose, children, wide = false }: { ti
 }
 
 // ── Register a new asset, or edit one ─────────────────────────────────────────
-export function AssetFormDialog({ asset, options, defaultClass, onClose, onSaved }: { asset?: any; options: any; defaultClass?: string; onClose: () => void; onSaved: () => void }) {
+export function AssetFormDialog({ asset, prefill, options, defaultClass, onClose, onSaved }: { asset?: any; prefill?: any; options: any; defaultClass?: string; onClose: () => void; onSaved: () => void }) {
   const editing = Boolean(asset);
   const [f, setF] = useState<any>(() => ({
-    asset_class: asset?.asset_class || defaultClass || 'ICT',
-    name: asset?.name || '',
-    category: asset?.category || '',
+    asset_class: asset?.asset_class || prefill?.asset_class || defaultClass || 'ICT',
+    name: asset?.name || prefill?.name || '',
+    category: asset?.category || prefill?.name || '',
     asset_code: asset?.asset_code || '',
     tag_prefix: '',
     quantity: '1',
@@ -69,6 +69,7 @@ export function AssetFormDialog({ asset, options, defaultClass, onClose, onSaved
   }, [f.asset_class, f.category, f.name, editing]);
 
   const categories = (options?.categories || []).filter((c: any) => c.asset_class === f.asset_class);
+  const itemRate = categories.find((c: any) => c.name.toLowerCase() === (f.category || f.name).trim().toLowerCase())?.depreciation_rate;
   const chosenTag = tagOpts.find(o => o.prefix === f.tag_prefix) || tagOpts[0];
   const qty = Math.max(1, parseInt(f.quantity) || 1);
 
@@ -185,7 +186,7 @@ export function AssetFormDialog({ asset, options, defaultClass, onClose, onSaved
         <div><label className={label}>PV number</label><input value={f.pv_number} onChange={e => set('pv_number', e.target.value)} className={input} /></div>
         <div><label className={label}>Date delivered / installed</label><input type="date" value={f.delivery_date} onChange={e => set('delivery_date', e.target.value)} className={input} /></div>
         <div><label className={label}>Cost (KES)</label><input type="number" min={0} step="0.01" value={f.purchase_cost} onChange={e => set('purchase_cost', e.target.value)} placeholder="Leave empty until known" className={input} /></div>
-        <div><label className={label}>Depreciation rate (% a year)</label><input type="number" min={0} step="0.1" value={f.depreciation_rate} onChange={e => set('depreciation_rate', e.target.value)} className={input} /></div>
+        <div><label className={label}>Depreciation rate (% a year)</label><input type="number" min={0} step="0.1" value={f.depreciation_rate} onChange={e => set('depreciation_rate', e.target.value)} placeholder={!editing && itemRate != null ? `${itemRate} (from the asset item)` : ''} className={input} /></div>
         <div className="sm:col-span-2"><label className={label}>Notes</label><textarea rows={2} value={f.notes} onChange={e => set('notes', e.target.value)} className={input} /></div>
       </div>
       <p className="text-xs text-stone mt-3">Depreciation and net book value are worked out from the cost, date and rate. You don&apos;t type them.</p>

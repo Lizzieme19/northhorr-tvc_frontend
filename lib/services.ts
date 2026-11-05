@@ -137,6 +137,7 @@ export const requisitionsApi = {
   create: (data: any) => api.post('/requisitions', data),
   update: (id: string, data: any) => api.patch(`/requisitions/${id}`, data),
   submit: (id: string) => api.patch(`/requisitions/${id}/submit`),
+  units: () => api.get('/requisitions/units'),
   approve: (id: string, data?: any) => api.patch(`/requisitions/${id}/approve`, data),
   delete: (id: string) => api.delete(`/requisitions/${id}`),
 };
@@ -196,6 +197,10 @@ export const assetsApi = {
   dispose: (id: string, data: any) => api.patch(`/assets/${id}/dispose`, data),
   delete: (id: string) => api.delete(`/assets/${id}`),
   // locations
+  types: (params?: any) => api.get('/assets/types', { params }),
+  createType: (data: any) => api.post('/assets/types', data),
+  updateType: (id: string, data: any) => api.patch(`/assets/types/${id}`, data),
+  deleteType: (id: string) => api.delete(`/assets/types/${id}`),
   toTag: () => api.get('/assets/to-tag'),
   registerReceived: (itemId: string, data: any) => api.post(`/assets/to-tag/${itemId}`, data),
   locations: () => api.get('/assets/locations'),

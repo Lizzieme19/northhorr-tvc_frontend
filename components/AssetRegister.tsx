@@ -5,6 +5,7 @@ import { useDebounced } from '@/lib/hooks';
 import Pagination from '@/components/Pagination';
 import { FilterPanel, FilterSearch, FilterSelect } from '@/components/ListFilters';
 import { AssetFormDialog, AssetDetailDialog, AssetImportDialog, LocationsDialog, ToTagDialog, CONDITION_LABEL, money } from '@/components/AssetDialogs';
+import AssetItems from '@/components/AssetItems';
 import { toast } from 'sonner';
 
 const EMPTY = { search: '', category: '', location_id: '', condition: '', status: 'ACTIVE', needs_valuation: false, attention: false };
@@ -42,7 +43,8 @@ export default function AssetRegister() {
   const [pageSize, setPageSize] = useState(25);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [dialog, setDialog] = useState<null | { type: 'form'; asset?: any } | { type: 'detail'; id: string } | { type: 'import' } | { type: 'locations' } | { type: 'totag' }>(null);
+  const [view, setView] = useState<'register' | 'items'>('register');
+  const [dialog, setDialog] = useState<null | { type: 'form'; asset?: any; prefill?: any } | { type: 'detail'; id: string } | { type: 'import' } | { type: 'locations' } | { type: 'totag' }>(null);
 
   const loadMeta = () => {
     assetsApi.summary().then(r => setSummary(r.data)).catch(() => { });
@@ -92,7 +94,16 @@ export default function AssetRegister() {
         </button>
       )}
 
-      {empty ? (
+      <div className="flex gap-1 border-b border-stone/15 mb-5" role="tablist">
+        {([['register', 'Register'], ['items', 'Asset items']] as const).map(([k, text]) => (
+          <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition ${view === k ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand'}`}>{text}</button>
+        ))}
+      </div>
+
+      {view === 'items' ? (
+        <AssetItems options={options} onRegister={t => setDialog({ type: 'form', prefill: t })} onChanged={loadMeta} />
+      ) : empty ? (
         <div className="bg-white rounded-2xl border border-stone/10 shadow-sm p-10 text-center">
           <div className="text-4xl mb-2">🏷️</div>
           <h3 className="font-display text-lg text-brand-dark">The register is empty</h3>
@@ -199,7 +210,7 @@ export default function AssetRegister() {
         </>
       )}
 
-      {dialog?.type === 'form' && <AssetFormDialog asset={dialog.asset} options={options} defaultClass={assetClass || undefined} onClose={() => setDialog(null)} onSaved={refresh} />}
+      {dialog?.type === 'form' && <AssetFormDialog asset={dialog.asset} prefill={dialog.prefill} options={options} defaultClass={assetClass || undefined} onClose={() => setDialog(null)} onSaved={refresh} />}
       {dialog?.type === 'detail' && <AssetDetailDialog assetId={dialog.id} onClose={() => setDialog(null)} onEdit={a => setDialog({ type: 'form', asset: a })} onChanged={refresh} />}
       {dialog?.type === 'import' && <AssetImportDialog onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog?.type === 'totag' && <ToTagDialog options={options} onClose={() => setDialog(null)} onChanged={refresh} />}
