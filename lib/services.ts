@@ -209,15 +209,17 @@ export const assetsApi = {
   mergeLocation: (id: string, intoId: string) => api.post(`/assets/locations/${id}/merge`, { into_id: intoId }),
   deleteLocation: (id: string) => api.delete(`/assets/locations/${id}`),
   // import from the asset registers workbook; the preview checks it and creates nothing
-  importPreview: (file: File) => {
+  importPreview: (file: File, opts?: { update_existing?: boolean; fill_only?: boolean; groups?: string[] }) => {
     const fd = new FormData();
     fd.append('file', file);
+    if (opts?.update_existing) { fd.append('update_existing', 'true'); fd.append('fill_only', String(opts.fill_only !== false)); if (opts.groups) fd.append('groups', opts.groups.join(',')); }
     return api.post('/assets/import/preview', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
-  importWorkbook: (file: File, includeStock = true) => {
+  importWorkbook: (file: File, includeStock = true, opts?: { update_existing?: boolean; fill_only?: boolean; groups?: string[] }) => {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('include_stock', String(includeStock));
+    if (opts?.update_existing) { fd.append('update_existing', 'true'); fd.append('fill_only', String(opts.fill_only !== false)); if (opts.groups) fd.append('groups', opts.groups.join(',')); }
     return api.post('/assets/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 10 * 60 * 1000 });
   },
 };

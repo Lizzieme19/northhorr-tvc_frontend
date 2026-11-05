@@ -320,19 +320,34 @@ export function AssetImportDialog({ onClose, onDone }: { onClose: () => void; on
   const [result, setResult] = useState<any>(null);
   const picker = useRef<HTMLInputElement>(null);
 
-  const choose = async (f: File | null) => {
-    if (!f) return;
-    if (!/\.xlsx$/i.test(f.name)) { toast.error('Choose the asset registers workbook (.xlsx)'); return; }
-    setFile(f); setPreview(null); setChecking(true);
-    try { setPreview((await assetsApi.importPreview(f)).data); }
+  // Updating items already in the register is off unless asked for
+  const ALL_GROUPS = ['value', 'location', 'condition', 'officer', 'details'];
+  const [updateOn, setUpdateOn] = useState(false);
+  const [replaceDiffering, setReplaceDiffering] = useState(false);
+  const [groups, setGroups] = useState<string[]>(ALL_GROUPS);
+  const opts = updateOn ? { update_existing: true, fill_only: !replaceDiffering, groups } : undefined;
+
+  const check = async (f: File) => {
+    setPreview(null); setChecking(true);
+    try { setPreview((await assetsApi.importPreview(f, opts)).data); }
     catch (e: any) { toast.error(e?.response?.data?.error || 'Could not read that workbook'); setFile(null); }
     finally { setChecking(false); }
   };
 
+  const choose = async (f: File | null) => {
+    if (!f) return;
+    if (!/\.xlsx$/i.test(f.name)) { toast.error('Choose the asset registers workbook (.xlsx)'); return; }
+    setFile(f);
+    await check(f);
+  };
+
+  // changing what to update checks the workbook again
+  useEffect(() => { if (file) { const t = setTimeout(() => check(file), 300); return () => clearTimeout(t); } }, [updateOn, replaceDiffering, groups.join(',')]);
+
   const run = async () => {
     if (!file) return;
     setImporting(true);
-    try { const r = await assetsApi.importWorkbook(file, includeStock); setResult(r.data); toast.success(r.data.message); onDone(); }
+    try { const r = await assetsApi.importWorkbook(file, includeStock, opts); setResult(r.data); toast.success(r.data.message); onDone(); }
     catch (e: any) { toast.error(e?.response?.data?.error || 'Import failed'); }
     finally { setImporting(false); }
   };
@@ -346,7 +361,7 @@ export function AssetImportDialog({ onClose, onDone }: { onClose: () => void; on
     <Shell title="Import the asset registers workbook" onClose={onClose} wide subtitle="Reads the ICT, furniture, plant & machinery, office equipment and portable items sheets, and the stock sheet. It is checked first; nothing is added until you confirm.">
       {result ? (
         <div>
-          <div className="grid grid-cols-3 gap-3 my-5">{tile(result.assets_created, 'assets added', 'bg-green-50')}{tile(result.locations_created, 'locations added')}{tile(result.stock_created, 'stock items added to Inventory')}</div>
+          <div className={`grid ${result.assets_updated ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-3 my-5`}>{tile(result.assets_created, 'assets added', 'bg-green-50')}{result.assets_updated > 0 && tile(result.assets_updated, `assets updated (${result.fields_changed} details)`, 'bg-sky-50')}{tile(result.locations_created, 'locations added')}{tile(result.stock_created, 'stock items added to Inventory')}</div>
           {result.errors?.length > 0 && <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3 mb-3">{result.errors.map((e: any, i: number) => <div key={i}>{e.rows}: {e.error}</div>)}</div>}
           <p className="text-sm text-stone mb-4">Open <strong>Needs valuation</strong> and <strong>Needs attention</strong> in the register to work through what is left.</p>
           <button onClick={onClose} className="w-full py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition">Done</button>
@@ -374,7 +389,7 @@ export function AssetImportDialog({ onClose, onDone }: { onClose: () => void; on
             <>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
                 {tile(s.assets.ready, 'assets to add', 'bg-green-50')}
-                {tile(s.assets.already_in_register, 'already in the register')}
+                {s.updates ? tile(s.updates.to_change, 'existing assets to update', 'bg-sky-50') : tile(s.assets.already_in_register, 'already in the register')}
                 {tile(s.assets.needs_valuation, 'have no cost yet', 'bg-amber-50')}
                 {tile(s.assets.without_location, 'have no location', 'bg-amber-50')}
               </div>
@@ -396,6 +411,57 @@ export function AssetImportDialog({ onClose, onDone }: { onClose: () => void; on
                 </div>
               </div>
 
+              <div className="mt-4 border border-stone/15 rounded-2xl p-4">
+                <label className="flex items-start gap-3 text-sm cursor-pointer">
+                  <input type="checkbox" checked={updateOn} onChange={e => setUpdateOn(e.target.checked)} className="h-4 w-4 mt-0.5 accent-brand" />
+                  <span><strong className="text-brand-dark">Also update items already in the register</strong><span className="block text-xs text-stone">Matches rows by tag number and shows exactly what would change. A blank cell never blanks anything, and names, tags and types are never changed.</span></span>
+                </label>
+                {updateOn && (
+                  <div className="mt-4 pl-7 space-y-4">
+                    <div className="space-y-1.5 text-sm">
+                      <label className="flex items-start gap-2 cursor-pointer"><input type="radio" checked={!replaceDiffering} onChange={() => setReplaceDiffering(false)} className="mt-1 accent-brand" /><span><strong className="text-brand-dark">Only fill in what is empty</strong> <span className="text-stone">(safest: anything already in the register stays as it is)</span></span></label>
+                      <label className="flex items-start gap-2 cursor-pointer"><input type="radio" checked={replaceDiffering} onChange={() => setReplaceDiffering(true)} className="mt-1 accent-brand" /><span><strong className="text-brand-dark">Also replace values that differ</strong> <span className="text-stone">(the workbook wins, including over changes made in the app)</span></span></label>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-brand-dark mb-1.5">What to update</div>
+                      <div className="grid sm:grid-cols-2 gap-1.5 text-sm text-stone">
+                        {([['value', 'Cost, date and depreciation rate'], ['location', 'Location'], ['condition', 'Condition'], ['officer', 'Responsible officer'], ['details', 'Make, serial number, source of funds, PV number, replacement date']] as const).map(([k, text]) => (
+                          <label key={k} className="flex items-start gap-2 cursor-pointer"><input type="checkbox" checked={groups.includes(k)} onChange={e => setGroups(g => e.target.checked ? [...g, k] : g.filter(x => x !== k))} className="h-4 w-4 mt-0.5 accent-brand" />{text}</label>
+                        ))}
+                      </div>
+                    </div>
+                    {s.updates && (
+                      <div className="rounded-xl bg-sky-50 px-3 py-2.5 text-sm text-brand-dark">
+                        <strong>{s.updates.to_change}</strong> of {s.updates.matched} matched assets would change ({s.updates.fields} details){s.updates.by_field.length > 0 && <>: {s.updates.by_field.map((f: any) => `${f.label} ${f.count}`).join(', ')}</>}.
+                        {s.updates.conflicts > 0 && <span className="block text-xs text-amber-800 mt-1">{s.updates.conflicts} row{s.updates.conflicts === 1 ? '' : 's'} could not be matched safely and were left as they are (listed below).</span>}
+                      </div>
+                    )}
+                    {preview.update_items?.length > 0 && (
+                      <details className="border border-stone/15 rounded-xl">
+                        <summary className="px-3 py-2.5 text-sm font-medium text-brand-dark cursor-pointer">Changes to existing assets ({s.updates.to_change})</summary>
+                        <div className="max-h-72 overflow-auto px-3 pb-3 text-xs">
+                          {preview.update_items.map((u: any) => (
+                            <div key={u.id} className="py-1.5 border-b border-stone/10">
+                              <span className="font-mono text-brand">{u.tag}</span> · {u.name}
+                              {u.changes.map((c: any) => <div key={c.field} className="text-stone pl-3">{c.label}: <span className="line-through">{c.from == null ? 'empty' : String(c.from)}</span> → <strong className="text-brand-dark">{String(c.to)}</strong></div>)}
+                            </div>
+                          ))}
+                          {s.updates.to_change > preview.update_items.length && <p className="text-stone pt-2">Showing the first {preview.update_items.length}. All of them are applied.</p>}
+                        </div>
+                      </details>
+                    )}
+                    {preview.update_conflicts?.length > 0 && (
+                      <details className="border border-amber-200 bg-amber-50/50 rounded-xl">
+                        <summary className="px-3 py-2.5 text-sm font-medium text-amber-900 cursor-pointer">Rows left as they are ({preview.update_conflicts.length})</summary>
+                        <div className="max-h-48 overflow-auto px-3 pb-3 text-xs">
+                          {preview.update_conflicts.map((c: any) => <div key={`${c.sheet}${c.row}`} className="py-1.5 border-b border-amber-200/60"><span className="font-mono">{c.tag || '(no tag)'}</span> · {c.name} <span className="text-stone">({c.sheet.trim()} row {c.row})</span><div className="text-stone">{c.message}</div></div>)}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <details className="mt-4 border border-stone/15 rounded-2xl">
                 <summary className="px-4 py-3 text-sm font-medium text-brand-dark cursor-pointer">Locations that will be used ({s.locations.length})</summary>
                 <div className="px-4 pb-3 grid sm:grid-cols-2 gap-x-6 text-sm">
@@ -412,9 +478,9 @@ export function AssetImportDialog({ onClose, onDone }: { onClose: () => void; on
                 <details className="mt-3 border border-stone/15 rounded-2xl">
                   <summary className="px-4 py-3 text-sm font-medium text-brand-dark cursor-pointer">Rows to look at ({preview.flagged_total})</summary>
                   <div className="max-h-64 overflow-auto px-4 pb-3 text-xs">
-                    {preview.flagged.filter((r: any) => r.attention || r.reclassified).map((r: any) => (
+                    {preview.flagged.filter((r: any) => r.attention || r.reclassified || (r.status === 'exists' && r.warnings.length)).map((r: any) => (
                       <div key={`${r.sheet}${r.row}`} className="py-1.5 border-b border-stone/10">
-                        <span className="font-mono text-brand">{r.tag}</span> · {r.name} <span className="text-stone">({r.sheet.trim()} row {r.row})</span>
+                        <span className="font-mono text-brand">{r.tag || '(not imported)'}</span> · {r.name} <span className="text-stone">({r.sheet.trim()} row {r.row})</span>
                         {r.warnings.concat(r.reclassified ? [r.reclassified] : []).map((m: string, i: number) => <div key={i} className="text-stone">{m}</div>)}
                       </div>
                     ))}
@@ -431,13 +497,13 @@ export function AssetImportDialog({ onClose, onDone }: { onClose: () => void; on
               )}
 
               <div className="mt-5 flex gap-3">
-                <button onClick={run} disabled={importing || (s.assets.ready === 0 && !(includeStock && s.stock.ready > 0))}
+                <button onClick={run} disabled={importing || (s.assets.ready === 0 && !(s.updates?.to_change > 0) && !(includeStock && s.stock.ready > 0))}
                   className="flex-1 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
-                  {importing ? 'Importing…' : s.assets.ready === 0 && s.stock.ready === 0 ? 'Everything is already in the system' : `Import ${s.assets.ready} assets`}
+                  {importing ? 'Working…' : s.assets.ready === 0 && s.stock.ready === 0 && !(s.updates?.to_change > 0) ? 'Everything is already in the system' : `${s.assets.ready > 0 ? `Add ${s.assets.ready} new assets` : ''}${s.assets.ready > 0 && s.updates?.to_change > 0 ? ' and ' : ''}${s.updates?.to_change > 0 ? `${s.assets.ready > 0 ? 'update' : 'Update'} ${s.updates.to_change} existing` : ''}${s.assets.ready === 0 && !(s.updates?.to_change > 0) ? `Import ${s.stock.ready} stock lines` : ''}`}
                 </button>
                 <button onClick={onClose} disabled={importing} className="px-6 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition">Cancel</button>
               </div>
-              <p className="text-xs text-stone mt-2 text-center">Running the same workbook again is safe: items already imported are skipped.</p>
+              <p className="text-xs text-stone mt-2 text-center">Running the same workbook again is safe. Items already in the register are only changed if you tick the option above.</p>
             </>
           )}
         </>
