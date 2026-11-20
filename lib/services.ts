@@ -328,3 +328,10 @@ export const invoicesApi = {
   delete: (id: string) => api.delete(`/invoices/${id}`),
   getPdfUrl: (id: string) => `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/invoices/${id}/pdf`,
 };
+
+// The activity log (Admin only)
+export const auditApi = {
+  list: (params?: any) => api.get('/audit', { params }),
+  filters: () => api.get('/audit/filters'),
+  exportUrl: (params: Record<string, string>) => `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/audit/export?${new URLSearchParams(params).toString()}`,
+};

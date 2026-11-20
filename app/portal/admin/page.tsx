@@ -14,6 +14,7 @@ import { useDebounced } from '@/lib/hooks';
 import StudentPicker from '@/components/StudentPicker';
 import StudentFeesModal from '@/components/StudentFeesModal';
 import ReconcileFees from '@/components/ReconcileFees';
+import ActivityLog from '@/components/ActivityLog';
 import StudentImportModal from '@/components/StudentImportModal';
 import TermInfo from '@/components/TermInfo';
 import { termLabel } from '@/lib/terms';
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'settings'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'settings'>('overview');
   const EMPTY_APP_FILTERS = { department_id: '', course_id: '', type: '', level_applied: '', date_from: '', date_to: '' };
   const [appFilters, setAppFilters] = useState(EMPTY_APP_FILTERS);
   const [appPageSize, setAppPageSize] = useState(15);
@@ -571,6 +572,7 @@ export default function AdminDashboard() {
           { key: 'requisitions', label: '🛒 Requisitions' },
           { key: 'term-progression', label: '📈 Term Progression' },
           { key: 'doc-templates', label: '📝 Doc Templates' },
+          { key: 'activity-log', label: '📜 Activity log' },
           { key: 'settings', label: '⚙️ Settings' },
         ].filter((t) => isAdmin || REGISTRAR_TABS.includes(t.key)).map((t) => (
           <button
@@ -2133,6 +2135,10 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {tab === 'activity-log' && isAdmin && (
+        <main className="max-w-7xl mx-auto px-6 py-8"><ActivityLog /></main>
       )}
 
       {tab === 'doc-templates' && (
