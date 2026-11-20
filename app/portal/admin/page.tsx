@@ -16,6 +16,8 @@ import StudentFeesModal from '@/components/StudentFeesModal';
 import ReconcileFees from '@/components/ReconcileFees';
 import ActivityLog from '@/components/ActivityLog';
 import ProfileOptionsAdmin, { StudentChoicesModal } from '@/components/ProfileOptions';
+import { LetterheadPanel, DocExtras, PreviewButton, DocStyle } from '@/components/DocumentDesign';
+import IdCardDesign from '@/components/IdCardDesign';
 import StudentImportModal from '@/components/StudentImportModal';
 import TermInfo from '@/components/TermInfo';
 import { termLabel } from '@/lib/terms';
@@ -47,7 +49,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'settings'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings'>('overview');
   const EMPTY_APP_FILTERS = { department_id: '', course_id: '', type: '', level_applied: '', date_from: '', date_to: '' };
   const [appFilters, setAppFilters] = useState(EMPTY_APP_FILTERS);
   const [appPageSize, setAppPageSize] = useState(15);
@@ -573,6 +575,7 @@ export default function AdminDashboard() {
           { key: 'requisitions', label: '🛒 Requisitions' },
           { key: 'term-progression', label: '📈 Term Progression' },
           { key: 'doc-templates', label: '📝 Doc Templates' },
+          { key: 'id-card', label: '🪪 ID Card' },
           { key: 'profile-options', label: '🏅 Interests & Sports' },
           { key: 'activity-log', label: '📜 Activity log' },
           { key: 'settings', label: '⚙️ Settings' },
@@ -2137,6 +2140,10 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {tab === 'id-card' && isAdmin && (
+        <main className="max-w-7xl mx-auto px-6 py-8"><IdCardDesign /></main>
       )}
 
       {tab === 'profile-options' && isAdmin && (
@@ -4973,6 +4980,11 @@ function DocTemplatesTab() {
   const [collegeLogo, setCollegeLogo] = useState<File | null>(null);
   const [textBlocks, setTextBlocks] = useState<any>({});
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
+  const [liveStyle, setLiveStyle] = useState<DocStyle | null>(null);
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [stampFile, setStampFile] = useState<File | null>(null);
+  const [removeSignature, setRemoveSignature] = useState(false);
+  const [removeStamp, setRemoveStamp] = useState(false);
 
   const selectedDoc = documentTypes.find(d => d.id === selectedType)!;
   const blocks = textBlockKeys[selectedType] || [];
@@ -4992,6 +5004,7 @@ function DocTemplatesTab() {
       setTextBlocks(merged);
       setMinistryLogo(null);
       setCollegeLogo(null);
+      setSignatureFile(null); setStampFile(null); setRemoveSignature(false); setRemoveStamp(false);
     } catch {
       setTemplate(null);
       // Fall back to defaults so the admin sees pre-filled content to edit
@@ -5009,6 +5022,10 @@ function DocTemplatesTab() {
       formData.append('text_blocks', JSON.stringify(textBlocks));
       if (ministryLogo) formData.append('ministry_logo', ministryLogo);
       if (collegeLogo) formData.append('college_logo', collegeLogo);
+      if (signatureFile) formData.append('signature', signatureFile);
+      if (stampFile) formData.append('stamp', stampFile);
+      if (removeSignature) formData.append('remove_signature', 'true');
+      if (removeStamp) formData.append('remove_stamp', 'true');
       await api.patch(`/document-templates/${selectedType}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -5044,6 +5061,8 @@ function DocTemplatesTab() {
           ))}
         </select>
       </div>
+
+      <LetterheadPanel onChange={setLiveStyle} />
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left: Editor */}
@@ -5086,6 +5105,10 @@ function DocTemplatesTab() {
               </div>
             </div>
 
+            <DocExtras type={selectedType} textBlocks={textBlocks} setTextBlocks={setTextBlocks} template={template}
+              signatureFile={signatureFile} setSignatureFile={setSignatureFile} stampFile={stampFile} setStampFile={setStampFile}
+              removeSignature={removeSignature} setRemoveSignature={setRemoveSignature} removeStamp={removeStamp} setRemoveStamp={setRemoveStamp} />
+
             {/* Text blocks section */}
             <div className="p-6 space-y-5">
               {loading ? (
@@ -5121,11 +5144,12 @@ function DocTemplatesTab() {
             </div>
 
             {/* Save button */}
-            <div className="px-6 pb-6">
+            <div className="px-6 pb-6 flex gap-3">
+              <PreviewButton type={selectedType} textBlocks={textBlocks} style={liveStyle} />
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full py-3 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50 text-sm"
+                className="flex-1 py-3 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50 text-sm"
               >
                 {saving ? 'Saving…' : `Save ${selectedDoc.name} Template`}
               </button>
