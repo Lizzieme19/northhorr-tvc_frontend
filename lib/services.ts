@@ -294,8 +294,8 @@ export const termsApi = {
 export const feeCorrectionsApi = {
   getSummary: (studentId: string) => api.get(`/fees/students/${studentId}/summary`),
   getHistory: (studentId: string) => api.get(`/fees/students/${studentId}/history`),
-  recordPayment: (studentId: string, termId: string, amount: number, notes?: string) =>
-    api.post(`/fees/students/${studentId}/terms/${termId}/payment`, { amount, notes: notes || undefined }),
+  recordPayment: (studentId: string, termId: string, amount: number, notes?: string, paidAt?: string) =>
+    api.post(`/fees/students/${studentId}/terms/${termId}/payment`, { amount, notes: notes || undefined, paid_at: paidAt || undefined }),
   editPayment: (id: string, data: any) => api.patch(`/fees/records/${id}`, data),
   voidPayment: (id: string, reason: string) => api.post(`/fees/records/${id}/void`, { reason }),
   setTermFee: (studentId: string, termId: string, totalFees: number | null, reason: string) =>
@@ -334,4 +334,10 @@ export const auditApi = {
   list: (params?: any) => api.get('/audit', { params }),
   filters: () => api.get('/audit/filters'),
   exportUrl: (params: Record<string, string>) => `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/audit/export?${new URLSearchParams(params).toString()}`,
+};
+
+// Payments for several students at once (Admin / Finance)
+export const feesApi = {
+  bulkRecord: (data: { paid_at?: string; fee_type_id?: string; allow_duplicates?: boolean; payments: { studentId: string; termId: string; amount: number; reference?: string; notes?: string; paid_at?: string }[] }) =>
+    api.post('/fees/bulk-record-payment', data),
 };

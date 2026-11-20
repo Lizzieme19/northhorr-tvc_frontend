@@ -6,6 +6,8 @@ import api from '@/lib/api';
 import { financeApi, feeTypesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
+import BulkPayments from '@/components/BulkPayments';
+import PaymentDate, { todayStr } from '@/components/PaymentDate';
 import TermInfo from '@/components/TermInfo';
 import StudentFeesModal from '@/components/StudentFeesModal';
 import FinanceAnalytics from '@/components/FinanceAnalytics';
@@ -125,6 +127,8 @@ export default function FinanceDashboard() {
   const [recordPaymentTermId, setRecordPaymentTermId] = useState('');
   const [recordPaymentAmount, setRecordPaymentAmount] = useState('');
   const [recordPaymentNotes, setRecordPaymentNotes] = useState('');
+  const [recordPaymentDate, setRecordPaymentDate] = useState(todayStr());
+  const [showBulkPayments, setShowBulkPayments] = useState(false);
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [studentTerms, setStudentTerms] = useState<any[]>([]);
   const [loadingStudentTerms, setLoadingStudentTerms] = useState(false);
@@ -205,6 +209,7 @@ export default function FinanceDashboard() {
     setRecordPaymentTermId('');
     setRecordPaymentAmount('');
     setRecordPaymentNotes('');
+    setRecordPaymentDate(todayStr());
     setLoadingStudentTerms(true);
     try {
       const r = await api.get(`/fees/students/${student.id}/summary`);
@@ -231,6 +236,7 @@ export default function FinanceDashboard() {
       await api.post(`/fees/students/${recordPaymentStudent.id}/terms/${recordPaymentTermId}/payment`, {
         amount: parseFloat(recordPaymentAmount),
         notes: recordPaymentNotes || undefined,
+        paid_at: recordPaymentDate || undefined,
       });
       toast.success('Payment recorded! You can now allocate it to specific fee types.');
       setRecordPaymentStudent(null);
@@ -404,6 +410,12 @@ export default function FinanceDashboard() {
               />
             </form>
             <button
+              onClick={() => setShowBulkPayments(true)}
+              className="shrink-0 px-3 py-1.5 rounded-xl border border-brand/40 text-brand font-semibold hover:bg-brand/5 transition text-sm"
+            >
+              💵 Several students
+            </button>
+            <button
               onClick={() => setShowReports(true)}
               className="shrink-0 px-3 py-1.5 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm"
             >
@@ -569,6 +581,7 @@ export default function FinanceDashboard() {
         )}
 
         {showReports && <ReportsExport onClose={() => setShowReports(false)} types={['fees']} />}
+        {showBulkPayments && <BulkPayments onClose={() => setShowBulkPayments(false)} onDone={() => { refreshStudents(); }} />}
 
         {/* ── Record Payment Modal ── */}
         {recordPaymentStudent && (
@@ -611,6 +624,7 @@ export default function FinanceDashboard() {
                         className="w-full px-4 py-3 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm"
                       />
                     </div>
+                    <PaymentDate value={recordPaymentDate} onChange={setRecordPaymentDate} label="Date received" inputClass="w-full px-4 py-3 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" labelClass="block text-sm font-semibold text-brand-dark mb-1.5" />
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Notes (optional)</label>
                       <input

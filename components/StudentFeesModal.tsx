@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { feeCorrectionsApi, feeTypesApi, termsApi } from '@/lib/services';
 import { termLabel } from '@/lib/terms';
+import PaymentDate, { todayStr } from '@/components/PaymentDate';
 import { toast } from 'sonner';
 
 const money = (n: number | null | undefined) => `KES ${(n || 0).toLocaleString()}`;
@@ -164,7 +165,7 @@ export default function StudentFeesModal({
       const amount = parseFloat(form.amount);
       if (!form.term_id) { toast.warning('Choose the term'); return; }
       if (!(amount > 0)) { toast.warning('Enter the amount received'); return; }
-      run(() => feeCorrectionsApi.recordPayment(student.id, form.term_id, amount, form.notes), 'Payment recorded');
+      run(() => feeCorrectionsApi.recordPayment(student.id, form.term_id, amount, form.notes, form.paid_at), 'Payment recorded');
     } else if (dialog.type === 'remove') {
       run(() => feeCorrectionsApi.removeTerm(student.id, dialog.term.term.id, form.reason?.trim()), 'Term assignment removed');
     }
@@ -210,7 +211,7 @@ export default function StudentFeesModal({
               </div>
               {canCorrect && (
                 <button
-                  onClick={() => (onRecordPayment ? onRecordPayment(student) : open({ type: 'pay' }, { term_id: terms.length ? terms[terms.length - 1].term.id : '', amount: '', notes: '' }))}
+                  onClick={() => (onRecordPayment ? onRecordPayment(student) : open({ type: 'pay' }, { term_id: terms.length ? terms[terms.length - 1].term.id : '', amount: '', notes: '', paid_at: todayStr() }))}
                   disabled={terms.length === 0}
                   className="px-4 py-2 rounded-xl bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition disabled:opacity-50"
                 >
@@ -312,6 +313,7 @@ export default function StudentFeesModal({
                     </select>
                   </div>
                   <div><label className={labelCls}>Amount received (KES)</label><input type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className={inputCls} /></div>
+                  <PaymentDate value={form.paid_at || ''} onChange={v => setForm({ ...form, paid_at: v })} inputClass={inputCls} labelClass={labelCls} />
                   <div><label className={labelCls}>Notes (optional)</label><input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="e.g. Cash, receipt #1234" className={inputCls} /></div>
                 </div>
               </>
@@ -322,7 +324,7 @@ export default function StudentFeesModal({
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className={labelCls}>Amount (KES)</label><input type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className={inputCls} /></div>
-                    <div><label className={labelCls}>Date paid</label><input type="date" value={form.paid_at} onChange={e => setForm({ ...form, paid_at: e.target.value })} className={inputCls} /></div>
+                    <div><label className={labelCls}>Date paid</label><input type="date" max={todayStr()} min="2000-01-01" value={form.paid_at} onChange={e => setForm({ ...form, paid_at: e.target.value })} className={inputCls} /></div>
                   </div>
                   <div>
                     <label className={labelCls}>Term</label>
