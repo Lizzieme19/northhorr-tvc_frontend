@@ -30,6 +30,9 @@ export default function StudentDashboard() {
   const [profileOptions, setProfileOptions] = useState<{ interests: string[]; sports: string[] }>({ interests: [], sports: [] });
   const [myInterests, setMyInterests] = useState<string[]>([]);
   const [mySports, setMySports] = useState<string[]>([]);
+  const [editingReligion, setEditingReligion] = useState(false);
+  const [religionDraft, setReligionDraft] = useState('');
+  const [savingReligion, setSavingReligion] = useState(false);
   const [editingChoices, setEditingChoices] = useState(false);
   const [savingChoices, setSavingChoices] = useState(false);
   const [loadingFeeSummary, setLoadingFeeSummary] = useState(false);
@@ -224,6 +227,22 @@ export default function StudentDashboard() {
       }
     } finally {
       setUpdating(false);
+    }
+  };
+
+  // Religion is not asked on the application form: the student fills it in here, at any time
+  const saveReligion = async () => {
+    setSavingReligion(true);
+    try {
+      await api.patch('/students/me', { religion: religionDraft });
+      const updated = await api.get('/students/me');
+      setProfile(updated.data);
+      setEditingReligion(false);
+      toast.success('Religion saved');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Could not save your religion');
+    } finally {
+      setSavingReligion(false);
     }
   };
 
@@ -901,6 +920,22 @@ export default function StudentDashboard() {
               {terms.length === 0 && (
                 <div className="bg-stone/50 rounded-xl p-4 border border-stone/20 text-center">
                   <p className="text-sm text-stone">No active terms available for enrollment</p>
+                </div>
+              )}
+            </div>
+
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Religion</h2>
+                {!editingReligion && <button onClick={() => { setReligionDraft(profile.application?.religion || ''); setEditingReligion(true); }} className="text-sm font-semibold text-brand hover:underline">{profile.application?.religion ? 'Change' : 'Add yours'}</button>}
+              </div>
+              {!editingReligion ? (
+                profile.application?.religion ? <p className="text-sm text-brand-dark font-medium">{profile.application.religion}</p> : <p className="text-sm text-stone">You have not filled this in yet.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <input value={religionDraft} onChange={e => setReligionDraft(e.target.value)} maxLength={60} placeholder="e.g. Christian, Muslim, other" className="flex-1 min-w-[12rem] px-3 py-2 rounded-xl border border-stone/25 text-sm focus:outline-none focus:border-brand" />
+                  <button disabled={savingReligion} onClick={saveReligion} className="px-5 py-2 rounded-xl bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition disabled:opacity-50">{savingReligion ? 'Saving…' : 'Save'}</button>
+                  <button onClick={() => setEditingReligion(false)} className="px-5 py-2 rounded-xl border border-stone/25 text-brand text-sm font-semibold hover:bg-stone/5 transition">Cancel</button>
                 </div>
               )}
             </div>

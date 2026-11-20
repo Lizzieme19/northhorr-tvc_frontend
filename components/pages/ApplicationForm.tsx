@@ -90,7 +90,7 @@ export default function ApplicationForm() {
     course_id: '',
     level_applied: '',
     // Personal
-    surname: '', other_names: '', gender: '', date_of_birth: '', nationality: 'Kenyan', religion: '',
+    surname: '', other_names: '', gender: '', date_of_birth: '', nationality: 'Kenyan',
     id_number: '', birth_cert_no: '', email: '', phone: '', address: '',
     // Parent / Emergency
     father_present: true, father_deceased: false, father_name: '', father_phone: '', father_email: '', father_occupation: '',
@@ -454,7 +454,6 @@ export default function ApplicationForm() {
             <Field name="email" label="Email Address" type="email" required value={formData.email} onChange={handleChange} />
             <Field name="phone" label="Phone Number" required inputMode="tel" placeholder="e.g. 0712 345 678" value={formData.phone} onChange={handleChange} onBlur={tidyPhone} error={shown('phone')} />
             <Field name="address" label="Postal Address" value={formData.address} onChange={handleChange} />
-            <Field name="religion" label="Religion" value={formData.religion} onChange={handleChange} />
             <div className="sm:col-span-2 rounded-2xl border border-stone/20 p-4">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={formData.has_disability} onChange={e => setFormData(f => ({ ...f, has_disability: e.target.checked, ...(e.target.checked ? {} : { disability: '' }) }))} className="h-5 w-5 mt-0.5 accent-brand" />
@@ -564,7 +563,7 @@ export default function ApplicationForm() {
                 { title: 'Personal details', step: 2, rows: [
                   ['Name', `${formData.surname} ${formData.other_names}`.trim() || '—'], ['Gender', formData.gender || '—'], ['Date of birth', formData.date_of_birth || '—'],
                   ['National ID', formData.id_number || '—'], ['Birth certificate no.', formData.birth_cert_no || '—'], ['Email', formData.email || '—'],
-                  ['Phone', normalizeKenyaPhone(formData.phone) || formData.phone || '—'], ['Postal address', formData.address || '—'], ['Religion', formData.religion || '—'],
+                  ['Phone', normalizeKenyaPhone(formData.phone) || formData.phone || '—'], ['Postal address', formData.address || '—'],
                   ['Disability', formData.has_disability ? `Yes: ${formData.disability}` : 'No'],
                 ] },
                 { title: 'Supporting documents', step: 3, rows: Object.entries(files).map(([k, v]: any) => [({ doc_id_copy: 'National ID / Passport', doc_kcse: 'KCSE certificate', doc_birth_cert: 'Birth certificate', doc_medical: 'Medical report', doc_kcpe: 'KCPE certificate' } as any)[k] || k, v ? v.name : 'Not uploaded']) },

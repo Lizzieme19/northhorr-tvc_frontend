@@ -2513,6 +2513,18 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       intake: student.intake || '',
       year: student.year || '',
       status: student.status || '',
+      // Personal
+      surname: student.application?.surname || '',
+      other_names: student.application?.other_names || '',
+      gender: student.application?.gender || '',
+      date_of_birth: student.application?.date_of_birth ? new Date(student.application.date_of_birth).toISOString().split('T')[0] : '',
+      nationality: student.application?.nationality || '',
+      religion: student.application?.religion || '',
+      birth_cert_no: student.application?.birth_cert_no || '',
+      medical_conditions: student.application?.medical_conditions || '',
+      allergies: student.application?.allergies || '',
+      has_disability: !!student.application?.has_disability,
+      disability: student.application?.disability || '',
       // Contact
       phone: student.application?.phone || '',
       address: student.application?.address || '',
@@ -2953,6 +2965,72 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                       <option value="WITHDRAWN">Withdrawn</option>
                       <option value="ATTACHMENT">Attachment</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Information */}
+              <div>
+                <h3 className="font-semibold text-brand-dark mb-3 border-b border-stone/10 pb-2">Personal Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Surname</label>
+                    <input type="text" value={editForm.surname ?? ''} onChange={e => setEditForm({ ...editForm, surname: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Other names</label>
+                    <input type="text" value={editForm.other_names ?? ''} onChange={e => setEditForm({ ...editForm, other_names: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Gender</label>
+                    <select value={editForm.gender ?? ''} onChange={e => setEditForm({ ...editForm, gender: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Date of birth</label>
+                    <input type="date" value={editForm.date_of_birth ?? ''} onChange={e => setEditForm({ ...editForm, date_of_birth: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Nationality</label>
+                    <input type="text" value={editForm.nationality ?? ''} onChange={e => setEditForm({ ...editForm, nationality: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Religion</label>
+                    <input type="text" value={editForm.religion ?? ''} onChange={e => setEditForm({ ...editForm, religion: e.target.value })} placeholder="e.g. Christian, Muslim, other"
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Birth certificate no.</label>
+                    <input type="text" value={editForm.birth_cert_no ?? ''} onChange={e => setEditForm({ ...editForm, birth_cert_no: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Medical conditions</label>
+                    <input type="text" value={editForm.medical_conditions ?? ''} onChange={e => setEditForm({ ...editForm, medical_conditions: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Allergies</label>
+                    <input type="text" value={editForm.allergies ?? ''} onChange={e => setEditForm({ ...editForm, allergies: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-brand-dark mb-1">
+                      <input type="checkbox" checked={!!editForm.has_disability} onChange={e => setEditForm({ ...editForm, has_disability: e.target.checked })} className="rounded" /> Has a disability
+                    </label>
+                    {editForm.has_disability && (
+                      <input type="text" value={editForm.disability ?? ''} onChange={e => setEditForm({ ...editForm, disability: e.target.value })} placeholder="What it is, so the college can support the student"
+                        className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" />
+                    )}
                   </div>
                 </div>
               </div>
