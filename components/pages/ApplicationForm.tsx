@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { departmentsApi } from '@/lib/services';
+import { normalizeKenyaPhone, phoneProblem } from '@/lib/phone';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -41,13 +42,15 @@ function levelIsEligible(level: any, kcseGrade: string, kcpeMarks: string, prior
 // ---------------------------------------------------------------------------
 // Field component
 // ---------------------------------------------------------------------------
-const Field = ({ label, name, type = 'text', required = false, value, onChange, ...props }: any) => (
+const Field = ({ label, name, type = 'text', required = false, value, onChange, error, ...props }: any) => (
   <div>
     <label className="block text-sm font-semibold text-brand-dark mb-1.5">{label} {required && <span className="text-terracotta">*</span>}</label>
     <input
       type={type} name={name} required={required} value={value} onChange={onChange} {...props}
-      className={`w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition text-sm ${type === 'file' ? 'p-2' : ''}`}
+      aria-invalid={error ? true : undefined}
+      className={`w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:ring-2 transition text-sm ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : 'border-stone/25 focus:border-brand focus:ring-brand/20'} ${type === 'file' ? 'p-2' : ''}`}
     />
+    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
   </div>
 );
 
@@ -90,11 +93,15 @@ export default function ApplicationForm() {
     surname: '', other_names: '', gender: '', date_of_birth: '', nationality: 'Kenyan', religion: '',
     id_number: '', birth_cert_no: '', email: '', phone: '', address: '',
     // Parent / Emergency
-    father_present: true, father_name: '', father_phone: '', father_email: '', father_occupation: '',
-    mother_present: true, mother_name: '', mother_phone: '', mother_email: '', mother_occupation: '',
+    father_present: true, father_deceased: false, father_name: '', father_phone: '', father_email: '', father_occupation: '',
+    mother_present: true, mother_deceased: false, mother_name: '', mother_phone: '', mother_email: '', mother_occupation: '',
     siblings_no: '',
     emergency_person: '', emergency_phone: '',
+    // Disability
+    has_disability: false, disability: '',
   });
+  const [confirmed, setConfirmed] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const [files, setFiles] = useState<any>({
     doc_kcpe: null, doc_kcse: null, doc_id_copy: null, doc_birth_cert: null, doc_medical: null
@@ -150,6 +157,22 @@ export default function ApplicationForm() {
     [eligibleLevels, formData.level_applied]
   );
 
+  // Phone numbers must be Kenyan mobile numbers. Shown once the person has typed something, or tried to go on.
+  const problems: Record<string, string> = {
+    phone: phoneProblem(formData.phone, true),
+    father_phone: formData.father_deceased ? '' : phoneProblem(formData.father_phone, true),
+    mother_phone: formData.mother_deceased ? '' : phoneProblem(formData.mother_phone, true),
+    emergency_phone: phoneProblem(formData.emergency_phone, true),
+    disability: formData.has_disability && !formData.disability.trim() ? 'Please describe the disability so the college can support you' : '',
+  };
+  const stepFields: Record<number, string[]> = { 2: ['phone', 'disability'], 4: ['father_phone', 'mother_phone', 'emergency_phone'] };
+  const shown = (f: string) => (showErrors || (formData as any)[f]) && problems[f] ? problems[f] : '';
+  // tidy a valid number into 07XXXXXXXX when the person leaves the box
+  const tidyPhone = (e: any) => {
+    const n = normalizeKenyaPhone(e.target.value);
+    if (n && n !== e.target.value) setFormData(prev => ({ ...prev, [e.target.name]: n }));
+  };
+
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
@@ -183,26 +206,43 @@ export default function ApplicationForm() {
         return;
       }
     }
+    const bad = (stepFields[step] || []).filter(f => problems[f]);
+    if (bad.length) {
+      setShowErrors(true);
+      toast.error(problems[bad[0]]);
+      return;
+    }
+    setShowErrors(false);
     setStep(s => s + 1);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const prevStep = () => setStep(s => s - 1);
+  const prevStep = () => { setStep(s => s - 1); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    if (!confirmed) { toast.error('Please tick the box to confirm that the information is correct.'); return; }
     setSubmitting(true);
 
     const data = new FormData();
+    const fD = formData.father_deceased;
+    const mD = formData.mother_deceased;
     const backendData = {
       ...formData,
-      father_name: formData.father_present ? formData.father_name : '',
-      father_phone: formData.father_present ? formData.father_phone : '',
-      father_email: formData.father_present ? formData.father_email : '',
-      father_occupation: formData.father_present ? formData.father_occupation : '',
-      mother_name: formData.mother_present ? formData.mother_name : '',
-      mother_phone: formData.mother_present ? formData.mother_phone : '',
-      mother_email: formData.mother_present ? formData.mother_email : '',
-      mother_occupation: formData.mother_present ? formData.mother_occupation : '',
+      phone: normalizeKenyaPhone(formData.phone) || formData.phone,
+      emergency_phone: normalizeKenyaPhone(formData.emergency_phone) || formData.emergency_phone,
+      father_present: !fD,
+      mother_present: !mD,
+      father_name: fD ? '' : formData.father_name,
+      father_phone: fD ? '' : (normalizeKenyaPhone(formData.father_phone) || formData.father_phone),
+      father_email: fD ? '' : formData.father_email,
+      father_occupation: fD ? '' : formData.father_occupation,
+      mother_name: mD ? '' : formData.mother_name,
+      mother_phone: mD ? '' : (normalizeKenyaPhone(formData.mother_phone) || formData.mother_phone),
+      mother_email: mD ? '' : formData.mother_email,
+      mother_occupation: mD ? '' : formData.mother_occupation,
+      disability: formData.has_disability ? formData.disability : '',
+      confirmed: true,
     };
 
     Object.entries(backendData).forEach(([k, v]) => {
@@ -212,8 +252,10 @@ export default function ApplicationForm() {
 
     try {
       const res = await api.post('/applications', data, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setSuccess(res.data);
+      setSuccess({ ...res.data, email: formData.email });
     } catch (err: any) {
+      const fields = err?.response?.data?.fields;
+      if (fields) { setShowErrors(true); setStep(fields.phone || fields.disability ? 2 : 4); }
       toast.error(err?.response?.data?.error || 'Failed to submit application. Please try again.');
     } finally {
       setSubmitting(false);
@@ -233,6 +275,10 @@ export default function ApplicationForm() {
           <div className="text-xs text-stone uppercase tracking-widest mb-1">Reference Number</div>
           <div className="font-mono text-2xl font-bold text-brand">{success.application_no}</div>
         </div>
+        <div className="max-w-md mx-auto mt-6 rounded-2xl border border-gold/50 bg-gold/10 p-5 text-left text-sm text-brand-dark">
+          <div className="font-semibold mb-1">📧 Please check your email regularly</div>
+          <p>We have sent a confirmation to <strong>{success.email}</strong>. You will also receive an email at this address about the outcome of your application, so check your inbox regularly, and your spam or junk folder too.</p>
+        </div>
       </div>
     );
   }
@@ -244,7 +290,7 @@ export default function ApplicationForm() {
     <div>
       {/* Stepper */}
       <div className="flex gap-2 mb-8">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4, 5].map(i => (
           <div key={i} className={`flex-1 h-2 rounded-full transition-colors ${step >= i ? 'bg-brand' : 'bg-stone/20'}`} />
         ))}
       </div>
@@ -253,9 +299,10 @@ export default function ApplicationForm() {
         {step === 2 && 'Step 2: Personal Details'}
         {step === 3 && 'Step 3: Supporting Documents'}
         {step === 4 && 'Step 4: Parent & Emergency Details'}
+        {step === 5 && 'Step 5: Review and Confirm'}
       </h2>
 
-      <form onSubmit={step === 4 ? handleSubmit : nextStep} className="space-y-8">
+      <form onSubmit={step === 5 ? handleSubmit : nextStep} className="space-y-8">
 
         {/* ── Step 1: Qualifications first → then filtered course selection ── */}
         {step === 1 && (
@@ -405,9 +452,20 @@ export default function ApplicationForm() {
             <Field name="id_number" label="National ID No." value={formData.id_number} onChange={handleChange} />
             <Field name="birth_cert_no" label="Birth Certificate No." value={formData.birth_cert_no} onChange={handleChange} />
             <Field name="email" label="Email Address" type="email" required value={formData.email} onChange={handleChange} />
-            <Field name="phone" label="Phone Number" required value={formData.phone} onChange={handleChange} />
+            <Field name="phone" label="Phone Number" required inputMode="tel" placeholder="e.g. 0712 345 678" value={formData.phone} onChange={handleChange} onBlur={tidyPhone} error={shown('phone')} />
             <Field name="address" label="Postal Address" value={formData.address} onChange={handleChange} />
             <Field name="religion" label="Religion" value={formData.religion} onChange={handleChange} />
+            <div className="sm:col-span-2 rounded-2xl border border-stone/20 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={formData.has_disability} onChange={e => setFormData(f => ({ ...f, has_disability: e.target.checked, ...(e.target.checked ? {} : { disability: '' }) }))} className="h-5 w-5 mt-0.5 accent-brand" />
+                <span><span className="block text-sm font-semibold text-brand-dark">I have a disability</span><span className="block text-xs text-stone">Tick this if you do, so the college can support you.</span></span>
+              </label>
+              {formData.has_disability && (
+                <div className="mt-3">
+                  <Field name="disability" label="Please describe the disability" required value={formData.disability} onChange={handleChange} error={shown('disability')} placeholder="e.g. Hearing impairment, needs a seat near the front" />
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -438,18 +496,19 @@ export default function ApplicationForm() {
           <div className="space-y-8">
             {/* Father */}
             <div>
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
                 <h3 className="text-lg font-display text-brand-dark">Father Information</h3>
-                <button type="button" onClick={() => setFormData(f => ({ ...f, father_present: !f.father_present }))}
-                  className={`w-12 h-6 rounded-full transition ${formData.father_present ? 'bg-brand' : 'bg-stone/30'} flex items-center`}>
-                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.father_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                </button>
-                <span className="text-sm text-stone">{formData.father_present ? 'Present' : 'Not present'}</span>
+                <label className="flex items-center gap-2 text-sm text-stone cursor-pointer">
+                  <input type="checkbox" checked={formData.father_deceased} onChange={e => setFormData(f => ({ ...f, father_deceased: e.target.checked }))} className="h-4 w-4 accent-brand" />
+                  Deceased
+                </label>
               </div>
-              {formData.father_present && (
+              {formData.father_deceased ? (
+                <p className="text-sm text-stone bg-cream-deep rounded-xl px-4 py-3">Marked as deceased. No details are needed.</p>
+              ) : (
                 <div className="grid sm:grid-cols-2 gap-5">
                   <Field name="father_name" label="Father's Name" required value={formData.father_name} onChange={handleChange} />
-                  <Field name="father_phone" label="Father's Phone" required value={formData.father_phone} onChange={handleChange} />
+                  <Field name="father_phone" label="Father's Phone" required inputMode="tel" placeholder="e.g. 0712 345 678" value={formData.father_phone} onChange={handleChange} onBlur={tidyPhone} error={shown('father_phone')} />
                   <Field name="father_email" label="Father's Email" type="email" value={formData.father_email} onChange={handleChange} />
                   <Field name="father_occupation" label="Father's Occupation" value={formData.father_occupation} onChange={handleChange} />
                 </div>
@@ -458,18 +517,19 @@ export default function ApplicationForm() {
 
             {/* Mother */}
             <div>
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
                 <h3 className="text-lg font-display text-brand-dark">Mother Information</h3>
-                <button type="button" onClick={() => setFormData(f => ({ ...f, mother_present: !f.mother_present }))}
-                  className={`w-12 h-6 rounded-full transition ${formData.mother_present ? 'bg-brand' : 'bg-stone/30'} flex items-center`}>
-                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${formData.mother_present ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                </button>
-                <span className="text-sm text-stone">{formData.mother_present ? 'Present' : 'Not present'}</span>
+                <label className="flex items-center gap-2 text-sm text-stone cursor-pointer">
+                  <input type="checkbox" checked={formData.mother_deceased} onChange={e => setFormData(f => ({ ...f, mother_deceased: e.target.checked }))} className="h-4 w-4 accent-brand" />
+                  Deceased
+                </label>
               </div>
-              {formData.mother_present && (
+              {formData.mother_deceased ? (
+                <p className="text-sm text-stone bg-cream-deep rounded-xl px-4 py-3">Marked as deceased. No details are needed.</p>
+              ) : (
                 <div className="grid sm:grid-cols-2 gap-5">
                   <Field name="mother_name" label="Mother's Name" required value={formData.mother_name} onChange={handleChange} />
-                  <Field name="mother_phone" label="Mother's Phone" required value={formData.mother_phone} onChange={handleChange} />
+                  <Field name="mother_phone" label="Mother's Phone" required inputMode="tel" placeholder="e.g. 0712 345 678" value={formData.mother_phone} onChange={handleChange} onBlur={tidyPhone} error={shown('mother_phone')} />
                   <Field name="mother_email" label="Mother's Email" type="email" value={formData.mother_email} onChange={handleChange} />
                   <Field name="mother_occupation" label="Mother's Occupation" value={formData.mother_occupation} onChange={handleChange} />
                 </div>
@@ -481,9 +541,55 @@ export default function ApplicationForm() {
               <h3 className="text-lg font-display text-brand-dark mb-4">Emergency Contact</h3>
               <div className="grid sm:grid-cols-2 gap-5">
                 <Field name="emergency_person" label="Emergency Contact Name" required value={formData.emergency_person} onChange={handleChange} />
-                <Field name="emergency_phone" label="Phone Number" required value={formData.emergency_phone} onChange={handleChange} />
+                <Field name="emergency_phone" label="Phone Number" required inputMode="tel" placeholder="e.g. 0712 345 678" value={formData.emergency_phone} onChange={handleChange} onBlur={tidyPhone} error={shown('emergency_phone')} />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Step 5: Review and confirm ── */}
+        {step === 5 && (
+          <div className="space-y-6">
+            <p className="text-sm text-stone">Please read through everything below. If something is wrong, use <strong>Change</strong> to go back and fix it. Nothing is sent until you confirm.</p>
+            {(() => {
+              const dept = allDepartments.find(d => d.id === formData.department_id);
+              const course = (dept?.courses || []).find((c: any) => c.id === formData.course_id);
+              const yn = (v: boolean) => (v ? 'Yes' : 'No');
+              const parent = (deceased: boolean, name: string, phone: string) => deceased ? 'Deceased' : [name, normalizeKenyaPhone(phone) || phone].filter(Boolean).join(' · ') || '—';
+              const sections: { title: string; step: number; rows: [string, string][] }[] = [
+                { title: 'Qualification and course', step: 1, rows: [
+                  ['KCSE mean grade', formData.kcse_grade || '—'], ['KCPE marks', formData.kcpe_marks || '—'], ['Prior level completed', formData.prior_level_completed || '—'],
+                  ['Department', dept?.name || '—'], ['Course', course?.name || '—'], ['Level', formData.level_applied || '—'],
+                ] },
+                { title: 'Personal details', step: 2, rows: [
+                  ['Name', `${formData.surname} ${formData.other_names}`.trim() || '—'], ['Gender', formData.gender || '—'], ['Date of birth', formData.date_of_birth || '—'],
+                  ['National ID', formData.id_number || '—'], ['Birth certificate no.', formData.birth_cert_no || '—'], ['Email', formData.email || '—'],
+                  ['Phone', normalizeKenyaPhone(formData.phone) || formData.phone || '—'], ['Postal address', formData.address || '—'], ['Religion', formData.religion || '—'],
+                  ['Disability', formData.has_disability ? `Yes: ${formData.disability}` : 'No'],
+                ] },
+                { title: 'Supporting documents', step: 3, rows: Object.entries(files).map(([k, v]: any) => [({ doc_id_copy: 'National ID / Passport', doc_kcse: 'KCSE certificate', doc_birth_cert: 'Birth certificate', doc_medical: 'Medical report', doc_kcpe: 'KCPE certificate' } as any)[k] || k, v ? v.name : 'Not uploaded']) },
+                { title: 'Parents and emergency contact', step: 4, rows: [
+                  ['Father', parent(formData.father_deceased, formData.father_name, formData.father_phone)], ['Mother', parent(formData.mother_deceased, formData.mother_name, formData.mother_phone)],
+                  ['Emergency contact', [formData.emergency_person, normalizeKenyaPhone(formData.emergency_phone) || formData.emergency_phone].filter(Boolean).join(' · ') || '—'],
+                ] },
+              ];
+              void yn;
+              return sections.map(sec => (
+                <div key={sec.title} className="border border-stone/15 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-display text-lg text-brand-dark">{sec.title}</h3>
+                    <button type="button" onClick={() => setStep(sec.step)} className="text-sm font-semibold text-brand hover:underline">Change</button>
+                  </div>
+                  <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                    {sec.rows.map(([k, v]) => <div key={k} className="flex justify-between gap-4 border-b border-stone/10 py-1.5"><dt className="text-stone">{k}</dt><dd className="text-brand-dark text-right break-words">{v}</dd></div>)}
+                  </dl>
+                </div>
+              ));
+            })()}
+            <label className="flex items-start gap-3 rounded-2xl border-2 border-brand/30 bg-brand/5 p-4 cursor-pointer">
+              <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="h-5 w-5 mt-0.5 accent-brand" />
+              <span className="text-sm text-brand-dark"><strong>I confirm that the information I have given is correct and complete.</strong> I understand that false information may lead to my application being rejected.</span>
+            </label>
           </div>
         )}
 
@@ -495,11 +601,11 @@ export default function ApplicationForm() {
             </button>
           ) : <div />}
 
-          <button type="submit" disabled={submitting}
+          <button type="submit" disabled={submitting || (step === 5 && !confirmed)}
             className="px-8 py-3 rounded-full bg-brand text-cream font-semibold hover:bg-brand-dark transition shadow-lg disabled:opacity-50">
-            {step === 4
-              ? (submitting ? 'Submitting...' : 'Submit Application ✅')
-              : 'Next Step →'}
+            {step === 5
+              ? (submitting ? 'Submitting...' : 'Confirm and Submit ✅')
+              : step === 4 ? 'Review →' : 'Next Step →'}
           </button>
         </div>
       </form>
