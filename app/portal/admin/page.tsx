@@ -15,6 +15,7 @@ import StudentPicker from '@/components/StudentPicker';
 import StudentFeesModal from '@/components/StudentFeesModal';
 import ReconcileFees from '@/components/ReconcileFees';
 import ActivityLog from '@/components/ActivityLog';
+import ProfileOptionsAdmin, { StudentChoicesModal } from '@/components/ProfileOptions';
 import StudentImportModal from '@/components/StudentImportModal';
 import TermInfo from '@/components/TermInfo';
 import { termLabel } from '@/lib/terms';
@@ -46,7 +47,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'settings'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'settings'>('overview');
   const EMPTY_APP_FILTERS = { department_id: '', course_id: '', type: '', level_applied: '', date_from: '', date_to: '' };
   const [appFilters, setAppFilters] = useState(EMPTY_APP_FILTERS);
   const [appPageSize, setAppPageSize] = useState(15);
@@ -572,6 +573,7 @@ export default function AdminDashboard() {
           { key: 'requisitions', label: '🛒 Requisitions' },
           { key: 'term-progression', label: '📈 Term Progression' },
           { key: 'doc-templates', label: '📝 Doc Templates' },
+          { key: 'profile-options', label: '🏅 Interests & Sports' },
           { key: 'activity-log', label: '📜 Activity log' },
           { key: 'settings', label: '⚙️ Settings' },
         ].filter((t) => isAdmin || REGISTRAR_TABS.includes(t.key)).map((t) => (
@@ -2137,6 +2139,10 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {tab === 'profile-options' && isAdmin && (
+        <main className="max-w-7xl mx-auto px-6 py-8"><ProfileOptionsAdmin /></main>
+      )}
+
       {tab === 'activity-log' && isAdmin && (
         <main className="max-w-7xl mx-auto px-6 py-8"><ActivityLog /></main>
       )}
@@ -2205,6 +2211,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [movingTermId, setMovingTermId] = useState<string | null>(null);
   const [moveToTermId, setMoveToTermId] = useState('');
   const [historyStudent, setHistoryStudent] = useState<any>(null);
+  const [choicesStudent, setChoicesStudent] = useState<any>(null);
   const [linkStudent, setLinkStudent] = useState<any>(null);
   const [showBulkDocs, setShowBulkDocs] = useState(false);
 
@@ -2616,6 +2623,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       {showImport && <StudentImportModal onClose={() => setShowImport(false)} onDone={refreshStudents} />}
       {feesStudent && <StudentFeesModal student={feesStudent} onClose={() => setFeesStudent(null)} onChanged={refreshStudents} />}
       {historyStudent && <StudentHistoryModal student={historyStudent} onClose={() => setHistoryStudent(null)} />}
+      {choicesStudent && <StudentChoicesModal student={choicesStudent} onClose={() => setChoicesStudent(null)} onSaved={refreshStudents} />}
       {linkStudent && <LinkRecordModal student={linkStudent} onClose={() => setLinkStudent(null)} onDone={() => { refreshStudents(); setShowDuplicates(false); }} />}
       {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
       {showBulkDocs && <BulkIssueDocumentsModal studentIds={selectedStudentIds} onClose={() => setShowBulkDocs(false)} onDone={refreshStudents} />}
@@ -2824,6 +2832,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                     <div className="flex gap-2">
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
                       <button onClick={() => setHistoryStudent(s)} className="text-purple-700 hover:text-purple-900 font-medium text-xs transition">History</button>
+                      <button onClick={() => setChoicesStudent(s)} className="text-sky-700 hover:text-sky-900 font-medium text-xs transition">Interests</button>
                       <button onClick={() => setLinkStudent(s)} className="text-stone hover:text-brand-dark font-medium text-xs transition" title="Link this student's earlier record">Link</button>
                       {isAdmin && <button onClick={() => setFeesStudent(s)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>}
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>

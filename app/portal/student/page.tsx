@@ -8,6 +8,7 @@ import { downloadStudentDocument } from '@/components/StudentDocuments';
 import { StudentHistoryPanel } from '@/components/StudentHistory';
 import { termDates, termFee, termState } from '@/lib/terms';
 import { studentDocumentsApi } from '@/lib/services';
+import { phoneProblem, normalizeKenyaPhone } from '@/lib/phone';
 import { toast } from 'sonner';
 
 export default function StudentDashboard() {
@@ -26,6 +27,11 @@ export default function StudentDashboard() {
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [feeSummary, setFeeSummary] = useState<any>(null);
+  const [profileOptions, setProfileOptions] = useState<{ interests: string[]; sports: string[] }>({ interests: [], sports: [] });
+  const [myInterests, setMyInterests] = useState<string[]>([]);
+  const [mySports, setMySports] = useState<string[]>([]);
+  const [editingChoices, setEditingChoices] = useState(false);
+  const [savingChoices, setSavingChoices] = useState(false);
   const [loadingFeeSummary, setLoadingFeeSummary] = useState(false);
   const [showFeeSummary, setShowFeeSummary] = useState(false);
   const [userNeedsPasswordChange, setUserNeedsPasswordChange] = useState(false);
@@ -114,8 +120,13 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (user?.role === 'STUDENT' && !user.mustChangePassword) {
+      api.get('/profile-options').then(o => setProfileOptions(o.data)).catch(() => { });
       api.get('/students/me').then(r => {
         setProfile(r.data);
+        setMyInterests(r.data.interests || []);
+        setMySports(r.data.sports || []);
+        // the balance is shown on the front page, so load it straight away
+        api.get(`/fees/students/${r.data.id}/summary`).then(f => setFeeSummary(f.data)).catch(() => { });
         setEditForm({
           // Personal identity
           email: r.data.user?.email || '',
@@ -138,12 +149,16 @@ export default function StudentDashboard() {
           father_email: r.data.application?.father_email || '',
           father_occupation: r.data.application?.father_occupation || '',
           father_present: r.data.application?.father_present ?? true,
+          father_deceased: r.data.application?.father_deceased ?? false,
           // Mother
           mother_name: r.data.application?.mother_name || '',
           mother_phone: r.data.application?.mother_phone || '',
           mother_email: r.data.application?.mother_email || '',
           mother_occupation: r.data.application?.mother_occupation || '',
           mother_present: r.data.application?.mother_present ?? true,
+          mother_deceased: r.data.application?.mother_deceased ?? false,
+          has_disability: r.data.application?.has_disability ?? false,
+          disability: r.data.application?.disability || '',
           // Guardian (fallback)
           parent_names: r.data.application?.parent_names || '',
           parent_phone: r.data.application?.parent_phone || '',
@@ -176,11 +191,20 @@ export default function StudentDashboard() {
     }
   }, [user]);
 
+  // Phone numbers must be Kenyan mobile numbers
+  const phoneChecks: [string, string][] = [['phone', 'Phone number'], ['emergency_contact_phone', 'Emergency contact phone'], ['father_phone', "Father's phone"], ['mother_phone', "Mother's phone"], ['parent_phone', 'Guardian phone']];
+  const phoneIssue = (k: string) => (editForm[k] ? phoneProblem(String(editForm[k])) : '');
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const bad = phoneChecks.find(([k]) => phoneIssue(k));
+    if (bad) { toast.error(`${bad[1]}: ${phoneIssue(bad[0])}`); return; }
+    if (editForm.has_disability && !String(editForm.disability || '').trim()) { toast.error('Please describe the disability so the college can support you'); return; }
     setUpdating(true);
     try {
-      const res = await api.patch('/students/me', editForm);
+      const tidy = { ...editForm };
+      phoneChecks.forEach(([k]) => { if (tidy[k]) tidy[k] = normalizeKenyaPhone(String(tidy[k])) || tidy[k]; });
+      const res = await api.patch('/students/me', tidy);
       // Server may update withinWindow status
       if (res.data.windowEnd) {
         const wEnd = new Date(res.data.windowEnd);
@@ -202,6 +226,23 @@ export default function StudentDashboard() {
       setUpdating(false);
     }
   };
+
+  // Interests and sports can be changed at any time (they are not part of the personal details that lock)
+  const saveChoices = async () => {
+    setSavingChoices(true);
+    try {
+      const res = await api.patch('/students/me', { interests: myInterests, sports: mySports });
+      setMyInterests(res.data.student?.interests || myInterests);
+      setMySports(res.data.student?.sports || mySports);
+      setEditingChoices(false);
+      toast.success('Interests and sports saved');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Could not save your choices');
+    } finally {
+      setSavingChoices(false);
+    }
+  };
+  const toggleChoice = (list: string[], set: (v: string[]) => void, name: string) => set(list.includes(name) ? list.filter(n => n !== name) : [...list, name]);
 
   const handleEnrollTerm = async (termId: string) => {
     if (!confirm('Are you sure you want to enroll in this term? This may have fee implications.')) return;
@@ -468,6 +509,7 @@ export default function StudentDashboard() {
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone Number</label>
                     <input type="text" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    {phoneIssue('phone') && <p className="text-xs text-red-600 mt-1">{phoneIssue('phone')}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">ID Number</label>
@@ -488,13 +530,14 @@ export default function StudentDashboard() {
                   <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-1.5">Emergency Contact Phone</label>
                     <input type="text" value={editForm.emergency_contact_phone || ''} onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    {phoneIssue('emergency_contact_phone') && <p className="text-xs text-red-600 mt-1">{phoneIssue('emergency_contact_phone')}</p>}
                   </div>
                 </div>
 
                 {/* ── Father / Guardian ── */}
                 <div className="pt-2 border-t border-stone/10">
                   <div className="font-semibold text-sm text-brand-dark mb-3">👨 Father / Male Guardian</div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid grid-cols-2 gap-4 ${editForm.father_deceased ? 'hidden' : ''}`}>
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Full Name</label>
                       <input type="text" value={editForm.father_name || ''} onChange={(e) => setEditForm({ ...editForm, father_name: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="e.g. Mohammed Abdi" />
@@ -502,6 +545,7 @@ export default function StudentDashboard() {
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
                       <input type="text" value={editForm.father_phone || ''} onChange={(e) => setEditForm({ ...editForm, father_phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    {phoneIssue('father_phone') && <p className="text-xs text-red-600 mt-1">{phoneIssue('father_phone')}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email</label>
@@ -513,15 +557,15 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                   <label className="flex items-center gap-2 mt-3 text-sm text-brand-dark">
-                    <input type="checkbox" checked={!!editForm.father_present} onChange={(e) => setEditForm({ ...editForm, father_present: e.target.checked })} className="rounded" />
-                    Father is alive / present
+                    <input type="checkbox" checked={!!editForm.father_deceased} onChange={(e) => setEditForm({ ...editForm, father_deceased: e.target.checked })} className="rounded" />
+                    Father is deceased (his details will be cleared)
                   </label>
                 </div>
 
                 {/* ── Mother / Guardian ── */}
                 <div className="pt-2 border-t border-stone/10">
                   <div className="font-semibold text-sm text-brand-dark mb-3">👩 Mother / Female Guardian</div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid grid-cols-2 gap-4 ${editForm.mother_deceased ? 'hidden' : ''}`}>
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Full Name</label>
                       <input type="text" value={editForm.mother_name || ''} onChange={(e) => setEditForm({ ...editForm, mother_name: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" placeholder="e.g. Fatuma Hassan" />
@@ -529,6 +573,7 @@ export default function StudentDashboard() {
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Phone</label>
                       <input type="text" value={editForm.mother_phone || ''} onChange={(e) => setEditForm({ ...editForm, mother_phone: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm" />
+                    {phoneIssue('mother_phone') && <p className="text-xs text-red-600 mt-1">{phoneIssue('mother_phone')}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-brand-dark mb-1.5">Email</label>
@@ -540,9 +585,24 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                   <label className="flex items-center gap-2 mt-3 text-sm text-brand-dark">
-                    <input type="checkbox" checked={!!editForm.mother_present} onChange={(e) => setEditForm({ ...editForm, mother_present: e.target.checked })} className="rounded" />
-                    Mother is alive / present
+                    <input type="checkbox" checked={!!editForm.mother_deceased} onChange={(e) => setEditForm({ ...editForm, mother_deceased: e.target.checked })} className="rounded" />
+                    Mother is deceased (her details will be cleared)
                   </label>
+                </div>
+
+                {/* ── Disability ── */}
+                <div className="pt-2 border-t border-stone/10">
+                  <div className="font-semibold text-sm text-brand-dark mb-3">♿ Disability</div>
+                  <label className="flex items-center gap-2 text-sm text-brand-dark">
+                    <input type="checkbox" checked={!!editForm.has_disability} onChange={(e) => setEditForm({ ...editForm, has_disability: e.target.checked })} className="rounded" />
+                    I have a disability
+                  </label>
+                  {editForm.has_disability && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-semibold text-brand-dark mb-1.5">Please describe it</label>
+                      <input type="text" value={editForm.disability || ''} onChange={(e) => setEditForm({ ...editForm, disability: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm" placeholder="So the college can support you" />
+                    </div>
+                  )}
                 </div>
 
               </fieldset>
@@ -586,6 +646,48 @@ export default function StudentDashboard() {
             <h1 className="font-display text-3xl font-bold mb-2">Welcome, {profile.application.surname} {profile.application.other_names}</h1>
             <p className="text-cream/80">{profile.course.name} • {profile.level}</p>
           </div>
+
+          {/* ── Fee balance, up front ── */}
+          {(() => {
+            const sum = feeSummary?.summary || null;
+            if (!sum) return (
+              <div className="px-8 pt-8"><div className="rounded-2xl border border-stone/15 bg-cream-deep p-5 text-sm text-stone">Loading your fee balance…</div></div>
+            );
+            const owed = sum.totalBalance || 0;
+            const credit = owed < 0;
+            const paidUp = Math.abs(owed) < 0.005;
+            const tone = paidUp ? 'border-green-200 bg-green-50' : credit ? 'border-sky-200 bg-sky-50' : 'border-red-200 bg-red-50';
+            const colour = paidUp ? 'text-green-700' : credit ? 'text-sky-700' : 'text-red-600';
+            const money = (n: number) => `KES ${Math.round(Math.abs(n)).toLocaleString()}`;
+            const lastPayment = (feeSummary.paymentHistory || [])[0];
+            const open = (feeSummary.termBreakdown || []).filter((t: any) => (t.balance || 0) > 0.005);
+            return (
+              <div className="px-8 pt-8">
+                <div className={`rounded-2xl border p-5 ${tone}`}>
+                  <div className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-widest text-stone">{credit ? 'Your fee credit' : 'Your fee balance'}</div>
+                      <div className={`text-3xl font-bold ${colour}`}>{paidUp ? 'Fully paid ✅' : money(owed)}</div>
+                      <div className="text-xs text-stone mt-1">{paidUp ? 'You owe nothing.' : credit ? 'You have paid more than has been billed so far.' : 'This is what you still owe, including any amount from earlier terms.'}</div>
+                    </div>
+                    <div className="flex gap-6 text-sm">
+                      <div><div className="text-xs text-stone">Billed</div><div className="font-semibold text-brand-dark">{money(sum.totalFees || 0)}</div></div>
+                      <div><div className="text-xs text-stone">Paid</div><div className="font-semibold text-green-700">{money(sum.totalPaid || 0)}</div></div>
+                    </div>
+                  </div>
+                  {open.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {open.map((t: any) => <span key={t.term.id} className="px-3 py-1 rounded-full bg-white/70 border border-stone/15 text-xs text-brand-dark">{t.term.name} {t.term.academic_year}: <strong>{money(t.balance)}</strong></span>)}
+                    </div>
+                  )}
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-stone">
+                    <span>{lastPayment ? `Last payment: ${money(lastPayment.amount)} on ${new Date(lastPayment.paid_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No payments recorded yet.'}</span>
+                    <button onClick={() => setShowFeeSummary(true)} className="font-semibold text-brand hover:underline">See the full breakdown →</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="p-8 grid lg:grid-cols-2 gap-8">
             <div className="lg:col-span-2">
@@ -803,20 +905,54 @@ export default function StudentDashboard() {
               )}
             </div>
 
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Interests &amp; Sports</h2>
+                {!editingChoices && <button onClick={() => setEditingChoices(true)} className="text-sm font-semibold text-brand hover:underline">{myInterests.length + mySports.length ? 'Change' : 'Add yours'}</button>}
+              </div>
+              {!editingChoices ? (
+                myInterests.length + mySports.length === 0 ? <p className="text-sm text-stone">You have not chosen any yet. Tell us what you enjoy.</p> : (
+                  <div className="flex flex-wrap gap-2">
+                    {mySports.map(n => <span key={`s-${n}`} className="px-3 py-1 rounded-full bg-brand/10 text-brand text-xs font-semibold">⚽ {n}</span>)}
+                    {myInterests.map(n => <span key={`i-${n}`} className="px-3 py-1 rounded-full bg-gold/20 text-brand-dark text-xs font-semibold">⭐ {n}</span>)}
+                  </div>
+                )
+              ) : (
+                <div className="space-y-5">
+                  {([['Sports', profileOptions.sports, mySports, setMySports], ['Interests', profileOptions.interests, myInterests, setMyInterests]] as const).map(([label, options, chosen, setChosen]) => (
+                    <div key={label}>
+                      <div className="text-xs font-semibold text-brand-dark mb-2">{label}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from(new Set([...options, ...chosen])).map(n => (
+                          <button key={n} type="button" onClick={() => toggleChoice(chosen as string[], setChosen as any, n)} aria-pressed={chosen.includes(n)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${chosen.includes(n) ? 'bg-brand text-cream border-brand' : 'bg-white text-brand-dark border-stone/25 hover:border-brand'}`}>{n}</button>
+                        ))}
+                        {options.length === 0 && chosen.length === 0 && <span className="text-xs text-stone">The college has not added any yet.</span>}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-3">
+                    <button onClick={saveChoices} disabled={savingChoices} className="px-5 py-2 rounded-xl bg-brand text-cream text-sm font-semibold hover:bg-brand-dark transition disabled:opacity-60">{savingChoices ? 'Saving…' : 'Save'}</button>
+                    <button onClick={() => { setEditingChoices(false); setMyInterests(profile.interests || []); setMySports(profile.sports || []); }} className="px-5 py-2 rounded-xl border border-stone/25 text-brand text-sm font-semibold hover:bg-stone/5 transition">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Fee Status</h2>
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <dt className="text-stone">Admission Fee (1500)</dt>
+                  <dt className="text-stone">Admission Fee</dt>
                   <dd className="font-medium">{profile.admission_fee_paid ? <span className="text-green-600">Paid ✅</span> : <span className="text-red-500">Pending</span>}</dd>
                 </div>
                 <div className="flex justify-between border-b border-stone/10 pb-2">
-                  <dt className="text-stone">Student ID Fee (500)</dt>
+                  <dt className="text-stone">Student ID Fee</dt>
                   <dd className="font-medium">{profile.student_id_fee_paid ? <span className="text-green-600">Paid ✅</span> : <span className="text-red-500">Pending</span>}</dd>
                 </div>
                 {profile.application.type === 'DIRECT' && (
                   <div className="flex justify-between border-b border-stone/10 pb-2">
-                    <dt className="text-stone">KUCCPS Fee (500)</dt>
+                    <dt className="text-stone">KUCCPS Fee</dt>
                     <dd className="font-medium">{profile.kuccps_fee_paid ? <span className="text-green-600">Paid ✅</span> : <span className="text-red-500">Pending</span>}</dd>
                   </div>
                 )}
@@ -856,15 +992,15 @@ export default function StudentDashboard() {
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <div className="text-stone text-xs mb-1">Total Fees</div>
-                      <div className="font-medium text-brand-dark">KES {feeSummary.totalFees?.toLocaleString() || 0}</div>
+                      <div className="font-medium text-brand-dark">KES {(feeSummary.summary?.totalFees ?? feeSummary.totalFees)?.toLocaleString() || 0}</div>
                     </div>
                     <div>
                       <div className="text-stone text-xs mb-1">Total Paid</div>
-                      <div className="font-medium text-green-600">KES {feeSummary.totalPaid?.toLocaleString() || 0}</div>
+                      <div className="font-medium text-green-600">KES {(feeSummary.summary?.totalPaid ?? feeSummary.totalPaid)?.toLocaleString() || 0}</div>
                     </div>
                     <div>
                       <div className="text-stone text-xs mb-1">Balance</div>
-                      <div className="font-medium text-red-500">KES {feeSummary.totalBalance?.toLocaleString() || 0}</div>
+                      <div className="font-medium text-red-500">KES {(feeSummary.summary?.totalBalance ?? feeSummary.totalBalance)?.toLocaleString() || 0}</div>
                     </div>
                   </div>
                 </div>
