@@ -16,6 +16,7 @@ import StudentFeesModal from '@/components/StudentFeesModal';
 import ReconcileFees from '@/components/ReconcileFees';
 import ActivityLog from '@/components/ActivityLog';
 import ProfileOptionsAdmin, { StudentChoicesModal } from '@/components/ProfileOptions';
+import StudentTypes from '@/components/StudentTypes';
 import { LetterheadPanel, DocExtras, PreviewButton, DocStyle } from '@/components/DocumentDesign';
 import IdCardDesign from '@/components/IdCardDesign';
 import StudentImportModal from '@/components/StudentImportModal';
@@ -36,7 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 // Registrars handle student affairs: applications, students, departments/courses and progression — never finance or system admin
-const REGISTRAR_TABS = ['overview', 'applications', 'students', 'courses', 'term-progression'];
+const REGISTRAR_TABS = ['overview', 'applications', 'students', 'student-types', 'courses', 'term-progression'];
 
 export default function AdminDashboard() {
   const { user, logout, loading } = useAuth();
@@ -49,7 +50,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings'>('overview');
+  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'student-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings'>('overview');
   const EMPTY_APP_FILTERS = { department_id: '', course_id: '', type: '', level_applied: '', date_from: '', date_to: '' };
   const [appFilters, setAppFilters] = useState(EMPTY_APP_FILTERS);
   const [appPageSize, setAppPageSize] = useState(15);
@@ -570,6 +571,7 @@ export default function AdminDashboard() {
           { key: 'news', label: '📰 News' },
           { key: 'gallery', label: '🖼️ Gallery' },
           { key: 'fee-types', label: '💰 Fee Types' },
+          { key: 'student-types', label: '🧑‍🎓 Student Types' },
           { key: 'terms', label: '📅 Terms' },
           { key: 'billing', label: '💳 Billing' },
           { key: 'requisitions', label: '🛒 Requisitions' },
@@ -2144,6 +2146,10 @@ export default function AdminDashboard() {
 
       {tab === 'id-card' && isAdmin && (
         <main className="max-w-7xl mx-auto px-6 py-8"><IdCardDesign /></main>
+      )}
+
+      {tab === 'student-types' && (
+        <main className="max-w-7xl mx-auto px-6 py-8"><StudentTypes canSetFees={isAdmin} /></main>
       )}
 
       {tab === 'profile-options' && isAdmin && (
