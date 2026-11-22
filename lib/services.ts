@@ -71,6 +71,13 @@ export const studentsApi = {
   myStatement: () => api.get('/students/me/statement'),
 };
 
+// Earlier merges (older admissions folded into a later one) that can be put back as their own admission
+export const studentMergesApi = {
+  list: () => api.get('/student-merges'),
+  preview: (id: string, termIds?: string[], status?: string) => api.get(`/student-merges/${id}/preview`, { params: { ...(termIds ? { term_ids: termIds.join(',') } : {}), ...(status ? { status } : {}) } }),
+  restore: (id: string, body: { term_ids?: string[]; status?: string; acknowledge_warnings: boolean }) => api.post(`/student-merges/${id}/restore`, body),
+};
+
 // Finance
 export const financeApi = {
   getFeeRecords: (params?: any) => api.get('/finance/students', { params }),

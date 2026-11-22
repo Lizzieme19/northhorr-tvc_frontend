@@ -8,7 +8,7 @@ import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
 import { StudentDocumentsModal, BulkIssueDocumentsModal } from '@/components/StudentDocuments';
 import { StudentHistoryModal, LinkRecordModal } from '@/components/StudentHistory';
-import { LinkedAdmissionsModal } from '@/components/LinkedAdmissions';
+import { LinkedAdmissionsModal, PastMergesModal } from '@/components/LinkedAdmissions';
 import Pagination from '@/components/Pagination';
 import { FilterPanel, FilterSelect, FilterSearch, FilterDate } from '@/components/ListFilters';
 import { useDebounced } from '@/lib/hooks';
@@ -2359,6 +2359,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [choicesStudent, setChoicesStudent] = useState<any>(null);
   const [linkStudent, setLinkStudent] = useState<any>(null);
   const [linkedView, setLinkedView] = useState<any>(null);
+  const [showPastMerges, setShowPastMerges] = useState(false);
   const [showBulkDocs, setShowBulkDocs] = useState(false);
 
   // Only send the filters that are set
@@ -2777,6 +2778,15 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
           >
             ⬇ Download Reports
           </button>
+          {isAdmin && enrolledStats?.merged_records > 0 && (
+            <button
+              onClick={() => setShowPastMerges(true)}
+              className="px-4 py-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 font-semibold hover:bg-purple-100 transition text-sm"
+              title="Put older admissions that were folded into a later one back as their own admission"
+            >
+              ↩ Restore merged ({enrolledStats.merged_records})
+            </button>
+          )}
           <button
             onClick={handleFindDuplicates}
             disabled={loadingDuplicates}
@@ -2791,6 +2801,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       {feesStudent && <StudentFeesModal student={feesStudent} onClose={() => setFeesStudent(null)} onChanged={refreshStudents} />}
       {historyStudent && <StudentHistoryModal student={historyStudent} onClose={() => setHistoryStudent(null)} />}
       {choicesStudent && <StudentChoicesModal student={choicesStudent} onClose={() => setChoicesStudent(null)} onSaved={refreshStudents} />}
+      {showPastMerges && <PastMergesModal onClose={() => setShowPastMerges(false)} onChanged={() => { refreshStudents(); studentsApi.getStats().then(r => setEnrolledStats(r.data)).catch(() => { }); }} />}
       {linkedView && <LinkedAdmissionsModal student={linkedView} canUnlink={isAdmin} canSeeFees={isAdmin} onClose={() => setLinkedView(null)} onChanged={refreshStudents} />}
       {linkStudent && <LinkRecordModal student={linkStudent} onClose={() => setLinkStudent(null)} onDone={() => { refreshStudents(); setShowDuplicates(false); }} />}
       {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
