@@ -7,12 +7,16 @@ import AssetRegister from '@/components/AssetRegister';
 import { GrnLinesDialog, KindBadge, UnitInput, withUnit, RequesterField, RequisitionLines, requesterOf, requesterPayload, blankLine } from '@/components/ProcurementItemParts';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
+import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
+
+type TabKey = 'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'assets' | 'inventory' | 'invoices';
+const TAB_KEYS: readonly TabKey[] = ['suppliers', 'requisitions', 'rfqs', 'lpos', 'grns', 'assets', 'inventory', 'invoices'];
 
 export default function ProcurementDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [tab, setTab] = useState<'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'assets' | 'inventory' | 'invoices'>('suppliers');
+  const [tab, setTab] = usePortalSection<TabKey>(TAB_KEYS, 'suppliers');
   const [assetCount, setAssetCount] = useState<number | null>(null);
   const [toTagCount, setToTagCount] = useState(0);
   const [units, setUnits] = useState<string[]>([]);
@@ -416,42 +420,36 @@ export default function ProcurementDashboard() {
     }
   };
 
+  const navGroups: NavGroup[] = [
+    { heading: 'Purchasing', items: [
+      { key: 'requisitions', label: 'Requisitions', icon: '📝', count: requisitions.length, hint: 'What departments have asked for' },
+      { key: 'rfqs', label: 'RFQs', icon: '📋', count: rfqs.length, hint: 'Requests for quotation' },
+      { key: 'lpos', label: 'LPOs', icon: '📄', count: lpos.length, hint: 'Local purchase orders' },
+      { key: 'grns', label: 'GRNs', icon: '✅', count: grns.length, hint: 'Goods received' },
+      { key: 'invoices', label: 'Invoices', icon: '🧾', count: invoices.length },
+    ] },
+    { heading: 'Stock & assets', items: [
+      { key: 'assets', label: 'Assets', icon: '🏷️', count: assetCount, badge: toTagCount > 0 ? toTagCount : null, hint: toTagCount > 0 ? `${toTagCount} to tag` : 'The asset register' },
+      { key: 'inventory', label: 'Inventory', icon: '📦', count: inventory.length },
+    ] },
+    { heading: 'Suppliers', items: [{ key: 'suppliers', label: 'Suppliers', icon: '🏢', count: suppliers.length }] },
+  ];
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-cream-deep">
-      <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          <span className="font-display font-semibold hidden sm:block">Procurement Portal</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
-          <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">PROCUREMENT</span>
-          <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
-          <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
-        </div>
-      </header>
+    <PortalShell
+      brand={{ title: 'Procurement Portal', subtitle: 'North Horr TVC', logoText: 'NT' }}
+      groups={navGroups}
+      active={tab}
+      onNavigate={(k) => { setTab(k as TabKey);  }}
+      user={{ email: user.email, role: 'PROCUREMENT' }}
+      onChangePassword={() => { setShowPasswordChange(true); window.scrollTo({ top: 0 }); }}
+      onLogout={() => { logout(); router.push('/login'); }}
+      bottomKeys={['requisitions', 'lpos', 'assets', 'suppliers']}
+    >
 
-      <nav className="bg-white border-b border-stone/15 px-6 flex gap-1 overflow-x-auto">
-        {[
-          { key: 'suppliers', label: `🏢 Suppliers (${suppliers.length})` },
-          { key: 'requisitions', label: `📝 Requisitions (${requisitions.length})` },
-          { key: 'rfqs', label: `📋 RFQs (${rfqs.length})` },
-          { key: 'lpos', label: `📄 LPOs (${lpos.length})` },
-          { key: 'grns', label: `✅ GRNs (${grns.length})` },
-          { key: 'assets', label: `🏷️ Assets${assetCount !== null ? ` (${assetCount})` : ''}${toTagCount > 0 ? ` · ${toTagCount} to tag` : ''}` },
-          { key: 'inventory', label: `📦 Inventory (${inventory.length})` },
-          { key: 'invoices', label: `🧾 Invoices (${invoices.length})` },
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as any)}
-            className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
             <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>
@@ -1207,6 +1205,6 @@ export default function ProcurementDashboard() {
         <GrnLinesDialog grnId={grnLines} units={units} assetOptions={assetOptions} onClose={() => setGrnLines(null)}
           onChanged={() => grnsApi.getAll().then(r => setGrns(r.data?.grns || [])).catch(() => {})} />
       )}
-    </div>
+    </PortalShell>
   );
 }

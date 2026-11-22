@@ -16,6 +16,7 @@ import StudentPicker from '@/components/StudentPicker';
 import StudentFeesModal from '@/components/StudentFeesModal';
 import ReconcileFees from '@/components/ReconcileFees';
 import ActivityLog from '@/components/ActivityLog';
+import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
 import ProfileOptionsAdmin, { StudentChoicesModal } from '@/components/ProfileOptions';
 import StudentTypes, { BulkTypeModal } from '@/components/StudentTypes';
 import { LetterheadPanel, DocExtras, PreviewButton, DocStyle } from '@/components/DocumentDesign';
@@ -27,7 +28,7 @@ import { feeBilling, BILLING_LABEL } from '@/lib/feeTypes';
 import { feeCorrectionsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
-interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; merged_records?: number; current_records?: number; }
+interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; merged_records?: number; current_records?: number; completed?: number; }
 interface Application { id: string; application_no: string; surname: string; other_names: string; email: string; status: string; type: string; created_at: string; course?: { name: string }; department?: { name: string };[key: string]: any; }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -36,6 +37,9 @@ const STATUS_COLORS: Record<string, string> = {
   APPROVED: 'bg-green-100 text-green-800',
   REJECTED: 'bg-red-100 text-red-800',
 };
+
+type AdminTab = 'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'student-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings';
+const ADMIN_TABS: readonly AdminTab[] = ['overview', 'applications', 'students', 'users', 'courses', 'resources', 'news', 'gallery', 'fee-types', 'student-types', 'terms', 'billing', 'requisitions', 'term-progression', 'doc-templates', 'activity-log', 'profile-options', 'id-card', 'settings'];
 
 // Registrars handle student affairs: applications, students, departments/courses and progression — never finance or system admin
 const REGISTRAR_TABS = ['overview', 'applications', 'students', 'student-types', 'courses', 'term-progression'];
@@ -51,7 +55,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'student-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings'>('overview');
+  const [tab, setTab] = usePortalSection<AdminTab>(isAdmin ? ADMIN_TABS : (REGISTRAR_TABS as readonly AdminTab[]), 'overview');
   const EMPTY_APP_FILTERS = { department_id: '', course_id: '', type: '', level_applied: '', date_from: '', date_to: '' };
   const [appFilters, setAppFilters] = useState(EMPTY_APP_FILTERS);
   const [appPageSize, setAppPageSize] = useState(15);
@@ -586,59 +590,54 @@ export default function AdminDashboard() {
     }
   };
 
+  const navGroups: NavGroup[] = ([
+    { items: [{ key: 'overview', label: 'Overview', icon: '📊' }] },
+    { heading: 'Admissions & students', items: [
+      { key: 'applications', label: 'Applications', icon: '📋', badge: stats?.pendingApps || null, hint: 'Review and approve applications' },
+      { key: 'students', label: 'Students', icon: '🎓', hint: 'Records, fees, documents, linked admissions' },
+      { key: 'term-progression', label: 'Term progression', icon: '📈', hint: 'Move students to the next term or level' },
+      { key: 'student-types', label: 'Student types', icon: '🧑‍🎓', hint: 'Direct, KUCCPS... and the fees each pays' },
+      { key: 'users', label: 'Users', icon: '👥', hint: 'Accounts and roles' },
+    ] },
+    { heading: 'Academics', items: [
+      { key: 'courses', label: 'Departments & courses', icon: '📚' },
+      { key: 'terms', label: 'Terms', icon: '📅', hint: 'Dates and term fees' },
+      { key: 'doc-templates', label: 'Document templates', icon: '📝', hint: 'Letters, letterhead and wording' },
+      { key: 'id-card', label: 'ID card design', icon: '🪪' },
+    ] },
+    { heading: 'Finance', items: [
+      { key: 'fee-types', label: 'Fee types', icon: '💰' },
+      { key: 'billing', label: 'Billing', icon: '💳', hint: 'Every term bill' },
+    ] },
+    { heading: 'Procurement', items: [{ key: 'requisitions', label: 'Requisitions', icon: '🛒' }] },
+    { heading: 'Website', items: [
+      { key: 'resources', label: 'Resources', icon: '📁' },
+      { key: 'news', label: 'News', icon: '📰' },
+      { key: 'gallery', label: 'Gallery', icon: '🖼️' },
+    ] },
+    { heading: 'System', items: [
+      { key: 'profile-options', label: 'Interests & sports', icon: '🏅' },
+      { key: 'activity-log', label: 'Activity log', icon: '📜', hint: 'Who did what, and when' },
+      { key: 'settings', label: 'Settings', icon: '⚙️' },
+    ] },
+  ] as NavGroup[]).map(g => ({ ...g, items: g.items.filter(i => isAdmin || REGISTRAR_TABS.includes(i.key)) })).filter(g => g.items.length > 0);
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-cream-deep">
-      {/* Top bar */}
-      <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          <span className="font-display font-semibold hidden sm:block">{isAdmin ? 'North Horr TVC Admin Portal' : 'North Horr TVC Registrar Portal'}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
-          <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">{user.role}</span>
-          <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
-          <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
-        </div>
-      </header>
+    <PortalShell
+      brand={{ title: isAdmin ? 'Admin Portal' : 'Registrar Portal', subtitle: 'North Horr TVC', logoText: 'NT' }}
+      groups={navGroups}
+      active={tab}
+      onNavigate={(k) => setTab(k as AdminTab)}
+      user={{ email: user.email, role: user.role }}
+      onChangePassword={() => { setShowPasswordChange(true); window.scrollTo({ top: 0 }); }}
+      onLogout={() => { logout(); router.push('/login'); }}
+      bottomKeys={['overview', 'applications', 'students', 'billing']}
+      searchable
+    >
 
-      {/* Nav tabs */}
-      <nav className="bg-white border-b border-stone/15 px-6 flex gap-1 overflow-x-auto">
-        {[
-          { key: 'overview', label: '📊 Overview' },
-          { key: 'applications', label: '📋 Applications' },
-          { key: 'students', label: '🎓 Students' },
-          { key: 'users', label: '👥 Users' },
-          { key: 'courses', label: '📚 Dept & Courses' },
-          { key: 'resources', label: '📁 Resources' },
-          { key: 'news', label: '📰 News' },
-          { key: 'gallery', label: '🖼️ Gallery' },
-          { key: 'fee-types', label: '💰 Fee Types' },
-          { key: 'student-types', label: '🧑‍🎓 Student Types' },
-          { key: 'terms', label: '📅 Terms' },
-          { key: 'billing', label: '💳 Billing' },
-          { key: 'requisitions', label: '🛒 Requisitions' },
-          { key: 'term-progression', label: '📈 Term Progression' },
-          { key: 'doc-templates', label: '📝 Doc Templates' },
-          { key: 'id-card', label: '🪪 ID Card' },
-          { key: 'profile-options', label: '🏅 Interests & Sports' },
-          { key: 'activity-log', label: '📜 Activity log' },
-          { key: 'settings', label: '⚙️ Settings' },
-        ].filter((t) => isAdmin || REGISTRAR_TABS.includes(t.key)).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key as any)}
-            className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'
-              }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
             <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>
@@ -654,7 +653,7 @@ export default function AdminDashboard() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
               {[
                 { label: 'Total Students', value: stats?.total ?? '—', icon: '🎓', color: 'bg-brand', note: stats?.merged_records ? `includes ${stats.merged_records} merged record${stats.merged_records === 1 ? '' : 's'}` : '' },
-                { label: 'Active Students', value: stats?.active ?? '—', icon: '✅', color: 'bg-green-600' },
+                { label: 'Active Students', value: stats?.active ?? '—', icon: '✅', color: 'bg-green-600', note: stats?.completed ? `${stats.completed} completed, awaiting graduation` : '' },
                 { label: 'Pending Applications', value: stats?.pendingApps ?? '—', icon: '⏳', color: 'bg-yellow-500' },
                 { label: 'Approved Applications', value: stats?.approvedApps ?? '—', icon: '📝', color: 'bg-terracotta' },
               ].map(card => (
@@ -2292,7 +2291,7 @@ export default function AdminDashboard() {
       )}
 
       {tab === 'settings' && <SystemSettingsTab />}
-    </div>
+    </PortalShell>
   );
 }
 
@@ -3010,7 +3009,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                   <td className="px-4 py-3 text-stone">{s.intake} {s.year}</td>
                   <td className="px-4 py-3 text-stone text-xs">{s.current_term ? `${s.current_term.name} (${s.current_term.academic_year})` : '-'}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-stone/20 text-stone'}`}>{s.status}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : s.status === 'COMPLETED' ? 'bg-sky-100 text-sky-800' : 'bg-stone/20 text-stone'}`}>{s.status}</span>
                   </td>
                   <td className="px-4 py-3">
                     {(() => {
@@ -3130,6 +3129,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                       className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
                       <option value="">Select Status</option>
                       <option value="ACTIVE">Active</option>
+                      <option value="COMPLETED">Completed (not yet graduated)</option>
                       <option value="DEFERRED">Deferred</option>
                       <option value="GRADUATED">Graduated</option>
                       <option value="WITHDRAWN">Withdrawn</option>

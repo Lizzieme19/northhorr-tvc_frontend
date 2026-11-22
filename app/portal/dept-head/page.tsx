@@ -6,6 +6,10 @@ import api from '@/lib/api';
 import { applicationsApi, studentsApi, requisitionsApi, departmentsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
+import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
+
+type TabKey = 'applications' | 'students' | 'requisitions';
+const TAB_KEYS: readonly TabKey[] = ['applications', 'students', 'requisitions'];
 
 export default function DeptHeadDashboard() {
   const { user, logout, loading } = useAuth();
@@ -20,7 +24,7 @@ export default function DeptHeadDashboard() {
   const [studentTotal, setStudentTotal] = useState(0);
   const [reqTotal, setReqTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<'applications' | 'students' | 'requisitions'>('applications');
+  const [tab, setTab] = usePortalSection<TabKey>(TAB_KEYS, 'applications');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [updating, setUpdating] = useState(false);
@@ -164,37 +168,29 @@ export default function DeptHeadDashboard() {
     }
   };
 
+  const navGroups: NavGroup[] = [
+    { items: [
+      { key: 'applications', label: 'Applications', icon: '📋', count: appTotal, hint: 'Applications to your department' },
+      { key: 'students', label: 'Enrolled students', icon: '🎓', count: studentTotal },
+      { key: 'requisitions', label: 'Purchase requisitions', icon: '🛒', count: reqTotal },
+    ] },
+  ];
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-cream-deep">
-      <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          <span className="font-display font-semibold hidden sm:block">Department Head Portal</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
-          <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">DEPT HEAD</span>
-          <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
-          <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
-        </div>
-      </header>
+    <PortalShell
+      brand={{ title: 'Department Head Portal', subtitle: 'North Horr TVC', logoText: 'NT' }}
+      groups={navGroups}
+      active={tab}
+      onNavigate={(k) => { setTab(k as TabKey); setPage(1); }}
+      user={{ email: user.email, role: 'DEPT HEAD' }}
+      onChangePassword={() => { setShowPasswordChange(true); window.scrollTo({ top: 0 }); }}
+      onLogout={() => { logout(); router.push('/login'); }}
+      bottomKeys={['applications', 'students', 'requisitions']}
+    >
 
-      <nav className="bg-white border-b border-stone/15 px-6 flex gap-1 overflow-x-auto">
-        {[
-          { key: 'applications', label: `📋 Department Applications (${appTotal})` },
-          { key: 'students', label: `🎓 Enrolled Students (${studentTotal})` },
-          { key: 'requisitions', label: `🛒 Purchase Requisitions (${reqTotal})` },
-        ].map(t => (
-          <button key={t.key} onClick={() => { setTab(t.key as any); setPage(1); }}
-            className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
             <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>
@@ -379,6 +375,7 @@ export default function DeptHeadDashboard() {
                       className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
                       <option value="">Select Status</option>
                       <option value="ACTIVE">Active</option>
+                      <option value="COMPLETED">Completed (not yet graduated)</option>
                       <option value="DEFERRED">Deferred</option>
                       <option value="GRADUATED">Graduated</option>
                       <option value="WITHDRAWN">Withdrawn</option>
@@ -620,6 +617,6 @@ export default function DeptHeadDashboard() {
           </div>
         </div>
       )}
-    </div>
+    </PortalShell>
   );
 }

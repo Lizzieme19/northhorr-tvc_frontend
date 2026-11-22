@@ -19,6 +19,7 @@ import Pagination from '@/components/Pagination';
 import { FilterPanel, FilterSelect, FilterSearch } from '@/components/ListFilters';
 import { useDebounced } from '@/lib/hooks';
 import { toast } from 'sonner';
+import PortalShell from '@/components/PortalShell';
 
 type TabId = 'overview' | 'students' | 'billing' | 'fee-structure' | 'student-types';
 const TABS: { id: TabId; label: string; icon: string; hint: string }[] = [
@@ -366,68 +367,36 @@ export default function FinanceDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-cream-deep">
-      {/* Header and navigation stay at the top while scrolling */}
-      <div className="sticky top-0 z-50 shadow-lg">
-        <header className="bg-brand-dark text-cream px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-            <span className="font-display font-semibold hidden sm:block">Finance Portal</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
-            <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">FINANCE</span>
-            <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
-            <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
-          </div>
-        </header>
-
-        <nav className="bg-white border-b border-stone/15" aria-label="Finance sections">
-          <div className="max-w-7xl mx-auto px-6 flex items-center gap-4">
-            <div className="flex gap-1 overflow-x-auto flex-1" role="tablist">
-              {TABS.map(t => (
-                <button
-                  key={t.id}
-                  role="tab"
-                  aria-selected={tab === t.id}
-                  title={t.hint}
-                  onClick={() => goTab(t.id)}
-                  className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition ${tab === t.id ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}
-                >
-                  <span className="mr-1.5" aria-hidden>{t.icon}</span>{t.label}
-                </button>
-              ))}
-            </div>
-            {/* Jump straight to a student from any tab */}
-            <form
-              onSubmit={e => { e.preventDefault(); if (quickSearch.trim()) { openStudents({ search: quickSearch.trim() }); setQuickSearch(''); } }}
-              className="hidden md:block"
-            >
-              <input
-                value={quickSearch}
-                onChange={e => setQuickSearch(e.target.value)}
-                placeholder="Find a student…"
-                aria-label="Find a student by admission number or name"
-                className="w-48 lg:w-60 px-3 py-1.5 rounded-xl border border-stone/25 bg-cream-deep/50 text-sm focus:outline-none focus:border-brand focus:bg-white"
-              />
-            </form>
-            <button
-              onClick={() => setShowBulkPayments(true)}
-              className="shrink-0 px-3 py-1.5 rounded-xl border border-brand/40 text-brand font-semibold hover:bg-brand/5 transition text-sm"
-            >
-              💵 Several students
-            </button>
-            <button
-              onClick={() => setShowReports(true)}
-              className="shrink-0 px-3 py-1.5 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm"
-            >
-              ⬇ Reports
-            </button>
-          </div>
-        </nav>
+    <PortalShell
+      brand={{ title: 'Finance Portal', subtitle: 'North Horr TVC', logoText: 'NT' }}
+      groups={[{ items: TABS.map(t => ({ key: t.id, label: t.label, icon: t.icon, hint: t.hint })) }]}
+      active={tab}
+      onNavigate={(k) => goTab(k as TabId)}
+      user={{ email: user.email, role: 'FINANCE' }}
+      onChangePassword={() => setShowPasswordChange(true)}
+      onLogout={() => { logout(); router.push('/login'); }}
+      bottomKeys={['overview', 'students', 'billing', 'fee-structure']}
+    >
+      {/* Quick actions, available on every page */}
+      <div className="bg-white border-b border-stone/15 px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
+        <form
+          onSubmit={e => { e.preventDefault(); if (quickSearch.trim()) { openStudents({ search: quickSearch.trim() }); setQuickSearch(''); } }}
+          className="flex-1 min-w-[10rem] sm:flex-none"
+        >
+          <input
+            value={quickSearch}
+            onChange={e => setQuickSearch(e.target.value)}
+            placeholder="Find a student…"
+            aria-label="Find a student by admission number or name"
+            className="w-full sm:w-60 px-3 py-1.5 rounded-xl border border-stone/25 bg-cream-deep/50 text-sm focus:outline-none focus:border-brand focus:bg-white"
+          />
+        </form>
+        <button onClick={() => setShowBulkPayments(true)} className="shrink-0 px-3 py-1.5 rounded-xl border border-brand/40 text-brand font-semibold hover:bg-brand/5 transition text-sm">💵 Several students</button>
+        <button onClick={() => setShowReports(true)} className="shrink-0 px-3 py-1.5 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm">⬇ Reports</button>
       </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
             <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>
@@ -976,6 +945,6 @@ export default function FinanceDashboard() {
           </div>
         )}
       </main>
-    </div>
+    </PortalShell>
   );
 }

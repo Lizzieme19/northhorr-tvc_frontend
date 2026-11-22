@@ -5,12 +5,16 @@ import { useAuth } from '@/lib/auth';
 import { staffApi, designationsApi, leavesApi, departmentsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
+import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
+
+type TabKey = 'staff' | 'designations' | 'leaves';
+const TAB_KEYS: readonly TabKey[] = ['staff', 'designations', 'leaves'];
 
 export default function HRDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [tab, setTab] = useState<'staff' | 'designations' | 'leaves'>('staff');
+  const [tab, setTab] = usePortalSection<TabKey>(TAB_KEYS, 'staff');
   const [staff, setStaff] = useState<any[]>([]);
   const [designations, setDesignations] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
@@ -106,37 +110,29 @@ export default function HRDashboard() {
     }
   };
 
+  const navGroups: NavGroup[] = [
+    { items: [
+      { key: 'staff', label: 'Staff', icon: '👥', count: staff.length },
+      { key: 'designations', label: 'Designations', icon: '📋', count: designations.length },
+      { key: 'leaves', label: 'Leave requests', icon: '🏖️', count: leaves.length },
+    ] },
+  ];
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
   return (
-    <div className="min-h-screen bg-cream-deep">
-      <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          <span className="font-display font-semibold hidden sm:block">HR Portal</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-cream/70 text-sm hidden md:block">{user.email}</span>
-          <span className="px-2 py-1 rounded-full bg-gold/20 text-gold text-xs font-semibold">HR</span>
-          <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
-          <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
-        </div>
-      </header>
+    <PortalShell
+      brand={{ title: 'HR Portal', subtitle: 'North Horr TVC', logoText: 'NT' }}
+      groups={navGroups}
+      active={tab}
+      onNavigate={(k) => { setTab(k as TabKey);  }}
+      user={{ email: user.email, role: 'HR' }}
+      onChangePassword={() => { setShowPasswordChange(true); window.scrollTo({ top: 0 }); }}
+      onLogout={() => { logout(); router.push('/login'); }}
+      bottomKeys={['staff', 'designations', 'leaves']}
+    >
 
-      <nav className="bg-white border-b border-stone/15 px-6 flex gap-1 overflow-x-auto">
-        {[
-          { key: 'staff', label: `👥 Staff (${staff.length})` },
-          { key: 'designations', label: `📋 Designations (${designations.length})` },
-          { key: 'leaves', label: `🏖️ Leave Requests (${leaves.length})` },
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as any)}
-            className={`px-5 py-4 text-sm font-medium border-b-2 transition whitespace-nowrap ${tab === t.key ? 'border-brand text-brand' : 'border-transparent text-stone hover:text-brand-dark'}`}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
             <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>
@@ -390,6 +386,6 @@ export default function HRDashboard() {
           </div>
         </div>
       )}
-    </div>
+    </PortalShell>
   );
 }

@@ -12,13 +12,19 @@ import { termDates, termFee, termState } from '@/lib/terms';
 import { studentDocumentsApi } from '@/lib/services';
 import { phoneProblem, normalizeKenyaPhone } from '@/lib/phone';
 import { toast } from 'sonner';
+import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
+
+type Section = 'overview' | 'fees' | 'academics' | 'documents' | 'profile' | 'account';
+const SECTIONS: readonly Section[] = ['overview', 'fees', 'academics', 'documents', 'profile', 'account'];
 
 export default function StudentDashboard() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
-  const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [section, go] = usePortalSection<Section>(SECTIONS, 'overview');
+  // the old panels are now pages
+  const setShowProfileEdit = (open: boolean) => go(open ? 'profile' : 'overview');
+  const setShowPasswordChange = (open: boolean) => go(open ? 'account' : 'overview');
   const [editForm, setEditForm] = useState<any>({});
   const [updating, setUpdating] = useState(false);
   const [terms, setTerms] = useState<any[]>([]);
@@ -356,31 +362,42 @@ export default function StudentDashboard() {
 
   if (!profile) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
 
-  return (
-    <div className="min-h-screen bg-cream-deep">
-      <header className="bg-brand-dark text-cream px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
-        <div className="flex items-center gap-3">
-          {profile.profile_picture_url ? (
-            <img
-              src={profile.profile_picture_url}
-              alt="Profile"
-              className="h-9 w-9 rounded-xl object-cover border-2 border-gold/50"
-            />
-          ) : (
-            <div className="h-9 w-9 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm">NT</div>
-          )}
-          <span className="font-display font-semibold">Student Portal</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="px-2 py-1 rounded-full bg-cream/20 text-cream text-xs font-semibold">{profile.admission_no}</span>
-          <button onClick={() => setShowProfileEdit(!showProfileEdit)} className="text-sm text-cream/60 hover:text-cream transition">Edit Profile</button>
-          <button onClick={() => setShowPasswordChange(!showPasswordChange)} className="text-sm text-cream/60 hover:text-cream transition">Change Password</button>
-          <button onClick={() => { logout(); router.push('/login'); }} className="text-sm text-cream/60 hover:text-cream transition">Logout</button>
-        </div>
-      </header>
+  const owed = feeSummary?.summary?.totalBalance;
+  const money = (n: number) => `KES ${Math.round(Math.abs(n)).toLocaleString()}`;
+  const missing: string[] = [];
+  if (!profile.application?.religion) missing.push('religion');
+  if (!(myInterests.length + mySports.length)) missing.push('interests and sports');
+  const navGroups: NavGroup[] = [
+    { items: [
+      { key: 'overview', label: 'Overview', icon: '🏠' },
+      { key: 'fees', label: 'My Fees', icon: '💳', badge: typeof owed === 'number' && owed > 0.005 ? '!' : null, hint: 'Balance, payments and statement' },
+      { key: 'academics', label: 'Academics', icon: '🎓', hint: 'Course, history and term enrollment' },
+      { key: 'documents', label: 'Documents', icon: '📄', hint: 'Letters, ID card and your uploads' },
+      { key: 'profile', label: 'My Profile', icon: '👤', hint: 'Personal details, interests and sports' },
+    ] },
+    { heading: 'Account', items: [{ key: 'account', label: 'Password & security', icon: '🔑' }] },
+  ];
+  const glance = [
+    { key: 'fees', icon: '💳', title: 'My fees', cta: 'See fees and payments', line: typeof owed !== 'number' ? 'Loading your balance…' : Math.abs(owed) < 0.005 ? 'Fully paid. You owe nothing.' : owed < 0 ? `You are in credit by ${money(owed)}.` : `You owe ${money(owed)}.` },
+    { key: 'academics', icon: '🎓', title: 'Academics', cta: 'See your course and history', line: `${profile.level} · ${profile.current_term ? `${profile.current_term.name} (${profile.current_term.academic_year})` : 'not enrolled in a term yet'}` },
+    { key: 'documents', icon: '📄', title: 'Documents', cta: 'Open your documents', line: docsLoaded ? `${issuedDocs.length} document${issuedDocs.length === 1 ? '' : 's'} issued by the college.` : 'Letters, ID card and your uploads.' },
+    { key: 'profile', icon: '👤', title: 'My profile', cta: missing.length ? 'Complete your profile' : 'Review your details', line: missing.length ? `Still to add: ${missing.join(', ')}.` : `Your details are complete.${withinWindow && windowEnd ? ` Personal details can be changed until ${windowEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}.` : ''}` },
+  ];
 
-      <main className="max-w-4xl mx-auto px-6 py-10">
-        {showProfileEdit && (
+  return (
+    <PortalShell
+      brand={{ title: 'Student Portal', subtitle: profile.admission_no, logoUrl: profile.profile_picture_url }}
+      groups={navGroups}
+      active={section}
+      onNavigate={(k) => go(k as Section)}
+      user={{ email: user.email, role: 'Student', name: `${profile.application.surname} ${profile.application.other_names}`.trim() }}
+      onChangePassword={() => go('account')}
+      onLogout={() => { logout(); router.push('/login'); }}
+      bottomKeys={['overview', 'fees', 'academics', 'documents', 'profile']}
+    >
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {section === 'profile' && (
           <div className="bg-white rounded-3xl shadow-xl p-8 mb-6 border border-stone/10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-display text-2xl text-brand-dark">Edit Profile</h2>
@@ -648,7 +665,7 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {showPasswordChange && (
+        {section === 'account' && (
           <div className="bg-white rounded-3xl shadow-xl p-8 mb-6 border border-stone/10">
             <h2 className="font-display text-2xl text-brand-dark mb-6">Change Password</h2>
             <ChangePassword />
@@ -661,15 +678,18 @@ export default function StudentDashboard() {
           </div>
         )}
 
+        {section !== 'account' && (
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-stone/10">
-          <div className="bg-brand p-8 text-cream relative">
-            <div className="absolute top-0 right-0 p-8 opacity-20 text-6xl">🎓</div>
-            <h1 className="font-display text-3xl font-bold mb-2">Welcome, {profile.application.surname} {profile.application.other_names}</h1>
+          {section === 'overview' && (
+          <div className="bg-brand p-5 sm:p-8 text-cream relative">
+            <div className="hidden sm:block absolute top-0 right-0 p-8 opacity-20 text-6xl">🎓</div>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold mb-2">Welcome, {profile.application.surname} {profile.application.other_names}</h1>
             <p className="text-cream/80">{profile.course.name} • {profile.level}</p>
           </div>
+          )}
 
           {/* ── Fee balance, up front ── */}
-          {(() => {
+          {(section === 'overview' || section === 'fees') && (() => {
             const sum = feeSummary?.summary || null;
             if (!sum) return (
               <div className="px-8 pt-8"><div className="rounded-2xl border border-stone/15 bg-cream-deep p-5 text-sm text-stone">Loading your fee balance…</div></div>
@@ -683,8 +703,8 @@ export default function StudentDashboard() {
             const lastPayment = (feeSummary.paymentHistory || [])[0];
             const open = (feeSummary.termBreakdown || []).filter((t: any) => (t.balance || 0) > 0.005);
             return (
-              <div className="px-8 pt-8">
-                <div className={`rounded-2xl border p-5 ${tone}`}>
+              <div className="px-4 sm:px-8 pt-5 sm:pt-8">
+                <div className={`rounded-2xl border p-4 sm:p-5 ${tone}`}>
                   <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-widest text-stone">{credit ? 'Your fee credit' : 'Your fee balance'}</div>
@@ -709,8 +729,21 @@ export default function StudentDashboard() {
               </div>
             );
           })()}
+          {section === 'overview' && (
+            <div className="px-4 sm:px-8 pt-4 sm:pt-6 pb-6 sm:pb-8 grid sm:grid-cols-2 gap-3 sm:gap-4">
+              {glance.map(c => (
+                <button key={c.key} onClick={() => go(c.key as Section)} className="text-left rounded-2xl border border-stone/15 bg-white p-5 hover:border-brand hover:shadow-md transition group">
+                  <div className="flex items-center gap-3 mb-2"><span className="text-2xl" aria-hidden>{c.icon}</span><span className="font-semibold text-brand-dark">{c.title}</span></div>
+                  <div className="text-sm text-stone">{c.line}</div>
+                  <div className="mt-3 text-xs font-semibold text-brand group-hover:underline">{c.cta} →</div>
+                </button>
+              ))}
+            </div>
+          )}
 
-          <div className="p-8 grid lg:grid-cols-2 gap-8">
+          {section !== 'overview' && (
+          <div className="p-4 sm:p-8 grid lg:grid-cols-2 gap-6 sm:gap-8">
+            {section === 'academics' && (<>
             <div className="lg:col-span-2">
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Academic Profile</h2>
               <dl className="space-y-3 text-sm">
@@ -732,7 +765,9 @@ export default function StudentDashboard() {
                 </div>
               </dl>
             </div>
+            </>)}
 
+            {section === 'documents' && (<>
             <div className="lg:col-span-2">
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Documents</h2>
 
@@ -792,13 +827,17 @@ export default function StudentDashboard() {
                 </div>
               </div>
             </div>
+            </>)}
 
+            {section === 'academics' && (<>
             {/* ── Academic history: every level, admission number and intake ── */}
             <div className="lg:col-span-2">
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">My Academic History</h2>
               <StudentHistoryPanel studentId={profile.id} />
             </div>
+            </>)}
 
+            {section === 'fees' && (<>
             {/* ── Fee statement across all admissions (only when there is more than one) ── */}
             {profile.linked_admissions?.length > 0 && (
               <div className="lg:col-span-2">
@@ -806,7 +845,9 @@ export default function StudentDashboard() {
                 <CombinedStatement load={() => studentsApi.myStatement()} />
               </div>
             )}
+            </>)}
 
+            {section === 'documents' && (<>
             {/* ── Uploaded Supporting Documents ── */}
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
@@ -883,8 +924,11 @@ export default function StudentDashboard() {
                 ))}
               </div>
             </div>
+            </>)}
 
+            {section === 'academics' && (<>
             <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Term Enrollment</h2>
               {/* Current Enrollments */}
               {enrollments.length > 0 && (
                 <div className="bg-green-50 rounded-xl p-4 border border-green-200">
@@ -933,7 +977,9 @@ export default function StudentDashboard() {
                 </div>
               )}
             </div>
+            </>)}
 
+            {section === 'profile' && (<>
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Religion</h2>
@@ -949,7 +995,9 @@ export default function StudentDashboard() {
                 </div>
               )}
             </div>
+            </>)}
 
+            {section === 'profile' && (<>
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Interests &amp; Sports</h2>
@@ -983,7 +1031,9 @@ export default function StudentDashboard() {
                 </div>
               )}
             </div>
+            </>)}
 
+            {section === 'fees' && (<>
             <div>
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Fee Status</h2>
               <dl className="space-y-3 text-sm">
@@ -1013,8 +1063,11 @@ export default function StudentDashboard() {
                 ℹ️ Fee payments are processed at the Finance Office on campus. Present your HELB application evidence there as well.
               </div>
             </div>
+            </>)}
           </div>
+          )}
         </div>
+        )}
 
         {/* Fee Summary Modal */}
         {showFeeSummary && feeSummary && (
@@ -1112,6 +1165,6 @@ export default function StudentDashboard() {
           </div>
         )}
       </main>
-    </div>
+    </PortalShell>
   );
 }

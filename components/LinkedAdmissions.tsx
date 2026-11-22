@@ -149,7 +149,7 @@ function RestorePanel({ merge, onBack, onDone }: { merge: any; onBack: () => voi
       </div>
       <label className="block"><span className="text-xs text-stone">Status of the restored admission</span>
         <select value={status} onChange={e => { setStatus(e.target.value); setAck(false); load(picked ?? undefined, e.target.value); }} className="mt-1 w-full sm:w-64 px-3 py-2 rounded-xl border border-stone/25">
-          {['GRADUATED', 'WITHDRAWN', 'DEFERRED', 'ACTIVE', 'ATTACHMENT'].map(s => <option key={s} value={s}>{title(s)}</option>)}
+          {['GRADUATED', 'COMPLETED', 'WITHDRAWN', 'DEFERRED', 'ACTIVE', 'ATTACHMENT'].map(s => <option key={s} value={s}>{title(s)}</option>)}
         </select></label>
       <div>
         <p className="text-xs font-semibold text-stone uppercase tracking-wider mb-1">Term bills: tick the ones that belong to {plan.restore.admission_no} ({plan.payments_moving} payment{plan.payments_moving === 1 ? '' : 's'} move with them)</p>
