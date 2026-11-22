@@ -8,6 +8,7 @@ import ChangePassword from '@/components/ChangePassword';
 import ReportsExport from '@/components/ReportsExport';
 import { StudentDocumentsModal, BulkIssueDocumentsModal } from '@/components/StudentDocuments';
 import { StudentHistoryModal, LinkRecordModal } from '@/components/StudentHistory';
+import { LinkedAdmissionsModal } from '@/components/LinkedAdmissions';
 import Pagination from '@/components/Pagination';
 import { FilterPanel, FilterSelect, FilterSearch, FilterDate } from '@/components/ListFilters';
 import { useDebounced } from '@/lib/hooks';
@@ -2357,6 +2358,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [historyStudent, setHistoryStudent] = useState<any>(null);
   const [choicesStudent, setChoicesStudent] = useState<any>(null);
   const [linkStudent, setLinkStudent] = useState<any>(null);
+  const [linkedView, setLinkedView] = useState<any>(null);
   const [showBulkDocs, setShowBulkDocs] = useState(false);
 
   // Only send the filters that are set
@@ -2789,6 +2791,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       {feesStudent && <StudentFeesModal student={feesStudent} onClose={() => setFeesStudent(null)} onChanged={refreshStudents} />}
       {historyStudent && <StudentHistoryModal student={historyStudent} onClose={() => setHistoryStudent(null)} />}
       {choicesStudent && <StudentChoicesModal student={choicesStudent} onClose={() => setChoicesStudent(null)} onSaved={refreshStudents} />}
+      {linkedView && <LinkedAdmissionsModal student={linkedView} canUnlink={isAdmin} canSeeFees={isAdmin} onClose={() => setLinkedView(null)} onChanged={refreshStudents} />}
       {linkStudent && <LinkRecordModal student={linkStudent} onClose={() => setLinkStudent(null)} onDone={() => { refreshStudents(); setShowDuplicates(false); }} />}
       {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
       {showBulkType && <BulkTypeModal studentIds={selectedStudentIds} onClose={() => setShowBulkType(false)} onDone={() => { refreshStudents(); setSelectedStudentIds([]); api.get('/student-types').then(r => setTypeOptions((r.data.types || []).filter((t: any) => t.is_active))).catch(() => { }); }} />}
@@ -2981,7 +2984,14 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                       className="rounded border-stone/25"
                     />
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-brand">{s.admission_no}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-brand">
+                    {s.admission_no}
+                    {(s.primary_student || s.linked_admissions?.length > 0) && (
+                      <button onClick={() => setLinkedView(s)} className="block mt-0.5 text-[10px] font-sans text-purple-700 hover:underline" title="See the admissions linked to this student">
+                        🔗 {s.primary_student ? `login: ${s.primary_student.admission_no}` : `${s.linked_admissions.length} linked`}
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-medium text-brand-dark">{s.application?.surname} {s.application?.other_names}</td>
                   <td className="px-4 py-3 text-stone text-xs">{s.course?.name}</td>
                   <td className="px-4 py-3 text-stone">{s.level}</td>
@@ -3007,7 +3017,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                       <button onClick={() => handleEditStudent(s)} className="text-brand hover:text-brand-dark font-medium text-xs transition">Edit</button>
                       <button onClick={() => setHistoryStudent(s)} className="text-purple-700 hover:text-purple-900 font-medium text-xs transition">History</button>
                       <button onClick={() => setChoicesStudent(s)} className="text-sky-700 hover:text-sky-900 font-medium text-xs transition">Interests</button>
-                      <button onClick={() => setLinkStudent(s)} className="text-stone hover:text-brand-dark font-medium text-xs transition" title="Link this student's earlier record">Link</button>
+                      <button onClick={() => setLinkStudent(s)} className="text-stone hover:text-brand-dark font-medium text-xs transition" title="Link another admission of this student (they share one login)">Link</button>
                       {isAdmin && <button onClick={() => setFeesStudent(s)} className="text-green-600 hover:text-green-800 font-medium text-xs transition">Fees</button>}
                       <button onClick={() => { setShowTermAssignModal(true); setSelectedStudent(s); setSelectedTermId(s.current_term_id || ''); }} className="text-blue-600 hover:text-blue-800 font-medium text-xs transition">Term</button>
                       <button onClick={() => handleDownloadIDCard(s.id)}

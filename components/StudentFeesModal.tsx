@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { feeCorrectionsApi, feeTypesApi, termsApi } from '@/lib/services';
+import { feeCorrectionsApi, feeTypesApi, termsApi, studentsApi } from '@/lib/services';
+import { CombinedStatement } from '@/components/LinkedAdmissions';
 import { termLabel } from '@/lib/terms';
 import PaymentDate, { todayStr } from '@/components/PaymentDate';
 import { toast } from 'sonner';
@@ -73,7 +74,8 @@ export default function StudentFeesModal({
 }) {
   const [summary, setSummary] = useState<any>(null);
   const [history, setHistory] = useState<any[] | null>(null);
-  const [tab, setTab] = useState<'terms' | 'history'>('terms');
+  const [tab, setTab] = useState<'terms' | 'history' | 'all'>('terms');
+  const isLinked = Boolean(student.primary_student_id || student.primary_student || student.linked_admissions?.length);
   const [allTerms, setAllTerms] = useState<any[]>([]);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -203,9 +205,9 @@ export default function StudentFeesModal({
 
             <div className="flex items-center justify-between mb-4 gap-3">
               <div className="flex gap-1 bg-cream-deep rounded-xl p-1 text-sm">
-                {(['terms', 'history'] as const).map(t => (
+                {((isLinked ? ['terms', 'history', 'all'] : ['terms', 'history']) as ('terms' | 'history' | 'all')[]).map(t => (
                   <button key={t} onClick={() => setTab(t)} className={`px-4 py-1.5 rounded-lg font-medium transition ${tab === t ? 'bg-white shadow text-brand' : 'text-stone hover:text-brand-dark'}`}>
-                    {t === 'terms' ? 'Terms & payments' : 'Change history'}
+                    {t === 'terms' ? 'Terms & payments' : t === 'history' ? 'Change history' : 'All admissions'}
                   </button>
                 ))}
               </div>
@@ -273,6 +275,8 @@ export default function StudentFeesModal({
                 ))}
               </div>
             )}
+
+            {tab === 'all' && <CombinedStatement load={() => studentsApi.statement(student.id)} />}
 
             {tab === 'history' && (
               <div className="space-y-2">

@@ -63,6 +63,12 @@ export const studentsApi = {
   },
   // Fold an older record of the same person into this one (keeps balances, payments, documents and history)
   merge: (id: string, mergeStudentId: string) => api.post(`/students/${id}/merge`, { merge_student_id: mergeStudentId }),
+  // Linked admissions: one person's admissions share one login; nothing is moved or deleted
+  previewLink: (id: string, otherId: string) => api.get(`/students/${id}/link-preview`, { params: { other: otherId } }),
+  linkAdmission: (id: string, linkedStudentId: string, acknowledgeWarnings: boolean) => api.post(`/students/${id}/link-admission`, { linked_student_id: linkedStudentId, acknowledge_warnings: acknowledgeWarnings }),
+  unlinkAdmission: (id: string) => api.post(`/students/${id}/unlink-admission`),
+  statement: (id: string) => api.get(`/students/${id}/statement`),
+  myStatement: () => api.get('/students/me/statement'),
 };
 
 // Finance

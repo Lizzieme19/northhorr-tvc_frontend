@@ -6,6 +6,8 @@ import api from '@/lib/api';
 import ChangePassword from '@/components/ChangePassword';
 import { downloadStudentDocument } from '@/components/StudentDocuments';
 import { StudentHistoryPanel } from '@/components/StudentHistory';
+import { CombinedStatement } from '@/components/LinkedAdmissions';
+import { studentsApi } from '@/lib/services';
 import { termDates, termFee, termState } from '@/lib/terms';
 import { studentDocumentsApi } from '@/lib/services';
 import { phoneProblem, normalizeKenyaPhone } from '@/lib/phone';
@@ -796,6 +798,14 @@ export default function StudentDashboard() {
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">My Academic History</h2>
               <StudentHistoryPanel studentId={profile.id} />
             </div>
+
+            {/* ── Fee statement across all admissions (only when there is more than one) ── */}
+            {profile.linked_admissions?.length > 0 && (
+              <div className="lg:col-span-2">
+                <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Fee Statement, All My Admissions</h2>
+                <CombinedStatement load={() => studentsApi.myStatement()} />
+              </div>
+            )}
 
             {/* ── Uploaded Supporting Documents ── */}
             <div className="lg:col-span-2">
