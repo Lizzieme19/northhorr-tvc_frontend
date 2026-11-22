@@ -16,7 +16,7 @@ import StudentFeesModal from '@/components/StudentFeesModal';
 import ReconcileFees from '@/components/ReconcileFees';
 import ActivityLog from '@/components/ActivityLog';
 import ProfileOptionsAdmin, { StudentChoicesModal } from '@/components/ProfileOptions';
-import StudentTypes from '@/components/StudentTypes';
+import StudentTypes, { BulkTypeModal } from '@/components/StudentTypes';
 import { LetterheadPanel, DocExtras, PreviewButton, DocStyle } from '@/components/DocumentDesign';
 import IdCardDesign from '@/components/IdCardDesign';
 import StudentImportModal from '@/components/StudentImportModal';
@@ -26,7 +26,7 @@ import { feeBilling, BILLING_LABEL } from '@/lib/feeTypes';
 import { feeCorrectionsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
-interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; }
+interface Stats { total: number; active: number; graduated: number; pendingApps: number; approvedApps: number; merged_records?: number; current_records?: number; }
 interface Application { id: string; application_no: string; surname: string; other_names: string; email: string; status: string; type: string; created_at: string; course?: { name: string }; department?: { name: string };[key: string]: any; }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -88,6 +88,15 @@ export default function AdminDashboard() {
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState('');
+  // approving: the student type chosen for one application, and for a ticked group
+  const [approvalType, setApprovalType] = useState('');
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+  const [bulkApprove, setBulkApprove] = useState({ type: '', intake: 'SEPTEMBER', year: String(new Date().getFullYear()) });
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkResult, setBulkResult] = useState<any>(null);
+  // the student types a fee type is charged to (empty = every student), with an amount per type when it differs
+  const [studentTypesList, setStudentTypesList] = useState<any[]>([]);
+  const [feeTypeCharge, setFeeTypeCharge] = useState<{ all: boolean; picks: Record<string, string> }>({ all: true, picks: {} });
   const [feeTypeForm, setFeeTypeForm] = useState({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '', added_to_term_fee: false, billing: 'NOT_BILLED' });
   const [editingFeeType, setEditingFeeType] = useState<any>(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
@@ -141,6 +150,7 @@ export default function AdminDashboard() {
     }
     // Load fee types for payment recording
     if (isAdmin) feeTypesApi.getAll().then(r => setFeeTypes(r.data.fee_types || [])).catch(() => setFeeTypes([]));
+    api.get('/student-types').then(r => setStudentTypesList((r.data.types || []).filter((t: any) => t.is_active))).catch(() => setStudentTypesList([]));
   }, [tab, isAdmin]);
 
   // Only send the filters that are set
@@ -207,11 +217,30 @@ export default function AdminDashboard() {
     };
   };
 
+  const handleBulkApprove = async () => {
+    if (selectedAppIds.length === 0) return;
+    const typeName = studentTypesList.find((t: any) => t.id === bulkApprove.type)?.name;
+    if (!confirm(`Approve ${selectedAppIds.length} application${selectedAppIds.length === 1 ? '' : 's'} as ${bulkApprove.intake.charAt(0) + bulkApprove.intake.slice(1).toLowerCase()} ${bulkApprove.year} intake${typeName ? `, all as ${typeName} students` : ', each with the student type that matches how they applied'}? Each student is emailed their login.`)) return;
+    setBulkApproving(true);
+    try {
+      const r = await api.post('/applications/bulk-approve', {
+        application_ids: selectedAppIds, student_type_id: bulkApprove.type || undefined,
+        intake: bulkApprove.intake, year: parseInt(bulkApprove.year) || new Date().getFullYear(),
+      });
+      setBulkResult(r.data);
+      const done = new Set<string>(r.data.approved.map((a: any) => a.id));
+      setApplications(prev => prev.map(a => done.has(a.id) ? { ...a, status: 'APPROVED' } : a));
+      setSelectedAppIds(ids => ids.filter(id => !done.has(id)));
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Bulk approval failed');
+    } finally { setBulkApproving(false); }
+  };
+
   // extra: { continue_student_id } continues an existing student; { create_new: true } confirms a brand-new student
   const handleStatus = async (id: string, status: string, extra: Record<string, any> = {}) => {
     setApproving(id);
     try {
-      const response = await applicationsApi.updateStatus(id, { status, review_notes: reviewNotes, intake, year: new Date().getFullYear(), ...extra });
+      const response = await applicationsApi.updateStatus(id, { status, review_notes: reviewNotes, intake, year: new Date().getFullYear(), ...(status === 'APPROVED' && approvalType ? { student_type_id: approvalType } : {}), ...extra });
       setSelectedApp(null);
       setExistingMatches(null);
       setApplications(prev => prev.map(a => a.id === id ? { ...a, status } : a));
@@ -380,14 +409,20 @@ export default function AdminDashboard() {
     e.preventDefault();
     setSavingFeeType(true);
     try {
-      const data = {
+      const data: any = {
         ...feeTypeForm,
         amount: parseFloat(feeTypeForm.amount) || 0,
         course_id: feeTypeForm.course_id || null,
       };
+      if (studentTypesList.length > 0) {
+        // who is charged is chosen from the student types; the older KUCCPS/Direct setting is replaced by it
+        delete data.applicant_type;
+        data.student_type_rules = feeTypeCharge.all ? [] : Object.entries(feeTypeCharge.picks).map(([student_type_id, amount]) => ({ student_type_id, amount: amount === '' ? null : amount }));
+        if (!feeTypeCharge.all && data.student_type_rules.length === 0) { toast.error('Choose at least one student type, or pick All students'); setSavingFeeType(false); return; }
+      }
       if (editingFeeType) {
-        await feeTypesApi.update(editingFeeType.id, data);
-        setFeeTypes(prev => prev.map(ft => ft.id === editingFeeType.id ? { ...ft, ...data } : ft));
+        const updatedRes = await feeTypesApi.update(editingFeeType.id, data);
+        setFeeTypes(prev => prev.map(ft => ft.id === editingFeeType.id ? { ...ft, ...data, ...(updatedRes.data?.fee_type || {}) } : ft));
         toast.success('Fee type updated. Existing student balances change only when you recalculate them.', {
           duration: 9000,
           action: { label: 'Recalculate', onClick: () => setTab('billing') },
@@ -399,6 +434,7 @@ export default function AdminDashboard() {
       }
       setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '', added_to_term_fee: false, billing: 'NOT_BILLED' });
       setEditingFeeType(null);
+      setFeeTypeCharge({ all: true, picks: {} });
     } catch (e: any) {
       toast.error(e?.response?.data?.error || 'Failed to save fee type');
     } finally {
@@ -408,6 +444,14 @@ export default function AdminDashboard() {
 
   const handleFeeTypeEdit = (ft: any) => {
     setEditingFeeType(ft);
+    const rules: any[] = ft.student_type_rules || [];
+    if (rules.length) {
+      setFeeTypeCharge({ all: false, picks: Object.fromEntries(rules.map((r: any) => [r.student_type_id, r.amount != null ? String(r.amount) : ''])) });
+    } else {
+      // an older "KUCCPS only" / "Direct only" setting becomes the student type of the same name
+      const legacy = ft.applicant_type && studentTypesList.find((t: any) => t.name.toLowerCase() === String(ft.applicant_type).toLowerCase());
+      setFeeTypeCharge(legacy ? { all: false, picks: { [legacy.id]: '' } } : { all: true, picks: {} });
+    }
     setFeeTypeForm({
       name: ft.name,
       code: ft.code,
@@ -608,7 +652,7 @@ export default function AdminDashboard() {
             <h1 className="font-display text-2xl text-brand-dark mb-6">Dashboard Overview</h1>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
               {[
-                { label: 'Total Students', value: stats?.total ?? '—', icon: '🎓', color: 'bg-brand' },
+                { label: 'Total Students', value: stats?.total ?? '—', icon: '🎓', color: 'bg-brand', note: stats?.merged_records ? `includes ${stats.merged_records} merged record${stats.merged_records === 1 ? '' : 's'}` : '' },
                 { label: 'Active Students', value: stats?.active ?? '—', icon: '✅', color: 'bg-green-600' },
                 { label: 'Pending Applications', value: stats?.pendingApps ?? '—', icon: '⏳', color: 'bg-yellow-500' },
                 { label: 'Approved Applications', value: stats?.approvedApps ?? '—', icon: '📝', color: 'bg-terracotta' },
@@ -617,6 +661,7 @@ export default function AdminDashboard() {
                   <div className={`h-11 w-11 rounded-xl ${card.color} grid place-items-center text-xl mb-4`}>{card.icon}</div>
                   <div className="font-display text-3xl font-bold text-brand-dark">{card.value}</div>
                   <div className="text-sm text-stone mt-1">{card.label}</div>
+                  {(card as any).note && <div className="text-xs text-stone/80 mt-0.5">{(card as any).note}</div>}
                 </div>
               ))}
             </div>
@@ -636,7 +681,7 @@ export default function AdminDashboard() {
                 <button onClick={() => setTab('students')} className="p-4 rounded-xl border-2 border-dashed border-terracotta/30 hover:border-terracotta hover:bg-terracotta/5 transition text-left">
                   <div className="text-2xl mb-2">🎓</div>
                   <div className="font-semibold text-brand-dark">View All Students</div>
-                  <div className="text-xs text-stone mt-1">{stats?.total || 0} enrolled</div>
+                  <div className="text-xs text-stone mt-1">{stats?.total || 0} enrolled in total</div>
                 </button>
               </div>
             </div>
@@ -683,11 +728,36 @@ export default function AdminDashboard() {
               <FilterDate label="Applied to" value={appFilters.date_to} onChange={v => setAppFilter('date_to', v)} />
             </FilterPanel>
 
+            {selectedAppIds.length > 0 && (
+              <div className="mb-3 rounded-2xl border border-brand/30 bg-brand/5 p-4 flex flex-wrap items-end gap-3 text-sm">
+                <div className="font-semibold text-brand-dark mr-2">{selectedAppIds.length} selected</div>
+                <label className="block"><span className="block text-xs text-stone mb-1">Student type</span>
+                  <select value={bulkApprove.type} onChange={e => setBulkApprove({ ...bulkApprove, type: e.target.value })} className="px-3 py-2 rounded-xl border border-stone/25 bg-white">
+                    <option value="">Match how they applied</option>
+                    {studentTypesList.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select></label>
+                <label className="block"><span className="block text-xs text-stone mb-1">Intake</span>
+                  <select value={bulkApprove.intake} onChange={e => setBulkApprove({ ...bulkApprove, intake: e.target.value })} className="px-3 py-2 rounded-xl border border-stone/25 bg-white">
+                    <option value="SEPTEMBER">September</option><option value="JANUARY">January</option><option value="MAY">May</option>
+                  </select></label>
+                <label className="block"><span className="block text-xs text-stone mb-1">Year</span>
+                  <input value={bulkApprove.year} onChange={e => setBulkApprove({ ...bulkApprove, year: e.target.value })} inputMode="numeric" className="w-24 px-3 py-2 rounded-xl border border-stone/25 bg-white" /></label>
+                <button onClick={handleBulkApprove} disabled={bulkApproving} className="px-5 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50">{bulkApproving ? 'Approving…' : `✅ Approve ${selectedAppIds.length}`}</button>
+                <button onClick={() => setSelectedAppIds([])} className="px-4 py-2 rounded-xl border border-stone/25 text-stone hover:bg-cream-deep">Clear</button>
+                <p className="w-full text-xs text-stone">Approvals run one after another. Applicants who may already be students, or who are missing a course, are left for you to open one by one.</p>
+              </div>
+            )}
+
             <div className="bg-white rounded-2xl border border-stone/10 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-cream-deep text-stone text-xs uppercase tracking-wider">
                     <tr>
+                      <th className="px-4 py-3 w-8">
+                        <input type="checkbox" aria-label="Select all open applications on this page"
+                          checked={applications.filter(a => ['PENDING', 'UNDER_REVIEW'].includes(a.status)).length > 0 && applications.filter(a => ['PENDING', 'UNDER_REVIEW'].includes(a.status)).every(a => selectedAppIds.includes(a.id))}
+                          onChange={e => { const open = applications.filter(a => ['PENDING', 'UNDER_REVIEW'].includes(a.status)).map(a => a.id); setSelectedAppIds(ids => e.target.checked ? Array.from(new Set([...ids, ...open])) : ids.filter(id => !open.includes(id))); }} />
+                      </th>
                       <th className="px-4 py-3 text-left">Ref No.</th>
                       <th className="px-4 py-3 text-left">Name</th>
                       <th className="px-4 py-3 text-left">Course</th>
@@ -699,10 +769,16 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody className="divide-y divide-stone/10">
                     {applications.length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-10 text-center text-stone">No applications found</td></tr>
+                      <tr><td colSpan={8} className="px-4 py-10 text-center text-stone">No applications found</td></tr>
                     )}
                     {applications.map(app => (
                       <tr key={app.id} className="hover:bg-cream-deep/50 transition">
+                        <td className="px-4 py-3">
+                          {['PENDING', 'UNDER_REVIEW'].includes(app.status) && (
+                            <input type="checkbox" aria-label={`Select ${app.surname}`} checked={selectedAppIds.includes(app.id)}
+                              onChange={e => setSelectedAppIds(ids => e.target.checked ? [...ids, app.id] : ids.filter(id => id !== app.id))} />
+                          )}
+                        </td>
                         <td className="px-4 py-3 font-mono text-xs text-brand">{app.application_no}</td>
                         <td className="px-4 py-3 font-medium text-brand-dark">{app.surname} {app.other_names}</td>
                         <td className="px-4 py-3 text-stone">{app.course?.name || '—'}</td>
@@ -946,15 +1022,39 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-brand-dark mb-1.5">Charged to</label>
-                  <select
-                    value={feeTypeForm.applicant_type}
-                    onChange={e => setFeeTypeForm({ ...feeTypeForm, applicant_type: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
-                  >
-                    <option value="">All students</option>
-                    <option value="KUCCPS">KUCCPS-placed students only</option>
-                    <option value="DIRECT">Direct-entry students only</option>
-                  </select>
+                  {studentTypesList.length === 0 ? (
+                    <select
+                      value={feeTypeForm.applicant_type}
+                      onChange={e => setFeeTypeForm({ ...feeTypeForm, applicant_type: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm"
+                    >
+                      <option value="">All students</option>
+                      <option value="KUCCPS">KUCCPS-placed students only</option>
+                      <option value="DIRECT">Direct-entry students only</option>
+                    </select>
+                  ) : (
+                    <div className="rounded-xl border border-stone/25 bg-white p-3 space-y-2 text-sm">
+                      <label className="flex items-center gap-2 cursor-pointer"><input type="radio" checked={feeTypeCharge.all} onChange={() => setFeeTypeCharge({ ...feeTypeCharge, all: true })} /> All students</label>
+                      <label className="flex items-center gap-2 cursor-pointer"><input type="radio" checked={!feeTypeCharge.all} onChange={() => setFeeTypeCharge({ ...feeTypeCharge, all: false })} /> Only these student types</label>
+                      {!feeTypeCharge.all && (
+                        <div className="pl-6 space-y-1.5">
+                          {studentTypesList.map((t: any) => {
+                            const on = t.id in feeTypeCharge.picks;
+                            return (
+                              <div key={t.id} className="flex items-center gap-3">
+                                <label className="flex items-center gap-2 w-40 cursor-pointer">
+                                  <input type="checkbox" checked={on} onChange={e => { const picks = { ...feeTypeCharge.picks }; if (e.target.checked) picks[t.id] = ''; else delete picks[t.id]; setFeeTypeCharge({ ...feeTypeCharge, picks }); }} />
+                                  {t.name}
+                                </label>
+                                {on && <input inputMode="decimal" value={feeTypeCharge.picks[t.id]} onChange={e => setFeeTypeCharge({ ...feeTypeCharge, picks: { ...feeTypeCharge.picks, [t.id]: e.target.value } })} placeholder={`same amount${feeTypeForm.amount ? ` (${feeTypeForm.amount})` : ''}`} className="w-40 px-2 py-1 rounded-lg border border-stone/25 text-sm focus:outline-none focus:border-brand" />}
+                              </div>
+                            );
+                          })}
+                          <p className="text-xs text-stone">Leave the amount empty to charge this fee type&apos;s own amount to that type.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -988,6 +1088,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => {
                       setEditingFeeType(null);
+                      setFeeTypeCharge({ all: true, picks: {} });
                       setFeeTypeForm({ name: '', code: '', description: '', amount: '', is_required: false, is_disabled: false, applies_to: 'ALL', course_id: '', level: '', term_based: false, applicant_type: '', added_to_term_fee: false, billing: 'NOT_BILLED' });
                     }}
                     className="w-full px-4 py-2.5 rounded-xl border border-stone/25 text-brand font-semibold hover:bg-stone/5 transition"
@@ -1009,7 +1110,7 @@ export default function AdminDashboard() {
                     <div key={ft.id} className={`flex items-center justify-between p-4 rounded-xl border ${ft.is_active ? 'bg-cream-deep/50 border-stone/10' : 'bg-stone/50 border-stone/20 opacity-60'}`}>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-brand-dark truncate">{ft.name}</div>
-                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} • {{ NOT_BILLED: 'Not billed', ONCE: 'Billed once', EVERY_TERM: 'Billed every term' }[feeBilling(ft)]}{ft.applicant_type ? ` • ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ''}</div>
+                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} • {{ NOT_BILLED: 'Not billed', ONCE: 'Billed once', EVERY_TERM: 'Billed every term' }[feeBilling(ft)]}{(ft.student_type_rules || []).length ? ` • Only: ${ft.student_type_rules.map((r: any) => `${r.student_type?.name || '?'}${r.amount != null ? ` (KES ${r.amount})` : ''}`).join(', ')}` : ft.applicant_type ? ` • ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ' • All students'}</div>
                         <div className="text-xs text-stone mt-1">{ft.is_required ? 'Required' : 'Optional'} • {ft.is_active ? 'Active' : 'Disabled'}</div>
                       </div>
                       <div className="flex gap-2 ml-4">
@@ -2117,6 +2218,16 @@ export default function AdminDashboard() {
                     <option value="MAY">May</option>
                   </select>
                 </div>
+                {studentTypesList.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-brand-dark mb-1">Student type (if approving)</label>
+                    <select value={approvalType} onChange={e => setApprovalType(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone/25 focus:outline-none focus:border-brand text-sm">
+                      <option value="">Match how they applied ({selectedApp.type === 'KUCCPS' ? 'KUCCPS' : 'Direct'})</option>
+                      {studentTypesList.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-brand-dark mb-1">Review Notes</label>
                   <textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)}
@@ -2140,6 +2251,21 @@ export default function AdminDashboard() {
               </div>
               <button onClick={() => setSelectedApp(null)} className="w-full py-2 text-sm text-stone hover:text-brand-dark transition">Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {bulkResult && (
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={() => setBulkResult(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-6 pt-5 pb-3 border-b border-stone/10"><h3 className="font-display text-lg text-brand-dark">Bulk approval</h3><p className="text-sm text-stone mt-1">{bulkResult.message}</p></div>
+            <div className="px-6 py-4 overflow-y-auto space-y-4 text-sm">
+              {bulkResult.approved.length > 0 && <div><p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-1">Approved ({bulkResult.approved.length})</p><ul className="divide-y divide-stone/10 border border-stone/10 rounded-xl">{bulkResult.approved.map((a: any) => <li key={a.id} className="px-3 py-1.5 flex justify-between gap-3"><span>{a.name}</span><span className="font-mono text-xs text-brand">{a.admission_no}</span></li>)}</ul></div>}
+              {bulkResult.needs_review.length > 0 && <div><p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Open these one by one ({bulkResult.needs_review.length})</p><ul className="divide-y divide-stone/10 border border-stone/10 rounded-xl">{bulkResult.needs_review.map((a: any) => <li key={a.id} className="px-3 py-1.5"><span className="font-medium">{a.name}</span> <span className="text-xs text-stone">{a.reason}</span></li>)}</ul></div>}
+              {bulkResult.failed.length > 0 && <div><p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">Could not approve ({bulkResult.failed.length})</p><ul className="divide-y divide-stone/10 border border-stone/10 rounded-xl">{bulkResult.failed.map((a: any, i: number) => <li key={i} className="px-3 py-1.5"><span className="font-medium">{a.name || a.id}</span> <span className="text-xs text-stone">{a.error}</span></li>)}</ul></div>}
+              {bulkResult.skipped.length > 0 && <p className="text-xs text-stone">Skipped: {bulkResult.skipped.map((a: any) => `${a.name} (${a.reason})`).join(', ')}</p>}
+            </div>
+            <div className="px-6 py-4 border-t border-stone/10 flex justify-end"><button onClick={() => setBulkResult(null)} className="px-5 py-2 rounded-xl bg-brand text-cream text-sm font-semibold hover:bg-brand-dark">Done</button></div>
           </div>
         </div>
       )}
@@ -2198,6 +2324,11 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [assigningTerm, setAssigningTerm] = useState(false);
   const [selectedTermId, setSelectedTermId] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [showBulkType, setShowBulkType] = useState(false);
+  const [enrolledStats, setEnrolledStats] = useState<any>(null);
+  useEffect(() => { studentsApi.getStats().then(r => setEnrolledStats(r.data)).catch(() => { }); }, []);
+  const [typeOptions, setTypeOptions] = useState<any[]>([]);
+  useEffect(() => { api.get('/student-types').then(r => setTypeOptions((r.data.types || []).filter((t: any) => t.is_active))).catch(() => { }); }, []);
   const [showBulkTermModal, setShowBulkTermModal] = useState(false);
   const [bulkTermId, setBulkTermId] = useState('');
   const [assigningBulkTerm, setAssigningBulkTerm] = useState(false);
@@ -2211,7 +2342,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   const [showReports, setShowReports] = useState(false);
   const [docsStudent, setDocsStudent] = useState<any>(null);
   const [pageSize, setPageSize] = useState(15);
-  const [studentFilters, setStudentFilters] = useState<any>({ department_id: '', course_id: '', level: '', intake: '', year: '', status: '', term_id: '', has_term: '', helb: '' });
+  const [studentFilters, setStudentFilters] = useState<any>({ department_id: '', course_id: '', level: '', intake: '', year: '', status: '', term_id: '', has_term: '', helb: '', student_type_id: '' });
   const [studentFilterOptions, setStudentFilterOptions] = useState<any>(null);
   const debouncedStudentSearch = useDebounced(search);
   const [showImport, setShowImport] = useState(false);
@@ -2605,7 +2736,10 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="font-display text-2xl text-brand-dark">Students ({total})</h1>
+        <div>
+          <h1 className="font-display text-2xl text-brand-dark">Students ({total})</h1>
+          {enrolledStats?.merged_records > 0 && <p className="text-xs text-stone mt-1">{enrolledStats.total} enrolled in total, including {enrolledStats.merged_records} older record{enrolledStats.merged_records === 1 ? '' : 's'} merged into a later one. The list shows one row per person.</p>}
+        </div>
         <div className="flex gap-3">
           {selectedStudentIds.length > 0 && (
             <>
@@ -2621,6 +2755,12 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
               >
                 Issue Documents ({selectedStudentIds.length})
               </button>
+              {typeOptions.length > 0 && <button
+                onClick={() => setShowBulkType(true)}
+                className="px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition text-sm"
+              >
+                Student Type ({selectedStudentIds.length})
+              </button>}
               {isAdmin && <button
                 onClick={() => setShowBulkPaymentModal(true)}
                 className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition text-sm"
@@ -2651,6 +2791,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       {choicesStudent && <StudentChoicesModal student={choicesStudent} onClose={() => setChoicesStudent(null)} onSaved={refreshStudents} />}
       {linkStudent && <LinkRecordModal student={linkStudent} onClose={() => setLinkStudent(null)} onDone={() => { refreshStudents(); setShowDuplicates(false); }} />}
       {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
+      {showBulkType && <BulkTypeModal studentIds={selectedStudentIds} onClose={() => setShowBulkType(false)} onDone={() => { refreshStudents(); setSelectedStudentIds([]); api.get('/student-types').then(r => setTypeOptions((r.data.types || []).filter((t: any) => t.is_active))).catch(() => { }); }} />}
       {showBulkDocs && <BulkIssueDocumentsModal studentIds={selectedStudentIds} onClose={() => setShowBulkDocs(false)} onDone={refreshStudents} />}
       {showReports && <ReportsExport onClose={() => setShowReports(false)} types={isAdmin ? ['fees', 'students'] : ['students']} initialType="students" hideFinance={!isAdmin} />}
 
@@ -2742,7 +2883,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
 
       <FilterPanel
         active={studentFilterCount + (search ? 1 : 0)}
-        onClear={() => { setStudentFilters({ department_id: '', course_id: '', level: '', intake: '', year: '', status: '', term_id: '', has_term: '', helb: '' }); setSearch(''); setPage(1); }}
+        onClear={() => { setStudentFilters({ department_id: '', course_id: '', level: '', intake: '', year: '', status: '', term_id: '', has_term: '', helb: '', student_type_id: '' }); setSearch(''); setPage(1); }}
       >
         <FilterSearch className="sm:col-span-2" value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Admission no, name, phone, ID number, email…" />
         <FilterSelect label="Department" value={studentFilters.department_id} onChange={v => { setStudentFilters((f: any) => ({ ...f, department_id: v, course_id: '' })); setPage(1); }}>
@@ -2778,6 +2919,12 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
           <option value="true">Assigned to a term</option>
           <option value="false">No term yet</option>
         </FilterSelect>
+        {typeOptions.length > 0 && (
+          <FilterSelect label="Student type" value={studentFilters.student_type_id} onChange={v => setStudentFilter('student_type_id', v)}>
+            <option value="">All types</option>
+            {typeOptions.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </FilterSelect>
+        )}
         <FilterSelect label="HELB" value={studentFilters.helb} onChange={v => setStudentFilter('helb', v)}>
           <option value="">All</option>
           <option value="true">Applied</option>
@@ -2808,6 +2955,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Course</th>
                 <th className="px-4 py-3 text-left">Level</th>
+                <th className="px-4 py-3 text-left">Type</th>
                 <th className="px-4 py-3 text-left">Intake</th>
                 <th className="px-4 py-3 text-left">Current Term</th>
                 <th className="px-4 py-3 text-left">Status</th>
@@ -2816,7 +2964,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone/10">
-              {students.length === 0 && <tr><td colSpan={10} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
+              {students.length === 0 && <tr><td colSpan={11} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
               {students.map(s => (
                 <tr key={s.id} className="hover:bg-cream-deep/50 transition">
                   <td className="px-4 py-3">
@@ -2837,6 +2985,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                   <td className="px-4 py-3 font-medium text-brand-dark">{s.application?.surname} {s.application?.other_names}</td>
                   <td className="px-4 py-3 text-stone text-xs">{s.course?.name}</td>
                   <td className="px-4 py-3 text-stone">{s.level}</td>
+                  <td className="px-4 py-3 text-stone text-xs">{s.student_type?.name || '—'}</td>
                   <td className="px-4 py-3 text-stone">{s.intake} {s.year}</td>
                   <td className="px-4 py-3 text-stone text-xs">{s.current_term ? `${s.current_term.name} (${s.current_term.academic_year})` : '-'}</td>
                   <td className="px-4 py-3">

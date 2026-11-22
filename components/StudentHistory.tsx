@@ -41,7 +41,7 @@ export function StudentHistoryTimeline({ stages }: { stages: any[] }) {
                 <div>Level: <strong className="text-brand-dark">{st.level}</strong></div>
                 <div>Intake: <strong className="text-brand-dark">{st.intake ? `${titleCase(st.intake)} ${st.year ?? ''}` : '—'}</strong></div>
                 {st.course && <div className="sm:col-span-2">Course: <strong className="text-brand-dark">{st.course}</strong></div>}
-                <div>Started: <strong className="text-brand-dark">{fmtDate(st.started_at)}</strong></div>
+                <div>Started: <strong className="text-brand-dark">{fmtDate(st.started_at)}</strong>{st.start_term && <span> · {st.start_term}</span>}</div>
                 <div>{st.is_current ? 'Status: ' : 'Completed: '}<strong className="text-brand-dark">{st.is_current ? 'Current level' : fmtDate(st.ended_at)}</strong></div>
                 {st.term && <div className="sm:col-span-2">Term: <strong className="text-brand-dark">{st.term}</strong></div>}
               </div>

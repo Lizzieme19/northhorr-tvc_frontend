@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 // until the person has seen who is affected and by how much.
 
 type StType = { id: string; name: string; description?: string | null; is_default: boolean; is_active: boolean; students: number };
-type Impact = { students_changed: number; rows_changed: number; fees_before: number; fees_after: number; fees_change: number; outstanding_change: number; items: any[] };
+type Impact = { students_changed: number; rows_changed: number; fees_before?: number; fees_after?: number; fees_change?: number; outstanding_change?: number; items: any[] };
 
 const kes = (n: number) => `KES ${Math.round(n || 0).toLocaleString()}`;
 const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${kes(Math.abs(n))}`;
@@ -31,8 +31,8 @@ function ImpactDialog({ title, intro, impact, extra, working, onApply, onClose }
             {none ? <strong className="text-brand-dark">No student&apos;s fees change.</strong> : (
               <ul className="space-y-1 text-brand-dark">
                 <li><strong>{impact.students_changed}</strong> student{impact.students_changed === 1 ? '' : 's'} affected ({impact.rows_changed} term bill{impact.rows_changed === 1 ? '' : 's'})</li>
-                <li>Fees billed: {kes(impact.fees_before)} → {kes(impact.fees_after)} (<strong>{signed(impact.fees_change)}</strong>)</li>
-                <li>Amount still owed changes by <strong>{signed(impact.outstanding_change)}</strong></li>
+                {impact.fees_change !== undefined && <li>Fees billed: {kes(impact.fees_before || 0)} → {kes(impact.fees_after || 0)} (<strong>{signed(impact.fees_change)}</strong>)</li>}
+                {impact.outstanding_change !== undefined && <li>Amount still owed changes by <strong>{signed(impact.outstanding_change)}</strong></li>}
               </ul>
             )}
             {extra && <p className="mt-2 text-xs text-stone">{extra}</p>}
@@ -62,6 +62,54 @@ function ImpactDialog({ title, intro, impact, extra, working, onApply, onClose }
 }
 
 type Pending = { title: string; intro: string; impact: Impact; extra?: string; apply: () => Promise<any> };
+
+// Move the students ticked in a list to a student type, from a term onward, with the effect shown first.
+export function BulkTypeModal({ studentIds, onClose, onDone }: { studentIds: string[]; onClose: () => void; onDone?: () => void }) {
+  const [types, setTypes] = useState<StType[]>([]);
+  const [terms, setTerms] = useState<any[]>([]);
+  const [typeId, setTypeId] = useState('');
+  const [termId, setTermId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<{ impact: Impact; extra?: string; target: string } | null>(null);
+  useEffect(() => {
+    api.get('/student-types').then(r => setTypes((r.data.types || []).filter((t: StType) => t.is_active))).catch(() => toast.error('Could not load the student types'));
+    api.get('/terms').then(r => { const l = r.data.terms || r.data; setTerms(Array.isArray(l) ? l : []); }).catch(() => { });
+  }, []);
+  const call = (apply: boolean) => api.post('/student-types/assign', { student_ids: studentIds, student_type_id: typeId, from_term_id: termId || undefined, apply });
+  const showPreview = async () => {
+    setBusy(true);
+    try {
+      const r = await call(false);
+      setPending({ impact: r.data.impact, target: types.find(t => t.id === typeId)?.name || '', extra: r.data.from_term ? `Applies from ${r.data.from_term.name} ${r.data.from_term.academic_year} onward. Earlier terms stay as they were billed.` : undefined });
+    } catch (e: any) { toast.error(errOf(e, 'Could not work out the effect')); }
+    finally { setBusy(false); }
+  };
+  const apply = async () => {
+    setBusy(true);
+    try { await call(true); toast.success(`${studentIds.length} student${studentIds.length === 1 ? '' : 's'} moved to ${pending?.target}`); onDone?.(); onClose(); }
+    catch (e: any) { toast.error(errOf(e, 'That could not be saved')); }
+    finally { setBusy(false); }
+  };
+  if (typeof document === 'undefined') return null;
+  if (pending) return <ImpactDialog title={`Move ${studentIds.length} student${studentIds.length === 1 ? '' : 's'} to ${pending.target}`} intro="This is what will change. Nothing is saved until you confirm." impact={pending.impact} extra={pending.extra} working={busy} onApply={apply} onClose={() => setPending(null)} />;
+  return createPortal(
+    <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="px-6 pt-5 pb-3 border-b border-stone/10"><h3 className="font-display text-lg text-brand-dark">Change student type</h3><p className="text-sm text-stone mt-1">For the {studentIds.length} student{studentIds.length === 1 ? '' : 's'} you ticked.</p></div>
+        <div className="px-6 py-4 space-y-3 text-sm">
+          <label className="block"><span className="text-xs text-stone">Move to type</span>
+            <select value={typeId} onChange={e => setTypeId(e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border border-stone/25"><option value="">Choose…</option>{types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+          <label className="block"><span className="text-xs text-stone">Starting from term</span>
+            <select value={termId} onChange={e => setTermId(e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border border-stone/25"><option value="">The current term</option>{terms.map((t: any) => <option key={t.id} value={t.id}>{t.name} {t.academic_year}</option>)}</select></label>
+          <p className="text-xs text-stone">Terms before that stay billed as they were.</p>
+        </div>
+        <div className="px-6 py-4 border-t border-stone/10 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-stone/25 text-sm text-stone hover:bg-cream-deep">Cancel</button>
+          <button disabled={!typeId || busy} onClick={showPreview} className="px-5 py-2 rounded-xl bg-brand text-cream text-sm font-semibold hover:bg-brand-dark disabled:opacity-50">{busy ? 'Working…' : 'Preview'}</button>
+        </div>
+      </div>
+    </div>, document.body);
+}
 
 export default function StudentTypes({ canSetFees = true }: { canSetFees?: boolean }) {
   const [types, setTypes] = useState<StType[] | null>(null);
