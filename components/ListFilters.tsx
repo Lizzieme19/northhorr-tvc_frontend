@@ -36,7 +36,7 @@ export function FilterDate({ label, value, onChange }: { label: string; value: s
 export function FilterPanel({ children, active, onClear }: { children: ReactNode; active: number; onClear: () => void }) {
   return (
     <div className="bg-white rounded-2xl border border-stone/10 shadow-sm p-4 mb-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">{children}</div>
       {active > 0 && (
         <div className="mt-3 flex items-center justify-between text-xs">
           <span className="text-stone">{active} filter{active === 1 ? '' : 's'} applied</span>

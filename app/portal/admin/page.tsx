@@ -637,7 +637,7 @@ export default function AdminDashboard() {
       searchable
     >
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
             <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>
@@ -2271,19 +2271,19 @@ export default function AdminDashboard() {
       )}
 
       {tab === 'id-card' && isAdmin && (
-        <main className="max-w-7xl mx-auto px-6 py-8"><IdCardDesign /></main>
+        <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><IdCardDesign /></main>
       )}
 
       {tab === 'student-types' && (
-        <main className="max-w-7xl mx-auto px-6 py-8"><StudentTypes canSetFees={isAdmin} /></main>
+        <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><StudentTypes canSetFees={isAdmin} /></main>
       )}
 
       {tab === 'profile-options' && isAdmin && (
-        <main className="max-w-7xl mx-auto px-6 py-8"><ProfileOptionsAdmin /></main>
+        <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><ProfileOptionsAdmin /></main>
       )}
 
       {tab === 'activity-log' && isAdmin && (
-        <main className="max-w-7xl mx-auto px-6 py-8"><ActivityLog /></main>
+        <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><ActivityLog /></main>
       )}
 
       {tab === 'doc-templates' && (
@@ -2859,40 +2859,29 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
         </div>
       )}
 
-      {/* CSV Imports */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* KUCCPS Import */}
-        <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-          <h2 className="font-display text-lg text-brand-dark mb-2">KUCCPS CSV Import</h2>
-          <p className="text-sm text-stone mb-4">Upload a CSV with columns: surname, other_names, gender, dob, email, phone, kcse_index, kcse_grade</p>
-          <label className="block w-full border-2 border-dashed border-brand/30 rounded-xl p-6 text-center cursor-pointer hover:border-brand hover:bg-brand/5 transition">
+      {/* Imports: one slim bar instead of two big cards */}
+      <div className="bg-white rounded-2xl border border-stone/10 shadow-sm px-4 sm:px-5 py-3 mb-4 flex flex-wrap items-center gap-x-10 gap-y-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-brand-dark" title="CSV columns: surname, other_names, gender, dob, email, phone, kcse_index, kcse_grade">KUCCPS CSV import <span className="text-stone font-normal cursor-help" aria-label="Columns: surname, other_names, gender, dob, email, phone, kcse_index, kcse_grade">ⓘ</span></span>
+          <label className="px-3 py-1.5 rounded-lg border border-dashed border-brand/40 text-xs font-medium text-brand cursor-pointer hover:bg-brand/5 transition max-w-[14rem] truncate">
             <input type="file" accept=".csv" className="hidden" onChange={e => setCsvFile(e.target.files?.[0] || null)} />
-            <div className="text-3xl mb-2">📄</div>
-            <div className="text-sm font-medium text-brand-dark">{csvFile ? csvFile.name : 'Click to upload CSV'}</div>
+            {csvFile ? csvFile.name : '📄 Choose CSV'}
           </label>
           <button onClick={handleKuccpsImport} disabled={!csvFile || importing}
-            className="mt-4 w-full px-4 py-2.5 rounded-xl bg-brand text-cream font-semibold hover:bg-brand-dark transition disabled:opacity-50">
-            {importing ? 'Importing…' : 'Import KUCCPS Students'}
+            className="px-3 py-1.5 rounded-lg bg-brand text-cream text-xs font-semibold hover:bg-brand-dark transition disabled:opacity-50 whitespace-nowrap">
+            {importing ? 'Importing…' : 'Import KUCCPS students'}
           </button>
-          {importResult && (
-            <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200 text-sm">
-              <div className="font-semibold text-green-800">Import complete!</div>
-              <div className="text-green-700">Imported: {importResult.imported} | Errors: {importResult.errors}</div>
-            </div>
-          )}
         </div>
-
-        {/* Student import: CSV, XLS or XLSX */}
-        <div className="bg-white rounded-2xl p-6 border border-stone/10 shadow-sm">
-          <h2 className="font-display text-lg text-brand-dark mb-2">Import Students</h2>
-          <p className="text-sm text-stone mb-4">Add many students from a CSV, XLS or XLSX file. The file is checked first and you confirm before anything is created. New students get their own temporary password.</p>
-          <div className="text-3xl mb-4">📊</div>
-          <button onClick={() => setShowImport(true)}
-            className="w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">
-            Import from file…
-          </button>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-brand-dark" title="CSV, XLS or XLSX. The file is checked first and nothing is created until you confirm.">Import students <span className="text-stone font-normal cursor-help">ⓘ</span></span>
+          <button onClick={() => setShowImport(true)} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition whitespace-nowrap">📊 Import from file…</button>
         </div>
       </div>
+      {importResult && (
+        <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 text-sm">
+          <span className="font-semibold text-green-800">Import complete!</span> <span className="text-green-700">Imported: {importResult.imported} | Errors: {importResult.errors}</span>
+        </div>
+      )}
 
       <FilterPanel
         active={studentFilterCount + (search ? 1 : 0)}
@@ -2968,7 +2957,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Course</th>
                 <th className="px-4 py-3 text-left">Level</th>
-                <th className="px-4 py-3 text-left">Type</th>
+                {typeOptions.length > 0 && <th className="px-4 py-3 text-left">Type</th>}
                 <th className="px-4 py-3 text-left">Intake</th>
                 <th className="px-4 py-3 text-left">Current Term</th>
                 <th className="px-4 py-3 text-left">Status</th>
@@ -2977,7 +2966,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone/10">
-              {students.length === 0 && <tr><td colSpan={11} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
+              {students.length === 0 && <tr><td colSpan={12} className="px-4 py-10 text-center text-stone">No students enrolled yet</td></tr>}
               {students.map(s => (
                 <tr key={s.id} className="hover:bg-cream-deep/50 transition">
                   <td className="px-4 py-3">
@@ -3005,7 +2994,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
                   <td className="px-4 py-3 font-medium text-brand-dark">{s.application?.surname} {s.application?.other_names}</td>
                   <td className="px-4 py-3 text-stone text-xs">{s.course?.name}</td>
                   <td className="px-4 py-3 text-stone">{s.level}</td>
-                  <td className="px-4 py-3 text-stone text-xs">{s.student_type?.name || '—'}</td>
+                  {typeOptions.length > 0 && <td className="px-4 py-3 text-stone text-xs">{s.student_type?.name || '—'}</td>}
                   <td className="px-4 py-3 text-stone">{s.intake} {s.year}</td>
                   <td className="px-4 py-3 text-stone text-xs">{s.current_term ? `${s.current_term.name} (${s.current_term.academic_year})` : '-'}</td>
                   <td className="px-4 py-3">

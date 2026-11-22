@@ -396,7 +396,7 @@ export default function FinanceDashboard() {
       </div>
 
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
             <h2 className="font-display text-xl text-brand-dark mb-4">Change Password</h2>

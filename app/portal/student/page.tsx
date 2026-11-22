@@ -396,7 +396,7 @@ export default function StudentDashboard() {
       bottomKeys={['overview', 'fees', 'academics', 'documents', 'profile']}
     >
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         {section === 'profile' && (
           <div className="bg-white rounded-3xl shadow-xl p-8 mb-6 border border-stone/10">
             <div className="flex items-center justify-between mb-6">
@@ -730,7 +730,7 @@ export default function StudentDashboard() {
             );
           })()}
           {section === 'overview' && (
-            <div className="px-4 sm:px-8 pt-4 sm:pt-6 pb-6 sm:pb-8 grid sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="px-4 sm:px-8 pt-4 sm:pt-6 pb-6 sm:pb-8 grid sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
               {glance.map(c => (
                 <button key={c.key} onClick={() => go(c.key as Section)} className="text-left rounded-2xl border border-stone/15 bg-white p-5 hover:border-brand hover:shadow-md transition group">
                   <div className="flex items-center gap-3 mb-2"><span className="text-2xl" aria-hidden>{c.icon}</span><span className="font-semibold text-brand-dark">{c.title}</span></div>
@@ -744,7 +744,7 @@ export default function StudentDashboard() {
           {section !== 'overview' && (
           <div className="p-4 sm:p-8 grid lg:grid-cols-2 gap-6 sm:gap-8">
             {section === 'academics' && (<>
-            <div className="lg:col-span-2">
+            <div>
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Academic Profile</h2>
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between border-b border-stone/10 pb-2">
@@ -830,10 +830,55 @@ export default function StudentDashboard() {
             </>)}
 
             {section === 'academics' && (<>
-            {/* ── Academic history: every level, admission number and intake ── */}
-            <div className="lg:col-span-2">
-              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">My Academic History</h2>
-              <StudentHistoryPanel studentId={profile.id} />
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Term Enrollment</h2>
+              {/* Current Enrollments */}
+              {enrollments.length > 0 && (
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <div className="font-medium text-green-800 text-sm mb-2">Current Enrollments</div>
+                  {enrollments.map((enrollment: any) => (
+                    <div key={enrollment.id} className="flex items-center justify-between text-sm py-1">
+                      <span className="text-green-700">{enrollment.term.name} ({enrollment.term.academic_year})</span>
+                      <span className="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full">Enrolled</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Available Terms for Enrollment */}
+              {terms.length > 0 && (
+                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
+                  <div className="font-medium text-brand-dark text-sm mb-2">Available Terms</div>
+                  <div className="space-y-2">
+                    {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).map((term: any) => (
+                      <div key={term.id} className="flex items-center justify-between text-sm py-2 border-b border-stone/10 last:border-0">
+                        <div>
+                          <div className="font-medium text-brand-dark">{term.name}</div>
+                          <div className="text-xs text-stone">
+                            {[term.academic_year, term.intake ? `${term.intake.charAt(0)}${term.intake.slice(1).toLowerCase()} intake` : '', termDates(term), termFee(term) && `Fee ${termFee(term)}`, termState(term)].filter(Boolean).join(' • ')}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleEnrollTerm(term.id)}
+                          disabled={enrolling === term.id}
+                          className="px-3 py-1 bg-brand text-cream rounded-full text-xs hover:bg-brand-dark transition disabled:opacity-50"
+                        >
+                          {enrolling === term.id ? 'Enrolling...' : 'Enroll'}
+                        </button>
+                      </div>
+                    ))}
+                    {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).length === 0 && (
+                      <div className="text-xs text-stone italic">No new terms available for enrollment</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {terms.length === 0 && (
+                <div className="bg-stone/50 rounded-xl p-4 border border-stone/20 text-center">
+                  <p className="text-sm text-stone">No active terms available for enrollment</p>
+                </div>
+              )}
             </div>
             </>)}
 
@@ -927,60 +972,15 @@ export default function StudentDashboard() {
             </>)}
 
             {section === 'academics' && (<>
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Term Enrollment</h2>
-              {/* Current Enrollments */}
-              {enrollments.length > 0 && (
-                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-                  <div className="font-medium text-green-800 text-sm mb-2">Current Enrollments</div>
-                  {enrollments.map((enrollment: any) => (
-                    <div key={enrollment.id} className="flex items-center justify-between text-sm py-1">
-                      <span className="text-green-700">{enrollment.term.name} ({enrollment.term.academic_year})</span>
-                      <span className="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full">Enrolled</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Available Terms for Enrollment */}
-              {terms.length > 0 && (
-                <div className="bg-cream-deep rounded-xl p-4 border border-stone/10">
-                  <div className="font-medium text-brand-dark text-sm mb-2">Available Terms</div>
-                  <div className="space-y-2">
-                    {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).map((term: any) => (
-                      <div key={term.id} className="flex items-center justify-between text-sm py-2 border-b border-stone/10 last:border-0">
-                        <div>
-                          <div className="font-medium text-brand-dark">{term.name}</div>
-                          <div className="text-xs text-stone">
-                            {[term.academic_year, term.intake ? `${term.intake.charAt(0)}${term.intake.slice(1).toLowerCase()} intake` : '', termDates(term), termFee(term) && `Fee ${termFee(term)}`, termState(term)].filter(Boolean).join(' • ')}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleEnrollTerm(term.id)}
-                          disabled={enrolling === term.id}
-                          className="px-3 py-1 bg-brand text-cream rounded-full text-xs hover:bg-brand-dark transition disabled:opacity-50"
-                        >
-                          {enrolling === term.id ? 'Enrolling...' : 'Enroll'}
-                        </button>
-                      </div>
-                    ))}
-                    {terms.filter((t: any) => !enrollments.some((e: any) => e.term_id === t.id)).length === 0 && (
-                      <div className="text-xs text-stone italic">No new terms available for enrollment</div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {terms.length === 0 && (
-                <div className="bg-stone/50 rounded-xl p-4 border border-stone/20 text-center">
-                  <p className="text-sm text-stone">No active terms available for enrollment</p>
-                </div>
-              )}
+            {/* ── Academic history: every level, admission number and intake ── */}
+            <div className="lg:col-span-2">
+              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">My Academic History</h2>
+              <StudentHistoryPanel studentId={profile.id} />
             </div>
             </>)}
 
             {section === 'profile' && (<>
-            <div className="lg:col-span-2">
+            <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Religion</h2>
                 {!editingReligion && <button onClick={() => { setReligionDraft(profile.application?.religion || ''); setEditingReligion(true); }} className="text-sm font-semibold text-brand hover:underline">{profile.application?.religion ? 'Change' : 'Add yours'}</button>}
@@ -998,7 +998,7 @@ export default function StudentDashboard() {
             </>)}
 
             {section === 'profile' && (<>
-            <div className="lg:col-span-2">
+            <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest">Interests &amp; Sports</h2>
                 {!editingChoices && <button onClick={() => setEditingChoices(true)} className="text-sm font-semibold text-brand hover:underline">{myInterests.length + mySports.length ? 'Change' : 'Add yours'}</button>}
