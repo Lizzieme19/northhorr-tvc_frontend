@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { feeCorrectionsApi, feeTypesApi, termsApi, studentsApi } from '@/lib/services';
 import { CombinedStatement } from '@/components/LinkedAdmissions';
+import StatementButtons from '@/components/StatementButtons';
 import { termLabel } from '@/lib/terms';
 import PaymentDate, { todayStr } from '@/components/PaymentDate';
 import { toast } from 'sonner';
@@ -192,6 +193,7 @@ export default function StudentFeesModal({
           {student.admission_no} — {student.application?.surname} {student.application?.other_names}
           {summary?.student?.level ? ` · ${summary.student.level}` : ''}
         </p>
+        <StatementButtons studentId={student.id} className="mb-4" />
 
         {!summary ? (
           <div className="py-12 text-center text-sm text-stone">Loading…</div>

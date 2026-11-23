@@ -7,6 +7,7 @@ import ChangePassword from '@/components/ChangePassword';
 import { downloadStudentDocument } from '@/components/StudentDocuments';
 import { StudentHistoryPanel } from '@/components/StudentHistory';
 import { CombinedStatement } from '@/components/LinkedAdmissions';
+import StatementButtons from '@/components/StatementButtons';
 import { studentsApi } from '@/lib/services';
 import { termDates, termFee, termState } from '@/lib/terms';
 import { studentDocumentsApi } from '@/lib/services';
@@ -1035,6 +1036,9 @@ export default function StudentDashboard() {
 
             {section === 'fees' && (<>
             <div>
+              <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-3">My Fee Statement</h2>
+              <p className="text-xs text-stone mb-2">Every term billed, every payment, and your balance, on the college letterhead.</p>
+              <StatementButtons mine excel={false} className="mb-6" />
               <h2 className="text-sm font-semibold text-terracotta uppercase tracking-widest mb-4">Fee Status</h2>
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between border-b border-stone/10 pb-2">

@@ -9,6 +9,7 @@ export type Report = {
   kpis: { label: string; value: any; type: string }[];
   sections: { heading: string; columns: Col[]; rows: any[]; subtotal?: { label: string; values: Record<string, any> } | null; omitted?: number; total_rows?: number }[];
   notes: string[]; signoff?: boolean;
+  details?: [string, string][]; subtitle_size?: number; filter_text?: string; signoff_labels?: string[];
 };
 export type ReportPayload = { report: Report; letterhead: any; generated_at: string; generated_by: string };
 
@@ -55,9 +56,9 @@ export default function ReportView({ data }: { data: ReportPayload }) {
 
       <div className="px-6 sm:px-10 pb-8">
         <div className="text-center">
-          <div className="font-semibold text-brand-dark">{r.subtitle}</div>
+          <div className="font-semibold text-brand-dark" style={r.subtitle_size ? { fontSize: `${Math.round(r.subtitle_size * 1.5)}px` } : undefined}>{r.subtitle}</div>
           <div className="text-xs text-stone mt-1">
-            {r.filters.length ? <>Filters: {r.filters.map(([k, v]) => `${k}: ${v}`).join('   |   ')}</> : 'No filters: everything is included'}
+            {r.filter_text || (r.filters.length ? <>Filters: {r.filters.map(([k, v]) => `${k}: ${v}`).join('   |   ')}</> : 'No filters: everything is included')}
           </div>
           <div className="text-[11px] text-stone/80 mt-0.5">Generated {generated}{data.generated_by ? ` by ${data.generated_by}` : ''}</div>
         </div>
@@ -72,6 +73,12 @@ export default function ReportView({ data }: { data: ReportPayload }) {
               </div>
             ))}
           </div>
+        )}
+
+        {r.details && r.details.length > 0 && (
+          <dl className="mt-4 grid gap-x-6 gap-y-3 rounded-lg border border-stone/15 px-4 py-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
+            {r.details.map(([k, v]) => <div key={k}><dt className="text-[10px] uppercase tracking-wider text-stone">{k}</dt><dd className="text-sm font-semibold text-brand-dark break-words">{v}</dd></div>)}
+          </dl>
         )}
 
         {r.sections.length === 0 && (
@@ -96,7 +103,7 @@ export default function ReportView({ data }: { data: ReportPayload }) {
                   </thead>
                   <tbody>
                     {s.rows.map((row, ri) => (
-                      <tr key={ri} className={ri % 2 ? 'bg-cream-deep/40' : ''}>
+                      <tr key={ri} className={row._bold ? 'font-semibold bg-brand/10' : ri % 2 ? 'bg-cream-deep/40' : ''}>
                         {s.columns.map(c => {
                           const text = cell(c, row[c.key]);
                           const chip = /status/.test(c.key) && STATUS_CHIP[text];
@@ -130,7 +137,7 @@ export default function ReportView({ data }: { data: ReportPayload }) {
 
         {r.signoff && r.sections.length > 0 && (
           <div className="mt-10 grid grid-cols-2 gap-10 text-xs">
-            {['Prepared by', 'Checked and approved by'].map(l => (
+            {(r.signoff_labels || ['Prepared by', 'Checked and approved by']).map(l => (
               <div key={l}><div className="border-b border-stone/40 h-8" /><div className="font-semibold text-brand-dark mt-1.5">{l}</div><div className="text-stone">Signature and date</div></div>
             ))}
           </div>

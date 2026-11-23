@@ -7,6 +7,7 @@ import { termLabel } from '@/lib/terms';
 import { toast } from 'sonner';
 import ReportView, { ReportPayload } from '@/components/ReportView';
 import ReportsExport from '@/components/ReportsExport';
+import StudentPicker from '@/components/StudentPicker';
 
 type Def = { id: string; group: string; title: string; blurb: string; filters: string[]; options: { group_by?: [string, string][]; sort?: [string, string][] } };
 
@@ -41,6 +42,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
   const [busy, setBusy] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [picked, setPicked] = useState<any>(null); // the student a statement is for
   const seq = useRef(0);
 
   const def = defs?.find(d => d.id === id) || null;
@@ -65,6 +67,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
 
   const run = async (reportId = id, p = params) => {
     if (!reportId) return;
+    if (reportId === 'student-statement' && !p.student_id) { setData(null); return; }
     const mine = ++seq.current;
     setLoading(true);
     try {
@@ -76,7 +79,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
   };
 
   // choosing a report starts with its defaults, and shows it straight away
-  const choose = (next: string) => { setId(next); setFilters({}); setData(null); setStale(false); run(next, {}); };
+  const choose = (next: string) => { setId(next); setFilters({}); setPicked(null); setData(null); setStale(false); run(next, {}); };
   useEffect(() => { if (id && defs && !data && !loading) run(id, {}); /* first report on opening */ // eslint-disable-next-line
   }, [defs]);
 
@@ -154,6 +157,13 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
                   {activeCount > 0 && <button onClick={() => { setFilters({}); setStale(true); }} className="text-xs text-stone hover:text-brand">Clear</button>}
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
+                  {has('student_id') && (
+                    <div className="col-span-2">
+                      <span className={label}>Student</span>
+                      <StudentPicker value={picked} onChange={st => { setPicked(st); setFilters(f => ({ ...f, student_id: st?.id || '' })); setStale(true); }} />
+                      {!picked && <p className="text-[11px] text-stone mt-1.5">Search by admission number or name to build their statement.</p>}
+                    </div>
+                  )}
                   {has('date_from') && (
                     <div className="col-span-2">
                       <div className="flex flex-wrap gap-1.5 mb-2">
@@ -214,6 +224,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
           </div>
           <div className="p-3 sm:p-6">
             {loading && !data && <div className="py-24 text-center text-stone text-sm">Building the report…</div>}
+            {!data && !loading && id === 'student-statement' && <div className="py-24 text-center text-stone text-sm">Choose a student on the left to see their fee statement.</div>}
             {data && <div className={loading ? 'opacity-60 transition' : 'transition'}><ReportView data={data} /></div>}
           </div>
         </main>
