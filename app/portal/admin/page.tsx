@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { studentsApi, applicationsApi, departmentsApi, coursesApi, resourcesApi, newsApi, feeTypesApi, termsApi, galleryApi, termProgressionApi, financeApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
-import ReportsExport from '@/components/ReportsExport';
+import ReportCenter from '@/components/ReportCenter';
 import { StudentDocumentsModal, BulkIssueDocumentsModal } from '@/components/StudentDocuments';
 import { StudentHistoryModal, LinkRecordModal } from '@/components/StudentHistory';
 import { LinkedAdmissionsModal, PastMergesModal } from '@/components/LinkedAdmissions';
@@ -2806,7 +2806,7 @@ function StudentsTab({ feeTypes }: { feeTypes: any[] }) {
       {docsStudent && <StudentDocumentsModal student={docsStudent} onClose={() => setDocsStudent(null)} onChanged={refreshStudents} />}
       {showBulkType && <BulkTypeModal studentIds={selectedStudentIds} onClose={() => setShowBulkType(false)} onDone={() => { refreshStudents(); setSelectedStudentIds([]); api.get('/student-types').then(r => setTypeOptions((r.data.types || []).filter((t: any) => t.is_active))).catch(() => { }); }} />}
       {showBulkDocs && <BulkIssueDocumentsModal studentIds={selectedStudentIds} onClose={() => setShowBulkDocs(false)} onDone={refreshStudents} />}
-      {showReports && <ReportsExport onClose={() => setShowReports(false)} types={isAdmin ? ['fees', 'students'] : ['students']} initialType="students" hideFinance={!isAdmin} />}
+      {showReports && <ReportCenter onClose={() => setShowReports(false)} initialReport="student-register" rawTypes={isAdmin ? ['fees', 'students'] : ['students']} hideFinance={!isAdmin} />}
 
       {/* Duplicates Panel */}
       {showDuplicates && duplicates.length > 0 && (

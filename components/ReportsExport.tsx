@@ -98,7 +98,7 @@ export default function ReportsExport({ onClose, types = ['fees', 'students'], i
   };
 
   return (
-    <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 py-6 overflow-y-auto">
+    <div className="fixed inset-0 bg-brand-dark/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 py-6 overflow-y-auto">
       <div className="bg-white rounded-3xl p-8 w-full max-w-3xl shadow-2xl my-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-display text-2xl text-brand-dark">Download Reports</h2>

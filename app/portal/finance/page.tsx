@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { financeApi, feeTypesApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
-import ReportsExport from '@/components/ReportsExport';
+import ReportCenter from '@/components/ReportCenter';
 import BulkPayments from '@/components/BulkPayments';
 import PaymentDate, { todayStr } from '@/components/PaymentDate';
 import TermInfo from '@/components/TermInfo';
@@ -553,7 +553,7 @@ export default function FinanceDashboard() {
           />
         )}
 
-        {showReports && <ReportsExport onClose={() => setShowReports(false)} types={['fees']} />}
+        {showReports && <ReportCenter onClose={() => setShowReports(false)} initialReport="fee-balances" rawTypes={['fees']} />}
         {showBulkPayments && <BulkPayments onClose={() => setShowBulkPayments(false)} onDone={() => { refreshStudents(); }} />}
 
         {/* ── Record Payment Modal ── */}

@@ -92,6 +92,13 @@ export const financeApi = {
   exportStudentsReport: (params?: any) => api.get('/finance/reports/students/export', { params, responseType: 'blob' }),
 };
 
+// Reports: viewed on screen first, then downloaded as a PDF on the college letterhead or as Excel
+export const reportsApi = {
+  catalog: () => api.get('/reports/catalog'),
+  preview: (id: string, params?: any) => api.get(`/reports/${id}/preview`, { params }),
+  file: (id: string, kind: 'pdf' | 'xlsx', params?: any) => api.get(`/reports/${id}/${kind}`, { params, responseType: 'blob' }),
+};
+
 // Student documents issued by the college (Admission Letter, Letter of Acceptance, ...)
 export const studentDocumentsApi = {
   getMine: () => api.get('/student-documents/me'),
