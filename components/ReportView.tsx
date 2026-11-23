@@ -38,7 +38,7 @@ export default function ReportView({ data }: { data: ReportPayload }) {
   const generated = new Date(data.generated_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <article className="bg-white rounded-xl shadow-lg border border-stone/10 max-w-[1180px] mx-auto overflow-hidden" aria-label={r.title}>
+    <article className="bg-white rounded-xl shadow-lg border border-stone/10 max-w-[1500px] mx-auto overflow-hidden" aria-label={r.title}>
       {/* Letterhead */}
       <header className="px-6 sm:px-10 pt-8 pb-4">
         <div className="flex items-center justify-between gap-4">

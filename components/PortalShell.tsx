@@ -53,6 +53,9 @@ type Props = {
 
 export default function PortalShell({ brand, groups, active, onNavigate, user, onChangePassword, onLogout, bottomKeys, searchable, children }: Props) {
   const [drawer, setDrawer] = useState(false);
+  const [collapsed, setCollapsed] = useState(false); // large screens: a slim icon rail instead of the full sidebar
+  useEffect(() => { try { setCollapsed(localStorage.getItem('ntvc_sidebar_collapsed') === '1'); } catch { /* no storage: stay open */ } }, []);
+  const toggleSidebar = () => setCollapsed(c => { const n = !c; try { localStorage.setItem('ntvc_sidebar_collapsed', n ? '1' : '0'); } catch { /* ignore */ } return n; });
   const [jump, setJump] = useState(false);
   const [q, setQ] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -73,20 +76,22 @@ export default function PortalShell({ brand, groups, active, onNavigate, user, o
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName || '') || (e.target as HTMLElement)?.isContentEditable;
       if (searchable && ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (e.key === '/' && !typing))) { e.preventDefault(); setJump(true); setCursor(0); }
       if (e.key === 'Escape') { setJump(false); setDrawer(false); }
+      if (e.key === '[' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); toggleSidebar(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchable]);
   useEffect(() => { if (jump) setTimeout(() => inputRef.current?.focus(), 30); }, [jump]);
   useEffect(() => { setCursor(0); }, [q]);
   // the menu does not stay open behind a page change; the page does not scroll behind it
   useEffect(() => { document.body.style.overflow = drawer ? 'hidden' : ''; return () => { document.body.style.overflow = ''; }; }, [drawer]);
 
-  const renderNav = (onPick: (k: string) => void) => (
-    <nav aria-label={`${brand.title} sections`} className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
+  const renderNav = (onPick: (k: string) => void, compact = false) => (
+    <nav aria-label={`${brand.title} sections`} className={`flex-1 overflow-y-auto overflow-x-hidden ${compact ? 'px-2 py-3 space-y-3' : 'px-3 py-3 space-y-5'}`}>
       {groups.map((g, gi) => (
         <div key={gi}>
-          {g.heading && <div className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-cream/40">{g.heading}</div>}
+          {g.heading && (compact ? (gi > 0 ? <div className="mx-2 mb-2 border-t border-white/10" /> : null) : <div className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-cream/40">{g.heading}</div>)}
           <ul className="space-y-0.5">
             {g.items.map(i => {
               const on = i.key === active;
@@ -95,13 +100,14 @@ export default function PortalShell({ brand, groups, active, onNavigate, user, o
                   <button
                     onClick={() => onPick(i.key)}
                     aria-current={on ? 'page' : undefined}
-                    title={i.hint}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-left transition ${on ? 'bg-white/12 text-white font-semibold shadow-inner ring-1 ring-gold/40' : 'text-cream/75 hover:bg-white/8 hover:text-white'}`}
+                    title={compact ? `${i.label}${i.hint ? ': ' + i.hint : ''}` : i.hint}
+                    aria-label={compact ? i.label : undefined}
+                    className={`relative w-full flex items-center ${compact ? 'justify-center h-10' : 'gap-3 px-3 py-2'} rounded-xl text-sm text-left transition ${on ? 'bg-white/12 text-white font-semibold shadow-inner ring-1 ring-gold/40' : 'text-cream/75 hover:bg-white/8 hover:text-white'}`}
                   >
                     <span className="w-5 text-center text-base leading-none" aria-hidden>{i.icon}</span>
-                    <span className="flex-1 truncate">{i.label}</span>
-                    {i.count != null && !i.badge ? <span className="text-[11px] text-cream/45 tabular-nums">{i.count}</span> : null}
-                    {i.badge ? <span className="min-w-[1.4rem] px-1.5 py-0.5 rounded-full bg-gold text-brand-dark text-[11px] font-bold text-center">{i.badge}</span> : null}
+                    {!compact && <span className="flex-1 truncate">{i.label}</span>}
+                    {!compact && i.count != null && !i.badge ? <span className="text-[11px] text-cream/45 tabular-nums">{i.count}</span> : null}
+                    {i.badge ? <span className={compact ? 'absolute top-0.5 right-1 min-w-[1rem] px-1 rounded-full bg-gold text-brand-dark text-[9px] font-bold text-center leading-4' : 'min-w-[1.4rem] px-1.5 py-0.5 rounded-full bg-gold text-brand-dark text-[11px] font-bold text-center'}>{i.badge}</span> : null}
                   </button>
                 </li>
               );
@@ -112,19 +118,25 @@ export default function PortalShell({ brand, groups, active, onNavigate, user, o
     </nav>
   );
 
-  const renderBrand = () => (
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">
+  const renderBrand = (compact = false) => (
+    <div className={`flex items-center border-b border-white/10 ${compact ? 'justify-center py-4' : 'gap-3 px-5 py-4'}`} title={compact ? brand.title : undefined}>
       {brand.logoUrl
         ? <img src={brand.logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover border-2 border-gold/50" />
         : <div className="h-10 w-10 rounded-xl bg-gold grid place-items-center font-display font-bold text-brand-dark text-sm shrink-0">{brand.logoText || 'NT'}</div>}
-      <div className="min-w-0">
+      {!compact && <div className="min-w-0">
         <div className="font-display font-semibold leading-tight truncate">{brand.title}</div>
         {brand.subtitle && <div className="text-[11px] text-cream/50 truncate">{brand.subtitle}</div>}
-      </div>
+      </div>}
     </div>
   );
 
-  const renderAccount = () => (
+  const renderAccount = (compact = false) => compact ? (
+    <div className="border-t border-white/10 py-3 flex flex-col items-center gap-2">
+      {user && <div className="h-8 w-8 rounded-full bg-white/10 grid place-items-center text-xs font-bold" title={`${user.name || user.email}${user.role ? ' (' + user.role.replace('_', ' ') + ')' : ''}`}>{(user.name || user.email || '?').charAt(0).toUpperCase()}</div>}
+      {onChangePassword && <button onClick={() => { setDrawer(false); onChangePassword(); }} title="Change password" aria-label="Change password" className="h-8 w-8 grid place-items-center rounded-lg bg-white/8 hover:bg-white/15 transition text-sm">🔑</button>}
+      <button onClick={onLogout} title="Log out" aria-label="Log out" className="h-8 w-8 grid place-items-center rounded-lg bg-white/8 hover:bg-white/15 transition text-sm">⎋</button>
+    </div>
+  ) : (
     <div className="border-t border-white/10 p-4 space-y-3">
       {user && (
         <div className="flex items-center gap-2 min-w-0">
@@ -157,15 +169,18 @@ export default function PortalShell({ brand, groups, active, onNavigate, user, o
       </header>
 
       {/* Large screens: the sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col bg-brand-dark text-cream z-30 shadow-xl">
-        {renderBrand()}
+      <aside className={`hidden lg:flex fixed inset-y-0 left-0 ${collapsed ? 'w-16' : 'w-64'} flex-col bg-brand-dark text-cream z-30 shadow-xl transition-[width] duration-200`}>
+        {renderBrand(collapsed)}
         {searchable && (
-          <button onClick={() => { setJump(true); setCursor(0); }} className="mx-3 mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 text-sm text-cream/70 transition">
-            <span aria-hidden>🔍</span><span className="flex-1 text-left">Jump to…</span><kbd className="text-[10px] px-1.5 py-0.5 rounded bg-white/10">/</kbd>
+          <button onClick={() => { setJump(true); setCursor(0); }} title="Jump to a section (/)" aria-label="Jump to a section" className={collapsed ? 'mx-2 mt-3 h-10 grid place-items-center rounded-xl bg-white/8 hover:bg-white/12 text-cream/70 transition' : 'mx-3 mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 text-sm text-cream/70 transition'}>
+            <span aria-hidden>🔍</span>{!collapsed && <><span className="flex-1 text-left">Jump to…</span><kbd className="text-[10px] px-1.5 py-0.5 rounded bg-white/10">/</kbd></>}
           </button>
         )}
-        {renderNav(go)}
-        {renderAccount()}
+        {renderNav(go, collapsed)}
+        <button onClick={toggleSidebar} aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'} title={collapsed ? 'Expand the sidebar ([)' : 'Collapse the sidebar for more room ([)'} className={`border-t border-white/10 text-cream/60 hover:text-white hover:bg-white/8 transition text-xs ${collapsed ? 'h-10 grid place-items-center text-base' : 'px-5 py-2.5 flex items-center gap-2'}`}>
+          <span aria-hidden>{collapsed ? '»' : '«'}</span>{!collapsed && <span>Collapse sidebar</span>}
+        </button>
+        {renderAccount(collapsed)}
       </aside>
 
       {/* Phones: the slide-in menu */}
@@ -183,7 +198,7 @@ export default function PortalShell({ brand, groups, active, onNavigate, user, o
         </div>
       )}
 
-      <div className={`lg:pl-64 ${bottom.length ? 'pb-20 lg:pb-0' : ''}`}>
+      <div className={`${collapsed ? 'lg:pl-16' : 'lg:pl-64'} transition-[padding] duration-200 ${bottom.length ? 'pb-20 lg:pb-0' : ''}`}>
         {/* Large screens: where you are */}
         <div className="hidden lg:flex items-center gap-2 px-8 py-3 text-sm text-stone border-b border-stone/10 bg-cream-deep/90 backdrop-blur sticky top-0 z-20">
           <span>{brand.title}</span>

@@ -41,6 +41,9 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
   const [busy, setBusy] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
+  const [railOpen, setRailOpen] = useState(true); // large screens: the report and filter panel can be hidden for a wider view
+  useEffect(() => { try { setRailOpen(localStorage.getItem('ntvc_reports_rail') !== '0'); } catch { /* stay open */ } }, []);
+  const toggleRail = () => setRailOpen(o => { const n = !o; try { localStorage.setItem('ntvc_reports_rail', n ? '1' : '0'); } catch { /* ignore */ } return n; });
   const [picked, setPicked] = useState<any>(null); // the student a statement is for
   const seq = useRef(0);
 
@@ -133,7 +136,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
 
       <div className={`flex-1 flex flex-col lg:flex-row ${embedded ? '' : 'min-h-0'}`}>
         {/* Report, filters, options */}
-        <aside className={`${showFilters ? 'block' : 'hidden'} lg:block lg:w-[340px] shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-stone/15 overflow-y-auto max-h-[55vh] ${embedded ? 'lg:sticky lg:top-11 lg:self-start lg:max-h-[calc(100vh-2.75rem)]' : 'lg:max-h-none'}`}>
+        <aside className={`${showFilters ? 'block' : 'hidden'} ${railOpen ? 'lg:block' : 'lg:hidden'} lg:w-[340px] shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-stone/15 overflow-y-auto max-h-[55vh] ${embedded ? 'lg:sticky lg:top-11 lg:self-start lg:max-h-[calc(100vh-2.75rem)]' : 'lg:max-h-none'}`}>
           <div className="p-4 space-y-5">
             {scope && <div className="rounded-xl bg-brand/5 border border-brand/20 px-3 py-2 text-xs text-brand-dark">Reports for the <strong>{scope.department_name}</strong> department.</div>}
             {!defs && <p className="text-sm text-stone">Loading…</p>}
@@ -222,6 +225,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
         {/* The report on screen */}
         <main className={`flex-1 min-w-0 ${embedded ? '' : 'overflow-y-auto'}`}>
           <div className={`sticky z-10 bg-cream-deep/95 backdrop-blur border-b border-stone/10 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-2 ${embedded ? 'top-14 lg:top-11' : 'top-0'}`}>
+            <button onClick={toggleRail} className="hidden lg:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-stone/25 bg-white text-xs font-medium text-brand hover:bg-brand/5" title={railOpen ? 'Hide the report list and filters for a wider view' : 'Show the report list and filters'}>{railOpen ? '⇤ Hide filters' : '⇥ Filters'}</button>
             <div className="text-sm font-semibold text-brand-dark mr-auto truncate">{def?.title || ''}{stale && <span className="ml-2 text-xs font-normal text-amber-700">filters changed: update the preview</span>}</div>
             <button onClick={openPdf} disabled={!data || busy === 'view'} className="px-3 py-1.5 rounded-lg border border-stone/25 bg-white text-sm font-medium text-brand hover:bg-brand/5 disabled:opacity-50">{busy === 'view' ? 'Opening…' : '👁 View / print PDF'}</button>
             <button onClick={() => download('pdf')} disabled={!data || !!busy} className="px-3 py-1.5 rounded-lg bg-brand text-cream text-sm font-semibold hover:bg-brand-dark disabled:opacity-50">{busy === 'pdf' ? 'Preparing…' : '⬇ PDF'}</button>
