@@ -27,6 +27,7 @@ const kpi = (k: { value: any; type: string }) => (k.type === 'money' ? `KES ${mo
 const right = (c: Col) => ['money', 'int', 'percent'].includes(c.type || '');
 
 const STATUS_CHIP: Record<string, string> = {
+  Pending: 'bg-amber-100 text-amber-800', 'Under review': 'bg-sky-100 text-sky-800', Approved: 'bg-green-100 text-green-800', Rejected: 'bg-red-100 text-red-700', 'Awaiting approval': 'bg-amber-100 text-amber-800', Ordered: 'bg-sky-100 text-sky-800', Draft: 'bg-stone/20 text-stone', Cancelled: 'bg-stone/20 text-stone',
   Cleared: 'bg-green-100 text-green-800', Partial: 'bg-amber-100 text-amber-800', Unpaid: 'bg-red-100 text-red-700', Overdue: 'bg-red-200 text-red-900',
   Active: 'bg-green-100 text-green-800', Completed: 'bg-sky-100 text-sky-800', Graduated: 'bg-stone/20 text-stone', Withdrawn: 'bg-red-100 text-red-700', Deferred: 'bg-amber-100 text-amber-800', Attachment: 'bg-purple-100 text-purple-800',
 };

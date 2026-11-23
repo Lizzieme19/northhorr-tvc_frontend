@@ -7,10 +7,11 @@ import AssetRegister from '@/components/AssetRegister';
 import { GrnLinesDialog, KindBadge, UnitInput, withUnit, RequesterField, RequisitionLines, requesterOf, requesterPayload, blankLine } from '@/components/ProcurementItemParts';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
+import ReportCenter from '@/components/ReportCenter';
 import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
 
-type TabKey = 'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'assets' | 'inventory' | 'invoices';
-const TAB_KEYS: readonly TabKey[] = ['suppliers', 'requisitions', 'rfqs', 'lpos', 'grns', 'assets', 'inventory', 'invoices'];
+type TabKey = 'suppliers' | 'requisitions' | 'rfqs' | 'lpos' | 'grns' | 'assets' | 'inventory' | 'invoices' | 'reports';
+const TAB_KEYS: readonly TabKey[] = ['reports', 'suppliers', 'requisitions', 'rfqs', 'lpos', 'grns', 'assets', 'inventory', 'invoices'];
 
 export default function ProcurementDashboard() {
   const { user, logout, loading } = useAuth();
@@ -433,6 +434,7 @@ export default function ProcurementDashboard() {
       { key: 'inventory', label: 'Inventory', icon: '📦', count: inventory.length },
     ] },
     { heading: 'Suppliers', items: [{ key: 'suppliers', label: 'Suppliers', icon: '🏢', count: suppliers.length }] },
+    { heading: 'Reports', items: [{ key: 'reports', label: 'Reports', icon: '📑', hint: 'Requisition reports, viewed on screen then downloaded' }] },
   ];
 
   if (loading || !user) return <div className="min-h-screen grid place-items-center"><div className="h-10 w-10 rounded-full border-4 border-brand/30 border-t-brand animate-spin" /></div>;
@@ -449,6 +451,9 @@ export default function ProcurementDashboard() {
       bottomKeys={['requisitions', 'lpos', 'assets', 'suppliers']}
     >
 
+      {tab === 'reports' ? (
+        <ReportCenter embedded onClose={() => setTab('suppliers')} initialReport="requisitions" />
+      ) : (
       <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
@@ -747,6 +752,7 @@ export default function ProcurementDashboard() {
         </div>
         )}
       </main>
+      )}
 
       {/* Create/Edit Modal */}
       {showModal && (

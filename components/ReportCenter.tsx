@@ -1,15 +1,14 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import api from '@/lib/api';
-import { financeApi, reportsApi } from '@/lib/services';
+import { reportsApi } from '@/lib/services';
 import { termLabel } from '@/lib/terms';
 import { toast } from 'sonner';
 import ReportView, { ReportPayload } from '@/components/ReportView';
 import ReportsExport from '@/components/ReportsExport';
 import StudentPicker from '@/components/StudentPicker';
 
-type Def = { id: string; group: string; title: string; blurb: string; filters: string[]; options: { group_by?: [string, string][]; sort?: [string, string][] } };
+type Def = { id: string; group: string; title: string; blurb: string; filters: string[]; date_label?: string; level_label?: string; options: { group_by?: [string, string][]; sort?: [string, string][]; detail?: [string, string][] } };
 
 const label = 'block text-[11px] font-semibold text-stone uppercase tracking-wide mb-1';
 const input = 'w-full px-2.5 py-1.5 rounded-lg border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand';
@@ -30,10 +29,10 @@ const nameFrom = (disposition: string | undefined, fallback: string) => disposit
 
 // Reports: pick one, set only the filters that apply, look at it on screen, then download it as a PDF on the college
 // letterhead or as Excel. `rawTypes` keeps the older every-column Excel export one click away.
-export default function ReportCenter({ onClose, initialReport, rawTypes = [], hideFinance = false }: { onClose: () => void; initialReport?: string; rawTypes?: ('fees' | 'students')[]; hideFinance?: boolean }) {
+export default function ReportCenter({ onClose, initialReport, rawTypes = [], hideFinance = false, embedded = false }: { onClose: () => void; initialReport?: string; rawTypes?: ('fees' | 'students')[]; hideFinance?: boolean; embedded?: boolean }) {
   const [defs, setDefs] = useState<Def[] | null>(null);
   const [options, setOptions] = useState<any>(null);
-  const [studentTypes, setStudentTypes] = useState<any[]>([]);
+  const [scope, setScope] = useState<{ department_id: string; department_name: string } | null>(null); // a department head sees one department
   const [id, setId] = useState<string>('');
   const [filters, setFilters] = useState<Record<string, any>>({});
   const [data, setData] = useState<ReportPayload | null>(null);
@@ -50,18 +49,18 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
   useEffect(() => {
     reportsApi.catalog().then(r => {
       const list: Def[] = r.data.reports || [];
+      setScope(r.data.scope || null);
       setDefs(list);
       const start = list.find(d => d.id === initialReport) || list[0];
       if (start) setId(start.id);
     }).catch(() => toast.error('Could not load the reports'));
-    financeApi.getReportFilters().then(r => setOptions(r.data)).catch(() => { });
-    api.get('/student-types').then(r => setStudentTypes((r.data.types || []).filter((t: any) => t.is_active))).catch(() => { });
+    reportsApi.filters().then(r => setOptions(r.data)).catch(() => { });
   }, [initialReport]);
 
   // the filters that apply to the chosen report, with what was typed in; empty ones are not sent
   const params = useMemo(() => {
     const p: Record<string, string> = {};
-    Object.entries(filters).forEach(([k, v]) => { if (v !== '' && v !== false && v !== undefined && def && (def.filters.includes(k) || k === 'group_by' || k === 'sort')) p[k] = String(v); });
+    Object.entries(filters).forEach(([k, v]) => { if (v !== '' && v !== false && v !== undefined && def && (def.filters.includes(k) || k === 'group_by' || k === 'sort' || k === 'detail')) p[k] = String(v); });
     return p;
   }, [filters, def]);
 
@@ -86,7 +85,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
   const set = (k: string, v: any) => { setFilters(f => ({ ...f, ...(k === 'department_id' ? { course_id: '' } : {}), [k]: v })); setStale(true); };
   const has = (k: string) => !!def?.filters.includes(k);
   const courses = useMemo(() => (options?.courses || []).filter((c: any) => !filters.department_id || c.department_id === filters.department_id), [options, filters.department_id]);
-  const activeCount = Object.keys(params).filter(k => k !== 'group_by' && k !== 'sort').length;
+  const activeCount = Object.keys(params).filter(k => !['group_by', 'sort', 'detail'].includes(k)).length;
 
   const save = (blob: Blob, name: string) => {
     const url = URL.createObjectURL(blob);
@@ -120,21 +119,23 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
     return [...m.entries()];
   }, [defs]);
 
-  if (typeof document === 'undefined') return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[70] bg-cream-deep flex flex-col">
-      <div className="bg-brand-dark text-cream px-4 sm:px-6 h-14 flex items-center gap-3 shrink-0 shadow-lg">
+  if (!embedded && typeof document === 'undefined') return null;
+  const page = (
+    <div className={embedded ? 'bg-cream-deep flex flex-col min-h-[calc(100vh-7rem)] lg:min-h-[calc(100vh-2.75rem)]' : 'fixed inset-0 z-[70] bg-cream-deep flex flex-col'}>
+      {!embedded && <div className="bg-brand-dark text-cream px-4 sm:px-6 h-14 flex items-center gap-3 shrink-0 shadow-lg">
         <span className="font-display font-semibold">Reports</span>
         <span className="text-cream/50 text-sm hidden sm:inline">View first, then download</span>
         <div className="flex-1" />
         <button onClick={() => setShowFilters(s => !s)} className="lg:hidden text-sm px-3 py-1.5 rounded-lg bg-white/10">{showFilters ? 'Hide filters' : 'Filters'}</button>
         <button onClick={onClose} aria-label="Close reports" className="h-9 w-9 grid place-items-center rounded-lg hover:bg-white/10 text-lg">✕</button>
-      </div>
+      </div>}
+      {embedded && <div className="lg:hidden px-4 pt-3"><button onClick={() => setShowFilters(s => !s)} className="text-sm px-3 py-1.5 rounded-lg bg-white border border-stone/25 text-brand">{showFilters ? 'Hide filters' : 'Choose report and filters'}</button></div>}
 
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+      <div className={`flex-1 flex flex-col lg:flex-row ${embedded ? '' : 'min-h-0'}`}>
         {/* Report, filters, options */}
-        <aside className={`${showFilters ? 'block' : 'hidden'} lg:block lg:w-[340px] shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-stone/15 overflow-y-auto max-h-[55vh] lg:max-h-none`}>
+        <aside className={`${showFilters ? 'block' : 'hidden'} lg:block lg:w-[340px] shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-stone/15 overflow-y-auto max-h-[55vh] ${embedded ? 'lg:sticky lg:top-11 lg:self-start lg:max-h-[calc(100vh-2.75rem)]' : 'lg:max-h-none'}`}>
           <div className="p-4 space-y-5">
+            {scope && <div className="rounded-xl bg-brand/5 border border-brand/20 px-3 py-2 text-xs text-brand-dark">Reports for the <strong>{scope.department_name}</strong> department.</div>}
             {!defs && <p className="text-sm text-stone">Loading…</p>}
             {groups.map(([g, list]) => (
               <div key={g}>
@@ -170,31 +171,35 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
                         {PRESETS.map(([name, fn]) => <button key={name} onClick={() => { const [a, b] = fn(); setFilters(f => ({ ...f, date_from: a, date_to: b })); setStale(true); }} className="text-[11px] px-2 py-1 rounded-full border border-stone/25 text-brand hover:bg-brand/5">{name}</button>)}
                       </div>
                       <div className="grid grid-cols-2 gap-2.5">
-                        <label><span className={label}>Payments from</span><input type="date" className={input} value={filters.date_from || ''} onChange={e => set('date_from', e.target.value)} /></label>
-                        <label><span className={label}>Payments to</span><input type="date" className={input} value={filters.date_to || ''} onChange={e => set('date_to', e.target.value)} /></label>
+                        <label><span className={label}>{def?.date_label || 'Payments'} from</span><input type="date" className={input} value={filters.date_from || ''} onChange={e => set('date_from', e.target.value)} /></label>
+                        <label><span className={label}>{def?.date_label || 'Payments'} to</span><input type="date" className={input} value={filters.date_to || ''} onChange={e => set('date_to', e.target.value)} /></label>
                       </div>
                     </div>
                   )}
                   {has('term_id') && <label className="col-span-2"><span className={label}>Term</span><select className={input} value={filters.term_id || ''} onChange={e => set('term_id', e.target.value)}><option value="">All terms</option>{(options?.terms || []).map((t: any) => <option key={t.id} value={t.id}>{termLabel(t)}</option>)}</select></label>}
-                  {has('department_id') && <label className="col-span-2"><span className={label}>Department</span><select className={input} value={filters.department_id || ''} onChange={e => set('department_id', e.target.value)}><option value="">All departments</option>{(options?.departments || []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>}
+                  {has('department_id') && !scope && <label className="col-span-2"><span className={label}>Department</span><select className={input} value={filters.department_id || ''} onChange={e => set('department_id', e.target.value)}><option value="">All departments</option>{(options?.departments || []).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>}
                   {has('course_id') && <label className="col-span-2"><span className={label}>Course</span><select className={input} value={filters.course_id || ''} onChange={e => set('course_id', e.target.value)}><option value="">All courses</option>{courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}
-                  {has('level') && <label><span className={label}>Level</span><select className={input} value={filters.level || ''} onChange={e => set('level', e.target.value)}><option value="">All</option>{(options?.levels || []).map((l: string) => <option key={l} value={l}>{l}</option>)}</select></label>}
+                  {has('level') && <label><span className={label}>{def?.level_label || 'Level'}</span><select className={input} value={filters.level || ''} onChange={e => set('level', e.target.value)}><option value="">All</option>{(options?.levels || []).map((l: string) => <option key={l} value={l}>{l}</option>)}</select></label>}
                   {has('intake') && <label><span className={label}>Intake</span><select className={input} value={filters.intake || ''} onChange={e => set('intake', e.target.value)}><option value="">All</option>{(options?.intakes || []).map((i: string) => <option key={i} value={i}>{i.charAt(0) + i.slice(1).toLowerCase()}</option>)}</select></label>}
                   {has('year') && <label><span className={label}>Year</span><select className={input} value={filters.year || ''} onChange={e => set('year', e.target.value)}><option value="">All</option>{(options?.years || []).map((y: number) => <option key={y} value={y}>{y}</option>)}</select></label>}
                   {has('status') && <label><span className={label}>Student status</span><select className={input} value={filters.status || ''} onChange={e => set('status', e.target.value)}><option value="">All</option>{(options?.student_statuses || []).map((s: string) => <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>)}</select></label>}
-                  {has('student_type_id') && studentTypes.length > 0 && <label><span className={label}>Student type</span><select className={input} value={filters.student_type_id || ''} onChange={e => set('student_type_id', e.target.value)}><option value="">All</option>{studentTypes.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
+                  {has('student_type_id') && (options?.student_types || []).length > 0 && <label><span className={label}>Student type</span><select className={input} value={filters.student_type_id || ''} onChange={e => set('student_type_id', e.target.value)}><option value="">All</option>{(options?.student_types || []).map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
                   {has('gender') && <label><span className={label}>Gender</span><select className={input} value={filters.gender || ''} onChange={e => set('gender', e.target.value)}><option value="">All</option><option>Male</option><option>Female</option></select></label>}
                   {has('helb') && <label><span className={label}>HELB</span><select className={input} value={filters.helb || ''} onChange={e => set('helb', e.target.value)}><option value="">All</option><option value="true">Applied</option><option value="false">Not applied</option></select></label>}
                   {has('fee_status') && !hideFinance && <label><span className={label}>Fee status</span><select className={input} value={filters.fee_status || ''} onChange={e => set('fee_status', e.target.value)}><option value="">All</option>{(options?.fee_statuses || []).map((s: string) => <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>)}</select></label>}
                   {has('fee_type_id') && <label><span className={label}>Fee type</span><select className={input} value={filters.fee_type_id || ''} onChange={e => set('fee_type_id', e.target.value)}><option value="">All</option>{(options?.fee_types || []).map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}
+                  {has('app_status') && <label><span className={label}>Status</span><select className={input} value={filters.app_status || ''} onChange={e => set('app_status', e.target.value)}><option value="">All</option>{(options?.application_statuses || []).map((s: string) => <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase().replace('_', ' ')}</option>)}</select></label>}
+                  {has('app_type') && <label><span className={label}>Entry</span><select className={input} value={filters.app_type || ''} onChange={e => set('app_type', e.target.value)}><option value="">All</option><option value="KUCCPS">KUCCPS</option><option value="DIRECT">Direct</option></select></label>}
+                  {has('req_status') && <label className="col-span-2"><span className={label}>Status</span><select className={input} value={filters.req_status || ''} onChange={e => set('req_status', e.target.value)}><option value="">All</option>{(options?.requisition_statuses || []).map((s: string) => <option key={s} value={s}>{s === 'PENDING_APPROVAL' ? 'Awaiting approval' : s.charAt(0) + s.slice(1).toLowerCase()}</option>)}</select></label>}
                   {has('min_balance') && <label><span className={label}>Owing at least (KES)</span><input inputMode="decimal" className={input} placeholder="e.g. 5000" value={filters.min_balance || ''} onChange={e => set('min_balance', e.target.value.replace(/[^0-9.]/g, ''))} /></label>}
                   {has('outstanding_only') && <label className="col-span-2 flex items-center gap-2 text-sm text-brand-dark"><input type="checkbox" className="h-4 w-4 accent-brand" checked={!!filters.outstanding_only} onChange={e => set('outstanding_only', e.target.checked ? 'true' : false)} />Only students who owe</label>}
                   {has('search') && <label className="col-span-2"><span className={label}>Search</span><input className={input} placeholder="Admission no, name, phone…" value={filters.search || ''} onChange={e => set('search', e.target.value)} /></label>}
                 </div>
 
-                {(def.options.group_by || def.options.sort) && (
+                {(def.options.group_by || def.options.sort || def.options.detail) && (
                   <div className="grid grid-cols-2 gap-2.5 mt-3 pt-3 border-t border-stone/10">
                     {def.options.group_by && <label className="col-span-2"><span className={label}>Group by</span><select className={input} value={filters.group_by || 'auto'} onChange={e => set('group_by', e.target.value)}>{def.options.group_by.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>}
+                    {def.options.detail && <label className="col-span-2"><span className={label}>Detail</span><select className={input} value={filters.detail || def.options.detail[0][0]} onChange={e => set('detail', e.target.value)}>{def.options.detail.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>}
                     {def.options.sort && <label className="col-span-2"><span className={label}>Sort by</span><select className={input} value={filters.sort || def.options.sort[0][0]} onChange={e => set('sort', e.target.value)}>{def.options.sort.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>}
                   </div>
                 )}
@@ -215,8 +220,8 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
         </aside>
 
         {/* The report on screen */}
-        <main className="flex-1 min-w-0 overflow-y-auto">
-          <div className="sticky top-0 z-10 bg-cream-deep/95 backdrop-blur border-b border-stone/10 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-2">
+        <main className={`flex-1 min-w-0 ${embedded ? '' : 'overflow-y-auto'}`}>
+          <div className={`sticky z-10 bg-cream-deep/95 backdrop-blur border-b border-stone/10 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-2 ${embedded ? 'top-14 lg:top-11' : 'top-0'}`}>
             <div className="text-sm font-semibold text-brand-dark mr-auto truncate">{def?.title || ''}{stale && <span className="ml-2 text-xs font-normal text-amber-700">filters changed: update the preview</span>}</div>
             <button onClick={openPdf} disabled={!data || busy === 'view'} className="px-3 py-1.5 rounded-lg border border-stone/25 bg-white text-sm font-medium text-brand hover:bg-brand/5 disabled:opacity-50">{busy === 'view' ? 'Opening…' : '👁 View / print PDF'}</button>
             <button onClick={() => download('pdf')} disabled={!data || !!busy} className="px-3 py-1.5 rounded-lg bg-brand text-cream text-sm font-semibold hover:bg-brand-dark disabled:opacity-50">{busy === 'pdf' ? 'Preparing…' : '⬇ PDF'}</button>
@@ -231,5 +236,7 @@ export default function ReportCenter({ onClose, initialReport, rawTypes = [], hi
       </div>
 
       {showRaw && <ReportsExport onClose={() => setShowRaw(false)} types={rawTypes} initialType={rawTypes[0]} hideFinance={hideFinance} />}
-    </div>, document.body);
+    </div>
+  );
+  return embedded ? page : createPortal(page, document.body);
 }

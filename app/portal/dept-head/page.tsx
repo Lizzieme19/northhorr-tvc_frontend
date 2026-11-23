@@ -6,10 +6,11 @@ import api from '@/lib/api';
 import { applicationsApi, studentsApi, requisitionsApi, departmentsApi } from '@/lib/services';
 import ChangePassword from '@/components/ChangePassword';
 import { toast } from 'sonner';
+import ReportCenter from '@/components/ReportCenter';
 import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
 
-type TabKey = 'applications' | 'students' | 'requisitions';
-const TAB_KEYS: readonly TabKey[] = ['applications', 'students', 'requisitions'];
+type TabKey = 'applications' | 'students' | 'requisitions' | 'reports';
+const TAB_KEYS: readonly TabKey[] = ['applications', 'students', 'requisitions', 'reports'];
 
 export default function DeptHeadDashboard() {
   const { user, logout, loading } = useAuth();
@@ -173,6 +174,7 @@ export default function DeptHeadDashboard() {
       { key: 'applications', label: 'Applications', icon: '📋', count: appTotal, hint: 'Applications to your department' },
       { key: 'students', label: 'Enrolled students', icon: '🎓', count: studentTotal },
       { key: 'requisitions', label: 'Purchase requisitions', icon: '🛒', count: reqTotal },
+      { key: 'reports', label: 'Reports', icon: '📑', hint: 'Reports for your department, viewed on screen then downloaded' },
     ] },
   ];
 
@@ -187,9 +189,12 @@ export default function DeptHeadDashboard() {
       user={{ email: user.email, role: 'DEPT HEAD' }}
       onChangePassword={() => { setShowPasswordChange(true); window.scrollTo({ top: 0 }); }}
       onLogout={() => { logout(); router.push('/login'); }}
-      bottomKeys={['applications', 'students', 'requisitions']}
+      bottomKeys={['applications', 'students', 'requisitions', 'reports']}
     >
 
+      {tab === 'reports' ? (
+        <ReportCenter embedded onClose={() => setTab('applications')} initialReport="student-register" hideFinance />
+      ) : (
       <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8">
         {showPasswordChange && (
           <div className="bg-white rounded-2xl p-6 mb-6 border border-stone/10 shadow-sm">
@@ -328,6 +333,7 @@ export default function DeptHeadDashboard() {
           </div>
         </div>
       </main>
+      )}
 
       {/* Student Profile Edit Modal */}
       {selectedStudent && (

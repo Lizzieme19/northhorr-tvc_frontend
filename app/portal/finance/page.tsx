@@ -21,13 +21,14 @@ import { useDebounced } from '@/lib/hooks';
 import { toast } from 'sonner';
 import PortalShell from '@/components/PortalShell';
 
-type TabId = 'overview' | 'students' | 'billing' | 'fee-structure' | 'student-types';
+type TabId = 'overview' | 'students' | 'billing' | 'fee-structure' | 'student-types' | 'reports';
 const TABS: { id: TabId; label: string; icon: string; hint: string }[] = [
   { id: 'overview', label: 'Overview', icon: '📊', hint: 'Totals, trends and who owes what' },
   { id: 'students', label: 'Students & fees', icon: '🎓', hint: 'Find a student, record payments, fix fees' },
   { id: 'billing', label: 'Billing', icon: '💳', hint: 'Every term bill, with filters' },
   { id: 'fee-structure', label: 'Fee structure', icon: '🧾', hint: 'Term fees and fee types' },
   { id: 'student-types', label: 'Student types', icon: '🧑‍🎓', hint: 'Direct, KUCCPS... each with its own fees' },
+  { id: 'reports', label: 'Reports', icon: '📑', hint: 'View on screen, then download as PDF on the letterhead or Excel' },
 ];
 
 // Read-only reference: what each term costs and how each fee type is billed
@@ -375,7 +376,7 @@ export default function FinanceDashboard() {
       user={{ email: user.email, role: 'FINANCE' }}
       onChangePassword={() => setShowPasswordChange(true)}
       onLogout={() => { logout(); router.push('/login'); }}
-      bottomKeys={['overview', 'students', 'billing', 'fee-structure']}
+      bottomKeys={['overview', 'students', 'billing', 'reports']}
     >
       {/* Quick actions, available on every page */}
       <div className="bg-white border-b border-stone/15 px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
@@ -392,7 +393,7 @@ export default function FinanceDashboard() {
           />
         </form>
         <button onClick={() => setShowBulkPayments(true)} className="shrink-0 px-3 py-1.5 rounded-xl border border-brand/40 text-brand font-semibold hover:bg-brand/5 transition text-sm">💵 Several students</button>
-        <button onClick={() => setShowReports(true)} className="shrink-0 px-3 py-1.5 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm">⬇ Reports</button>
+        <button onClick={() => goTab('reports')} className="shrink-0 px-3 py-1.5 rounded-xl bg-gold text-brand-dark font-semibold hover:opacity-90 transition text-sm">📑 Reports</button>
       </div>
 
 
@@ -413,6 +414,8 @@ export default function FinanceDashboard() {
         )}
 
         {tab === 'student-types' && <StudentTypes />}
+
+        {tab === 'reports' && <ReportCenter embedded onClose={() => goTab('overview')} initialReport="fee-balances" rawTypes={['fees']} />}
 
         {tab === 'fee-structure' && (
           <div>
@@ -553,7 +556,7 @@ export default function FinanceDashboard() {
           />
         )}
 
-        {showReports && <ReportCenter onClose={() => setShowReports(false)} initialReport="fee-balances" rawTypes={['fees']} />}
+        
         {showBulkPayments && <BulkPayments onClose={() => setShowBulkPayments(false)} onDone={() => { refreshStudents(); }} />}
 
         {/* ── Record Payment Modal ── */}

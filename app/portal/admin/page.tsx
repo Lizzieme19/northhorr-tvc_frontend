@@ -38,11 +38,11 @@ const STATUS_COLORS: Record<string, string> = {
   REJECTED: 'bg-red-100 text-red-800',
 };
 
-type AdminTab = 'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'student-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings';
-const ADMIN_TABS: readonly AdminTab[] = ['overview', 'applications', 'students', 'users', 'courses', 'resources', 'news', 'gallery', 'fee-types', 'student-types', 'terms', 'billing', 'requisitions', 'term-progression', 'doc-templates', 'activity-log', 'profile-options', 'id-card', 'settings'];
+type AdminTab = 'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'student-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings' | 'reports';
+const ADMIN_TABS: readonly AdminTab[] = ['overview', 'reports', 'applications', 'students', 'users', 'courses', 'resources', 'news', 'gallery', 'fee-types', 'student-types', 'terms', 'billing', 'requisitions', 'term-progression', 'doc-templates', 'activity-log', 'profile-options', 'id-card', 'settings'];
 
 // Registrars handle student affairs: applications, students, departments/courses and progression — never finance or system admin
-const REGISTRAR_TABS = ['overview', 'applications', 'students', 'student-types', 'courses', 'term-progression'];
+const REGISTRAR_TABS = ['overview', 'reports', 'applications', 'students', 'student-types', 'courses', 'term-progression'];
 
 export default function AdminDashboard() {
   const { user, logout, loading } = useAuth();
@@ -591,7 +591,10 @@ export default function AdminDashboard() {
   };
 
   const navGroups: NavGroup[] = ([
-    { items: [{ key: 'overview', label: 'Overview', icon: '📊' }] },
+    { items: [
+      { key: 'overview', label: 'Overview', icon: '📊' },
+      { key: 'reports', label: 'Reports', icon: '📑', hint: 'View on screen, then download as PDF on the letterhead or Excel' },
+    ] },
     { heading: 'Admissions & students', items: [
       { key: 'applications', label: 'Applications', icon: '📋', badge: stats?.pendingApps || null, hint: 'Review and approve applications' },
       { key: 'students', label: 'Students', icon: '🎓', hint: 'Records, fees, documents, linked admissions' },
@@ -2284,6 +2287,10 @@ export default function AdminDashboard() {
 
       {tab === 'activity-log' && isAdmin && (
         <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><ActivityLog /></main>
+      )}
+
+      {tab === 'reports' && (
+        <ReportCenter embedded onClose={() => setTab('overview')} initialReport={isAdmin ? 'fee-balances' : 'student-register'} rawTypes={isAdmin ? ['fees', 'students'] : ['students']} hideFinance={!isAdmin} />
       )}
 
       {tab === 'doc-templates' && (

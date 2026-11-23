@@ -95,6 +95,7 @@ export const financeApi = {
 // Reports: viewed on screen first, then downloaded as a PDF on the college letterhead or as Excel
 export const reportsApi = {
   catalog: () => api.get('/reports/catalog'),
+  filters: () => api.get('/reports/filters'),
   preview: (id: string, params?: any) => api.get(`/reports/${id}/preview`, { params }),
   file: (id: string, kind: 'pdf' | 'xlsx', params?: any) => api.get(`/reports/${id}/${kind}`, { params, responseType: 'blob' }),
 };
