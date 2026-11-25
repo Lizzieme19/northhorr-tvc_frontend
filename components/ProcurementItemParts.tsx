@@ -4,8 +4,12 @@ import { grnsApi } from '@/lib/services';
 import { Shell } from '@/components/AssetDialogs';
 import { toast } from 'sonner';
 
-// What a procurement line is buying: a consumable (goes into Inventory, counted in a unit of measure) or an
-// asset (tagged one by one in the asset register). Chosen on the requisition and carried through to the GRN.
+// What a procurement line is buying: a consumable (goes into Inventory, counted in a unit of measure), an asset
+// (tagged one by one in the asset register) or a service (work done for the college, accepted as completed). Chosen on
+// the requisition and carried through to the order and the note that receives it.
+
+export const SERVICE_CATEGORIES = ['Repairs & maintenance', 'Cleaning & sanitation', 'Security', 'Catering', 'Transport & hire', 'ICT & internet', 'Consultancy & professional fees', 'Training & workshops', 'Printing & branding', 'Utilities', 'Insurance', 'Legal & audit', 'Building works', 'Other'];
+export const SERVICE_UNITS = ['job', 'lump sum', 'hour', 'day', 'week', 'month', 'year', 'visit', 'trip', 'person', 'session'];
 
 const input = 'w-full px-4 py-3 rounded-xl border border-stone/25 bg-white focus:outline-none focus:border-brand transition text-sm';
 const small = 'w-full px-3 py-2 rounded-lg border border-stone/25 bg-white text-sm focus:outline-none focus:border-brand';
@@ -15,6 +19,7 @@ export const withUnit = (qty: number | null | undefined, unit?: string | null) =
 
 export function KindBadge({ type }: { type?: string | null }) {
   if (type === 'ASSET') return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800">Asset</span>;
+  if (type === 'SERVICE') return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">Service</span>;
   if (type === 'CONSUMABLE') return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800">Stock</span>;
   return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">Not classified</span>;
 }
@@ -22,7 +27,7 @@ export function KindBadge({ type }: { type?: string | null }) {
 export function UnitInput({ value, onChange, units, className = input, id = 'units' }: { value: string; onChange: (v: string) => void; units: string[]; className?: string; id?: string }) {
   return (
     <>
-      <input list={id} value={value} onChange={e => onChange(e.target.value)} placeholder="e.g. ream, box, litre" className={className} />
+      <input list={id} value={value} onChange={e => onChange(e.target.value)} placeholder={id.startsWith('service') ? 'e.g. job, month, hour' : 'e.g. ream, box, litre'} className={className} />
       <datalist id={id}>{units.map(u => <option key={u} value={u} />)}</datalist>
     </>
   );
@@ -44,8 +49,8 @@ export function ItemKindFields({ form, set, inventory, units, assetOptions }: {
   };
   const picked = form.inventory_item_id && form.inventory_item_id !== 'NEW' ? inventory.find(i => i.id === form.inventory_item_id) : null;
 
-  const choose = (t: 'CONSUMABLE' | 'ASSET') =>
-    set({ item_type: t, inventory_item_id: '', item_name: '', unit_of_measure: '', asset_class: '', asset_category: '', asset_new: false });
+  const choose = (t: 'CONSUMABLE' | 'ASSET' | 'SERVICE') =>
+    set({ item_type: t, inventory_item_id: '', item_name: '', unit_of_measure: t === 'SERVICE' ? 'job' : '', asset_class: '', asset_category: '', service_category: '', asset_new: false });
 
   const pickStock = (id: string) => {
     if (id === 'NEW') { set({ inventory_item_id: 'NEW', item_name: '', unit_of_measure: '' }); return; }
@@ -57,7 +62,7 @@ export function ItemKindFields({ form, set, inventory, units, assetOptions }: {
     <div className="space-y-4">
       <div>
         <label className={label}>What are you buying? *</label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-3 gap-3">
           <button type="button" onClick={() => choose('CONSUMABLE')} aria-pressed={type === 'CONSUMABLE'}
             className={`text-left rounded-xl border p-3 transition ${type === 'CONSUMABLE' ? 'border-brand ring-2 ring-brand/20 bg-brand/5' : 'border-stone/25 hover:border-brand'}`}>
             <div className="font-semibold text-brand-dark text-sm">📦 Consumable</div>
@@ -67,6 +72,11 @@ export function ItemKindFields({ form, set, inventory, units, assetOptions }: {
             className={`text-left rounded-xl border p-3 transition ${type === 'ASSET' ? 'border-brand ring-2 ring-brand/20 bg-brand/5' : 'border-stone/25 hover:border-brand'}`}>
             <div className="font-semibold text-brand-dark text-sm">🏷️ Asset</div>
             <div className="text-xs text-stone">Tagged one by one in the asset register (computers, furniture…)</div>
+          </button>
+          <button type="button" onClick={() => choose('SERVICE')} aria-pressed={type === 'SERVICE'}
+            className={`text-left rounded-xl border p-3 transition ${type === 'SERVICE' ? 'border-brand ring-2 ring-brand/20 bg-brand/5' : 'border-stone/25 hover:border-brand'}`}>
+            <div className="font-semibold text-brand-dark text-sm">🛠️ Service</div>
+            <div className="text-xs text-stone">Work done for the college: repairs, security, catering, training…</div>
           </button>
         </div>
       </div>
@@ -95,6 +105,27 @@ export function ItemKindFields({ form, set, inventory, units, assetOptions }: {
               {picked && <p className="text-xs text-stone mt-1">In stock: {withUnit(picked.current_stock, picked.unit_of_measure)}</p>}
             </div>
           )}
+        </>
+      )}
+
+      {type === 'SERVICE' && (
+        <>
+          <div>
+            <label className={label}>Service needed *</label>
+            <input required value={form.item_name || ''} onChange={e => set({ item_name: e.target.value })} className={input} placeholder="e.g. Security guard services, Generator servicing, Internet subscription" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className={label}>Kind of service <span className="font-normal text-stone">(optional)</span></label>
+              <input list="service-categories" value={form.service_category || ''} onChange={e => set({ service_category: e.target.value })} className={input} placeholder="Choose or type" />
+              <datalist id="service-categories">{SERVICE_CATEGORIES.map(c => <option key={c} value={c} />)}</datalist>
+            </div>
+            <div>
+              <label className={label}>Charged by *</label>
+              <UnitInput id="service-units" value={form.unit_of_measure || ''} onChange={v => set({ unit_of_measure: v })} units={SERVICE_UNITS} />
+            </div>
+          </div>
+          <p className="text-xs text-stone">A service is work, so it does not go into Inventory or the asset register. It is accepted as completed when the work is done.</p>
         </>
       )}
 
@@ -158,21 +189,22 @@ export function GrnLinesDialog({ grnId, units, assetOptions, onClose, onChanged 
     finally { setBusy(null); }
   };
 
-  if (!grn) return <Shell title="Goods received" onClose={onClose}><p className="py-10 text-center text-sm text-stone">Loading…</p></Shell>;
+  if (!grn) return <Shell title="Receiving" onClose={onClose}><p className="py-10 text-center text-sm text-stone">Loading…</p></Shell>;
   const pending = grn.status === 'PENDING';
   const unclassified = grn.items.filter((i: any) => !i.item_type && i.quantity_accepted > 0).length;
+  const allServices = grn.items.length > 0 && grn.items.every((i: any) => i.item_type === 'SERVICE');
 
   return (
-    <Shell title={`${grn.grn_no} — lines`} onClose={onClose} wide
+    <Shell title={`${grn.grn_no} — ${allServices ? 'services' : 'lines'}`} onClose={onClose} wide
       subtitle={pending
-        ? 'Say what each line is before verifying. Consumables go into Inventory in their unit; assets wait to be tagged in the asset register.'
+        ? (allServices ? 'Say how much of each service was completed and whether the work was satisfactory, then verify to accept it. Services do not go into stock or the asset register.' : 'Say what each line is before verifying. Consumables go into Inventory in their unit; assets wait to be tagged in the asset register; services are accepted as completed work.')
         : grn.status === 'VERIFIED' ? 'This GRN is verified.' : 'This GRN was rejected.'}>
       {pending && unclassified > 0 && <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-3 py-2 mb-3">{unclassified} line{unclassified > 1 ? 's are' : ' is'} not classified yet. Verifying is blocked until {unclassified > 1 ? 'they are' : 'it is'}.</div>}
       <div className="space-y-3 mt-3">
         {grn.items.map((l: any) => (
           <div key={l.id} className={`rounded-xl border p-3 ${busy === l.id ? 'opacity-60' : ''} ${!l.item_type && pending ? 'border-amber-300 bg-amber-50/40' : 'border-stone/15'}`}>
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><span className="font-semibold text-brand-dark text-sm">{l.item_name}</span> <KindBadge type={l.item_type} /></div>
+              <div className="min-w-0"><span className="font-semibold text-brand-dark text-sm">{l.item_name}</span> <KindBadge type={l.item_type} />{l.service_category && <span className="text-xs text-stone"> · {l.service_category}</span>}</div>
               <div className="text-xs text-stone whitespace-nowrap">Ordered {withUnit(l.quantity_ordered, l.unit_of_measure)}</div>
             </div>
 
@@ -183,9 +215,10 @@ export function GrnLinesDialog({ grnId, units, assetOptions, onClose, onChanged 
                   <select value={l.item_type || ''} onChange={e => {
                     const v = e.target.value;
                     if (v === 'CONSUMABLE') save(l, { item_type: 'CONSUMABLE' });
+                    else if (v === 'SERVICE') save(l, { item_type: 'SERVICE' });
                     else if (v === 'ASSET') { if (l.asset_class) save(l, { item_type: 'ASSET', asset_class: l.asset_class }); else local(l, { item_type: 'ASSET' }); }
                   }} className={small}>
-                    <option value="">Choose…</option><option value="CONSUMABLE">Consumable (stock)</option><option value="ASSET">Asset (tag it)</option>
+                    <option value="">Choose…</option><option value="CONSUMABLE">Consumable (stock)</option><option value="ASSET">Asset (tag it)</option><option value="SERVICE">Service (completed work)</option>
                   </select>
                 </div>
                 {l.item_type === 'CONSUMABLE' && (
@@ -204,8 +237,16 @@ export function GrnLinesDialog({ grnId, units, assetOptions, onClose, onChanged 
                     </select>
                   </div>
                 )}
+                {l.item_type === 'SERVICE' && (
+                  <div>
+                    <span className="block text-xs text-stone mb-1">Quality of the work</span>
+                    <select value={l.condition || 'GOOD'} onChange={e => save(l, { condition: e.target.value })} className={small}>
+                      <option value="GOOD">Satisfactory</option><option value="PARTIAL">Partly done</option><option value="DEFECTIVE">Not satisfactory</option>
+                    </select>
+                  </div>
+                )}
                 <div>
-                  <span className="block text-xs text-stone mb-1">Received</span>
+                  <span className="block text-xs text-stone mb-1">{l.item_type === 'SERVICE' ? 'Completed' : 'Received'}</span>
                   <input type="number" min={0} defaultValue={l.quantity_received} onBlur={e => +e.target.value !== l.quantity_received && save(l, { quantity_received: e.target.value })} className={small} />
                 </div>
                 <div>
@@ -215,7 +256,8 @@ export function GrnLinesDialog({ grnId, units, assetOptions, onClose, onChanged 
               </div>
             ) : (
               <div className="text-sm text-stone mt-2">
-                Received {withUnit(l.quantity_received, l.unit_of_measure)}, accepted {withUnit(l.quantity_accepted, l.unit_of_measure)}
+                {l.item_type === 'SERVICE' ? 'Completed' : 'Received'} {withUnit(l.quantity_received, l.unit_of_measure)}, accepted {withUnit(l.quantity_accepted, l.unit_of_measure)}
+                {l.item_type === 'SERVICE' && <span className="text-teal-800"> · {({ GOOD: 'satisfactory', PARTIAL: 'partly done', DEFECTIVE: 'not satisfactory' } as any)[l.condition || 'GOOD'] || 'satisfactory'}{grn.status === 'VERIFIED' ? ' · accepted as completed work' : ''}</span>}
                 {grn.status === 'VERIFIED' && l.item_type === 'CONSUMABLE' && <span className="text-sky-800"> · added to Inventory</span>}
                 {grn.status === 'VERIFIED' && l.item_type === 'ASSET' && <span className="text-purple-800"> · {l.tagged_count || 0} of {l.quantity_accepted} tagged{l.quantity_accepted - (l.tagged_count || 0) > 0 ? ' — the rest are waiting in Assets → Ready to tag' : ''}</span>}
               </div>
@@ -264,8 +306,8 @@ export const requesterPayload = (form: any) => {
   return { department_id: null, unit_name: null };
 };
 
-// ── The items on a requisition: any number, each a consumable or an asset ──
-export const blankLine = () => ({ key: Math.random().toString(36).slice(2), item_type: '', inventory_item_id: '', item_name: '', unit_of_measure: '', asset_class: '', asset_new: false, description: '', quantity: '', unit_price: '', specifications: '' });
+// ── The items on a requisition: any number, each a consumable, an asset or a service ──
+export const blankLine = () => ({ key: Math.random().toString(36).slice(2), item_type: '', inventory_item_id: '', item_name: '', unit_of_measure: '', asset_class: '', service_category: '', asset_new: false, description: '', quantity: '', unit_price: '', specifications: '' });
 
 export function RequisitionLines({ lines, setLines, inventory, units, assetOptions }: { lines: any[]; setLines: (l: any[]) => void; inventory: any[]; units: string[]; assetOptions: any }) {
   const update = (i: number, patch: any) => setLines(lines.map((l, x) => (x === i ? { ...l, ...patch } : l)));
@@ -281,11 +323,11 @@ export function RequisitionLines({ lines, setLines, inventory, units, assetOptio
           <ItemKindFields form={l} set={patch => update(i, patch)} inventory={inventory} units={units} assetOptions={assetOptions} />
           <div className="grid sm:grid-cols-3 gap-4 mt-4">
             <div>
-              <label className={label}>Quantity{l.item_type === 'CONSUMABLE' && l.unit_of_measure ? ` (${l.unit_of_measure})` : ''} *</label>
+              <label className={label}>{l.item_type === 'SERVICE' ? 'How many' : 'Quantity'}{(l.item_type === 'CONSUMABLE' || l.item_type === 'SERVICE') && l.unit_of_measure ? ` (${l.unit_of_measure})` : ''} *</label>
               <input type="number" required min={1} value={l.quantity} onChange={e => update(i, { quantity: e.target.value })} className={input} />
             </div>
             <div>
-              <label className={label}>Unit price (KES) *</label>
+              <label className={label}>{l.item_type === 'SERVICE' && l.unit_of_measure ? `Price per ${l.unit_of_measure} (KES)` : 'Unit price (KES)'} *</label>
               <input type="number" required min={0} step="0.01" value={l.unit_price} onChange={e => update(i, { unit_price: e.target.value })} className={input} />
             </div>
             <div>
@@ -295,7 +337,7 @@ export function RequisitionLines({ lines, setLines, inventory, units, assetOptio
           </div>
           <div className="grid sm:grid-cols-2 gap-4 mt-4">
             <div><label className={label}>Description</label><input value={l.description} onChange={e => update(i, { description: e.target.value })} className={input} /></div>
-            <div><label className={label}>Specifications</label><input value={l.specifications} onChange={e => update(i, { specifications: e.target.value })} className={input} /></div>
+            <div><label className={label}>{l.item_type === 'SERVICE' ? 'Scope of work / deliverables' : 'Specifications'}</label><input value={l.specifications} onChange={e => update(i, { specifications: e.target.value })} className={input} /></div>
           </div>
         </div>
       ))}

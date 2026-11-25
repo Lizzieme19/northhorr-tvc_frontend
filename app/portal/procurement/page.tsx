@@ -156,6 +156,7 @@ export default function ProcurementDashboard() {
         item_name: l.item_name || '',
         unit_of_measure: l.unit_of_measure || '',
         asset_class: l.asset_class || '',
+        service_category: l.service_category || '',
         asset_new: l.item_type === 'ASSET' && !assetTypes.some(c => c.asset_class === l.asset_class && c.name === (l.asset_category || l.item_name)),
         description: l.description || '',
         quantity: String(l.quantity ?? ''),
@@ -212,7 +213,7 @@ export default function ProcurementDashboard() {
       } else if (tab === 'requisitions') {
         const lines: any[] = formData.lines || [];
         if (lines.length === 0) { toast.error('Add at least one item'); setSubmitting(false); return; }
-        if (lines.some(l => !l.item_type)) { toast.error('Say whether each item is a consumable or an asset'); setSubmitting(false); return; }
+        if (lines.some(l => !l.item_type)) { toast.error('Say whether each item is a consumable, an asset or a service'); setSubmitting(false); return; }
         const who = requesterPayload(formData);
         if (!who.department_id && !who.unit_name) { toast.error('Choose a department, or type the unit that needs the items'); setSubmitting(false); return; }
         const requisitionData = {
@@ -226,7 +227,8 @@ export default function ProcurementDashboard() {
             unit_price: parseFloat(l.unit_price),
             specifications: l.specifications,
             item_type: l.item_type,
-            unit_of_measure: l.item_type === 'CONSUMABLE' ? (l.unit_of_measure || null) : null,
+            unit_of_measure: l.item_type === 'CONSUMABLE' || l.item_type === 'SERVICE' ? (l.unit_of_measure || null) : null,
+            service_category: l.item_type === 'SERVICE' ? (l.service_category || null) : null,
             inventory_item_id: l.item_type === 'CONSUMABLE' && l.inventory_item_id !== 'NEW' ? l.inventory_item_id : null,
             asset_class: l.item_type === 'ASSET' ? l.asset_class : null,
             asset_category: l.item_type === 'ASSET' ? l.item_name : null,
@@ -414,8 +416,9 @@ export default function ProcurementDashboard() {
       const parts = got ? [
         got.stock_lines ? `${got.stock_lines} stock line${got.stock_lines > 1 ? 's' : ''} added to Inventory` : '',
         got.assets_to_tag ? `${got.assets_to_tag} asset${got.assets_to_tag > 1 ? 's' : ''} ready to tag in Assets` : '',
+        got.services_accepted ? `${got.services_accepted} service${got.services_accepted > 1 ? 's' : ''} accepted as completed` : '',
       ].filter(Boolean) : [];
-      toast.success(status === 'VERIFIED' ? `GRN verified${parts.length ? `: ${parts.join(', ')}` : ''}` : 'GRN rejected');
+      toast.success(status === 'VERIFIED' ? `Verified${parts.length ? `: ${parts.join(', ')}` : ''}` : 'Rejected');
     } catch (err: any) {
       toast.error(err?.response?.data?.error || `Failed to ${status.toLowerCase()} GRN`);
     }
@@ -426,7 +429,7 @@ export default function ProcurementDashboard() {
       { key: 'requisitions', label: 'Requisitions', icon: '📝', count: requisitions.length, hint: 'What departments have asked for' },
       { key: 'rfqs', label: 'RFQs', icon: '📋', count: rfqs.length, hint: 'Requests for quotation' },
       { key: 'lpos', label: 'LPOs', icon: '📄', count: lpos.length, hint: 'Local purchase orders' },
-      { key: 'grns', label: 'GRNs', icon: '✅', count: grns.length, hint: 'Goods received' },
+      { key: 'grns', label: 'GRNs', icon: '✅', count: grns.length, hint: 'Goods received and services completed' },
       { key: 'invoices', label: 'Invoices', icon: '🧾', count: invoices.length },
     ] },
     { heading: 'Stock & assets', items: [
@@ -540,7 +543,7 @@ export default function ProcurementDashboard() {
                               <tbody className="divide-y divide-stone/5">
                                 {r.items.map((item: any) => (
                                   <tr key={item.id}>
-                                    <td className="px-3 py-2 font-medium text-brand-dark">{item.item_name} <KindBadge type={item.item_type} />{item.description && <span className="text-stone font-normal"> — {item.description}</span>}</td>
+                                    <td className="px-3 py-2 font-medium text-brand-dark">{item.item_name} <KindBadge type={item.item_type} />{item.service_category && <span className="text-stone font-normal"> · {item.service_category}</span>}{item.description && <span className="text-stone font-normal"> — {item.description}</span>}</td>
                                     <td className="px-3 py-2 text-right">{withUnit(item.quantity, item.unit_of_measure)}</td>
                                     <td className="px-3 py-2 text-right">KES {item.unit_price?.toLocaleString() || '—'}</td>
                                     <td className="px-3 py-2 text-right font-medium">KES {item.total_price?.toLocaleString() || '—'}</td>
@@ -691,10 +694,10 @@ export default function ProcurementDashboard() {
                 grns.map(g => (
                   <div key={g.id} className="p-4 bg-cream-deep/50 rounded-xl border border-stone/10 flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-brand-dark">{g.grn_no}</div>
+                      <div className="font-semibold text-brand-dark">{g.grn_no}{(g.items || []).length > 0 && (g.items || []).every((i: any) => i.item_type === 'SERVICE') && <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800 align-middle">Service completion</span>}</div>
                       <div className="text-sm text-stone">{g.lpo?.lpo_no} • {g.lpo?.supplier?.name}</div>
                       <div className="text-sm text-stone">{g.items?.length || 0} line{g.items?.length === 1 ? '' : 's'}: {(g.items || []).map((i: any) => `${withUnit(i.quantity_accepted, i.unit_of_measure)} ${i.item_name}`).join(', ')}</div>
-                      {g.status === 'PENDING' && (g.items || []).some((i: any) => !i.item_type) && <div className="text-xs text-amber-700 mt-0.5">Some lines still need to be marked as consumable or asset before this can be verified.</div>}
+                      {g.status === 'PENDING' && (g.items || []).some((i: any) => !i.item_type) && <div className="text-xs text-amber-700 mt-0.5">Some lines still need to be marked as consumable, asset or service before this can be verified.</div>}
                       <div className="text-xs mt-1">
                         <span className={`px-2 py-0.5 rounded-full ${g.status === 'VERIFIED' ? 'bg-green-100 text-green-800' : g.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
                           {g.status}
