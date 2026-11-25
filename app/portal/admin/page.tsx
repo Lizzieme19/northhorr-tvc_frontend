@@ -19,12 +19,13 @@ import ActivityLog from '@/components/ActivityLog';
 import PortalShell, { usePortalSection, NavGroup } from '@/components/PortalShell';
 import ProfileOptionsAdmin, { StudentChoicesModal } from '@/components/ProfileOptions';
 import StudentTypes, { BulkTypeModal } from '@/components/StudentTypes';
+import StudentCharges from '@/components/StudentCharges';
 import { LetterheadPanel, DocExtras, PreviewButton, DocStyle } from '@/components/DocumentDesign';
 import IdCardDesign from '@/components/IdCardDesign';
 import StudentImportModal from '@/components/StudentImportModal';
 import TermInfo from '@/components/TermInfo';
 import { termLabel } from '@/lib/terms';
-import { feeBilling, BILLING_LABEL } from '@/lib/feeTypes';
+import { feeBilling, BILLING_LABEL, BILLING_SHORT } from '@/lib/feeTypes';
 import { feeCorrectionsApi } from '@/lib/services';
 import { toast } from 'sonner';
 
@@ -38,8 +39,8 @@ const STATUS_COLORS: Record<string, string> = {
   REJECTED: 'bg-red-100 text-red-800',
 };
 
-type AdminTab = 'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'student-types' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings' | 'reports';
-const ADMIN_TABS: readonly AdminTab[] = ['overview', 'reports', 'applications', 'students', 'users', 'courses', 'resources', 'news', 'gallery', 'fee-types', 'student-types', 'terms', 'billing', 'requisitions', 'term-progression', 'doc-templates', 'activity-log', 'profile-options', 'id-card', 'settings'];
+type AdminTab = 'overview' | 'applications' | 'students' | 'users' | 'courses' | 'resources' | 'news' | 'gallery' | 'fee-types' | 'student-types' | 'student-charges' | 'terms' | 'billing' | 'requisitions' | 'term-progression' | 'doc-templates' | 'activity-log' | 'profile-options' | 'id-card' | 'settings' | 'reports';
+const ADMIN_TABS: readonly AdminTab[] = ['overview', 'reports', 'applications', 'students', 'users', 'courses', 'resources', 'news', 'gallery', 'fee-types', 'student-types', 'student-charges', 'terms', 'billing', 'requisitions', 'term-progression', 'doc-templates', 'activity-log', 'profile-options', 'id-card', 'settings'];
 
 // Registrars handle student affairs: applications, students, departments/courses and progression — never finance or system admin
 const REGISTRAR_TABS = ['overview', 'reports', 'applications', 'students', 'student-types', 'courses', 'term-progression'];
@@ -610,6 +611,7 @@ export default function AdminDashboard() {
     ] },
     { heading: 'Finance', items: [
       { key: 'fee-types', label: 'Fee types', icon: '💰' },
+      { key: 'student-charges', label: 'Student charges', icon: '🧾', hint: 'A different amount for each student (exam fee...)' },
       { key: 'billing', label: 'Billing', icon: '💳', hint: 'Every term bill' },
     ] },
     { heading: 'Procurement', items: [{ key: 'requisitions', label: 'Requisitions', icon: '🛒' }] },
@@ -1021,6 +1023,7 @@ export default function AdminDashboard() {
                     {feeTypeForm.billing === 'NOT_BILLED' && 'Nothing is added to a student\'s bill. The fee type is only used to split payments on Allocate Funds. The term fee is set on the Terms tab.'}
                     {feeTypeForm.billing === 'ONCE' && 'Added to the bill one time, in the student\'s first term (for example admission or student ID).'}
                     {feeTypeForm.billing === 'EVERY_TERM' && 'Added to every term\'s bill in addition to the term fee set on the Terms tab.'}
+                    {feeTypeForm.billing === 'PER_STUDENT' && 'Not added to anyone automatically. The amount differs for each student (an exam fee, a re-sit...), so Finance sets it for each student on the Student charges tab. The amount above is only a guide.'}
                   </p>
                 </div>
                 <div>
@@ -1113,7 +1116,7 @@ export default function AdminDashboard() {
                     <div key={ft.id} className={`flex items-center justify-between p-4 rounded-xl border ${ft.is_active ? 'bg-cream-deep/50 border-stone/10' : 'bg-stone/50 border-stone/20 opacity-60'}`}>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-brand-dark truncate">{ft.name}</div>
-                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} • {{ NOT_BILLED: 'Not billed', ONCE: 'Billed once', EVERY_TERM: 'Billed every term' }[feeBilling(ft)]}{(ft.student_type_rules || []).length ? ` • Only: ${ft.student_type_rules.map((r: any) => `${r.student_type?.name || '?'}${r.amount != null ? ` (KES ${r.amount})` : ''}`).join(', ')}` : ft.applicant_type ? ` • ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ' • All students'}</div>
+                        <div className="text-sm text-stone">{ft.code} • KES {ft.amount} • {ft.applies_to} • {BILLING_SHORT[feeBilling(ft)]}{(ft.student_type_rules || []).length ? ` • Only: ${ft.student_type_rules.map((r: any) => `${r.student_type?.name || '?'}${r.amount != null ? ` (KES ${r.amount})` : ''}`).join(', ')}` : ft.applicant_type ? ` • ${ft.applicant_type === 'KUCCPS' ? 'KUCCPS only' : 'Direct entry only'}` : ' • All students'}</div>
                         <div className="text-xs text-stone mt-1">{ft.is_required ? 'Required' : 'Optional'} • {ft.is_active ? 'Active' : 'Disabled'}</div>
                       </div>
                       <div className="flex gap-2 ml-4">
@@ -2277,6 +2280,9 @@ export default function AdminDashboard() {
         <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><IdCardDesign /></main>
       )}
 
+      {tab === 'student-charges' && isAdmin && (
+        <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><StudentCharges /></main>
+      )}
       {tab === 'student-types' && (
         <main className="max-w-[120rem] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-10 py-6 sm:py-8"><StudentTypes canSetFees={isAdmin} /></main>
       )}

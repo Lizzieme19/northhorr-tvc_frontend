@@ -271,7 +271,7 @@ export default function StudentTypes({ canSetFees = true }: { canSetFees?: boole
           <div className="bg-white rounded-2xl border border-stone/10 shadow-sm divide-y divide-stone/10">
             {grid.fee_types.map((f: any) => {
               const editing = ruleEdit && ruleEdit.id === f.id;
-              const label = f.billing === 'EVERY_TERM' ? 'Every term' : f.billing === 'ONCE' ? 'Once' : 'Not billed';
+              const label = f.billing === 'EVERY_TERM' ? 'Every term' : f.billing === 'ONCE' ? 'Once' : f.billing === 'PER_STUDENT' ? 'Set per student' : 'Not billed';
               return (
                 <div key={f.id} className="px-5 py-3 text-sm">
                   <div className="flex flex-wrap items-center gap-3">

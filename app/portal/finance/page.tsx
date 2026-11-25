@@ -1,5 +1,6 @@
 'use client';
 import StudentTypes from '@/components/StudentTypes';
+import StudentCharges from '@/components/StudentCharges';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -21,12 +22,13 @@ import { useDebounced } from '@/lib/hooks';
 import { toast } from 'sonner';
 import PortalShell from '@/components/PortalShell';
 
-type TabId = 'overview' | 'students' | 'billing' | 'fee-structure' | 'student-types' | 'reports';
+type TabId = 'overview' | 'students' | 'billing' | 'fee-structure' | 'student-charges' | 'student-types' | 'reports';
 const TABS: { id: TabId; label: string; icon: string; hint: string }[] = [
   { id: 'overview', label: 'Overview', icon: '📊', hint: 'Totals, trends and who owes what' },
   { id: 'students', label: 'Students & fees', icon: '🎓', hint: 'Find a student, record payments, fix fees' },
   { id: 'billing', label: 'Billing', icon: '💳', hint: 'Every term bill, with filters' },
   { id: 'fee-structure', label: 'Fee structure', icon: '🧾', hint: 'Term fees and fee types' },
+  { id: 'student-charges', label: 'Student charges', icon: '🧾', hint: 'A different amount for each student (exam fee...)' },
   { id: 'student-types', label: 'Student types', icon: '🧑‍🎓', hint: 'Direct, KUCCPS... each with its own fees' },
   { id: 'reports', label: 'Reports', icon: '📑', hint: 'View on screen, then download as PDF on the letterhead or Excel' },
 ];
@@ -413,6 +415,7 @@ export default function FinanceDashboard() {
           </div>
         )}
 
+        {tab === 'student-charges' && <StudentCharges />}
         {tab === 'student-types' && <StudentTypes />}
 
         {tab === 'reports' && <ReportCenter embedded onClose={() => goTab('overview')} initialReport="fee-balances" rawTypes={['fees']} />}
